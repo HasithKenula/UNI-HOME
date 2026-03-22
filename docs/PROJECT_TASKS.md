@@ -1,0 +1,1261 @@
+# 🏠 SLIIT Student Accommodation Management System — Full Project Task List
+
+> **Tech Stack:** MongoDB · Express.js · React.js · Node.js (MERN)
+> **Total Tasks:** 400+ | **Modules:** 7 | **Phases:** 6
+> **Status Legend:** ⬜ Not Started · 🔲 In Progress · ✅ Done
+
+---
+
+## 📌 Table of Contents
+
+- [Phase 0 — Project Initialization & Setup](#phase-0--project-initialization--setup)
+- [Phase 1 — Module 1: Authentication & User Management](#phase-1--module-1-authentication--user-management)
+- [Phase 2 — Module 2: Accommodation Management](#phase-2--module-2-accommodation-management)
+- [Phase 3 — Module 3: Booking & Search Management](#phase-3--module-3-booking--search-management)
+- [Phase 4 — Module 4: Reviews & AI Summary](#phase-4--module-4-reviews--ai-summary)
+- [Phase 5 — Module 5: Payment Management](#phase-5--module-5-payment-management)
+- [Phase 6 — Module 6: Maintenance & Support](#phase-6--module-6-maintenance--support)
+- [Phase 7 — Module 7: Admin Panel](#phase-7--module-7-admin-panel)
+- [Phase 8 — Notifications System (Cross-Cutting)](#phase-8--notifications-system-cross-cutting)
+- [Phase 9 — Testing, Deployment & Documentation](#phase-9--testing-deployment--documentation)
+
+---
+
+---
+
+# Phase 0 — Project Initialization & Setup
+
+## 0.1 Repository & Folder Structure
+
+- [x] Create GitHub repository `sliit-accommodation-system`
+- [x] Initialize monorepo structure:
+  ```
+  /
+  ├── client/          (React frontend)
+  ├── server/          (Express backend)
+  ├── docs/            (Documentation)
+  └── README.md
+  ```
+- [x] Create `.gitignore` (node_modules, .env, build, uploads)
+- [x] Create `README.md` with project overview
+- [x] Set up branch strategy (main, develop, feature/*)
+
+## 0.2 Backend Initialization (server/)
+
+- [x] `cd server && npm init -y`
+- [x] Install core dependencies:
+  ```bash
+  npm install express mongoose dotenv cors helmet morgan
+  npm install bcryptjs jsonwebtoken cookie-parser
+  npm install express-validator multer nodemailer
+  npm install express-rate-limit
+  ```
+- [x] Install dev dependencies:
+  ```bash
+  npm install -D nodemon jest supertest
+  ```
+- [x] Create backend folder structure:
+  ```
+  server/
+  ├── config/
+  │   ├── db.js                 # MongoDB connection
+  │   └── env.js                # Environment config
+  ├── models/                   # Mongoose schemas (18 models)
+  │   ├── User.js
+  │   ├── Student.js
+  │   ├── Owner.js
+  │   ├── ServiceProvider.js
+  │   ├── Admin.js
+  │   ├── Accommodation.js
+  │   ├── Room.js
+  │   ├── Booking.js
+  │   ├── Payment.js
+  │   ├── Invoice.js
+  │   ├── Review.js
+  │   ├── AIReviewSummary.js
+  │   ├── MaintenanceTicket.js
+  │   ├── Notification.js
+  │   ├── ListingReport.js
+  │   ├── Inquiry.js
+  │   ├── NotificationTemplate.js
+  │   └── AuditLog.js
+  ├── routes/
+  │   ├── auth.routes.js
+  │   ├── user.routes.js
+  │   ├── accommodation.routes.js
+  │   ├── room.routes.js
+  │   ├── booking.routes.js
+  │   ├── payment.routes.js
+  │   ├── invoice.routes.js
+  │   ├── review.routes.js
+  │   ├── aiSummary.routes.js
+  │   ├── ticket.routes.js
+  │   ├── notification.routes.js
+  │   ├── inquiry.routes.js
+  │   ├── favorite.routes.js
+  │   ├── report.routes.js
+  │   └── admin.routes.js
+  ├── controllers/
+  │   ├── auth.controller.js
+  │   ├── user.controller.js
+  │   ├── accommodation.controller.js
+  │   ├── room.controller.js
+  │   ├── booking.controller.js
+  │   ├── payment.controller.js
+  │   ├── invoice.controller.js
+  │   ├── review.controller.js
+  │   ├── aiSummary.controller.js
+  │   ├── ticket.controller.js
+  │   ├── notification.controller.js
+  │   ├── inquiry.controller.js
+  │   ├── favorite.controller.js
+  │   ├── report.controller.js
+  │   └── admin.controller.js
+  ├── middleware/
+  │   ├── auth.middleware.js      # JWT verification
+  │   ├── role.middleware.js      # Role-based access
+  │   ├── validate.middleware.js  # Request validation
+  │   ├── upload.middleware.js    # Multer file upload
+  │   └── error.middleware.js     # Global error handler
+  ├── utils/
+  │   ├── email.util.js           # Nodemailer helper
+  │   ├── token.util.js           # JWT helpers
+  │   ├── pagination.util.js      # Pagination helper
+  │   ├── auditLog.util.js        # Audit logging helper
+  │   └── notification.util.js    # Notification dispatch
+  ├── validators/
+  │   ├── auth.validator.js
+  │   ├── accommodation.validator.js
+  │   ├── booking.validator.js
+  │   ├── review.validator.js
+  │   └── ticket.validator.js
+  ├── server.js                   # Entry point
+  └── .env
+  ```
+- [x] Create `server.js` — Express app setup with middleware
+- [x] Create `config/db.js` — MongoDB connection with Mongoose
+- [x] Create `.env` file:
+  ```env
+  PORT=5000
+  MONGO_URI=mongodb://localhost:27017/sliit_accommodation_db
+  JWT_SECRET=your_jwt_secret_key
+  JWT_REFRESH_SECRET=your_refresh_secret
+  JWT_EXPIRE=1h
+  JWT_REFRESH_EXPIRE=7d
+  EMAIL_HOST=smtp.gmail.com
+  EMAIL_USER=your_email@gmail.com
+  EMAIL_PASS=your_app_password
+  CLIENT_URL=http://localhost:3000
+  ```
+- [x] Create global error handler middleware
+- [ ] Test server starts: `npm run dev` → `Server running on port 5000`
+- [ ] Test MongoDB connection → `MongoDB Connected`
+
+## 0.3 Frontend Initialization (client/)
+
+- [x] `npx create-react-app client` or `npm create vite@latest client -- --template react`
+- [x] Install core dependencies:
+  ```bash
+  npm install react-router-dom axios
+  npm install @reduxjs/toolkit react-redux
+  npm install react-hook-form react-toastify
+  npm install react-icons lucide-react
+  npm install tailwindcss @tailwindcss/forms postcss autoprefixer
+  ```
+- [x] Configure Tailwind CSS (`tailwind.config.js`, `postcss.config.js`)
+- [x] Create frontend folder structure:
+  ```
+  client/src/
+  ├── api/
+  │   └── axios.js               # Axios instance with interceptors
+  ├── app/
+  │   └── store.js               # Redux store
+  ├── features/
+  │   ├── auth/
+  │   │   ├── authSlice.js
+  │   │   └── authAPI.js
+  │   ├── accommodations/
+  │   ├── bookings/
+  │   ├── payments/
+  │   ├── reviews/
+  │   ├── tickets/
+  │   ├── notifications/
+  │   └── admin/
+  ├── components/
+  │   ├── common/                # Reusable UI components
+  │   │   ├── Navbar.jsx
+  │   │   ├── Footer.jsx
+  │   │   ├── Sidebar.jsx
+  │   │   ├── LoadingSpinner.jsx
+  │   │   ├── Pagination.jsx
+  │   │   ├── Modal.jsx
+  │   │   ├── ConfirmDialog.jsx
+  │   │   ├── FileUpload.jsx
+  │   │   ├── StarRating.jsx
+  │   │   └── StatusBadge.jsx
+  │   ├── auth/
+  │   ├── accommodation/
+  │   ├── booking/
+  │   ├── payment/
+  │   ├── review/
+  │   ├── ticket/
+  │   ├── notification/
+  │   └── admin/
+  ├── pages/
+  │   ├── public/
+  │   │   ├── HomePage.jsx
+  │   │   ├── LoginPage.jsx
+  │   │   ├── RegisterPage.jsx
+  │   │   ├── SearchPage.jsx
+  │   │   └── ListingDetailPage.jsx
+  │   ├── student/
+  │   │   ├── StudentDashboard.jsx
+  │   │   ├── MyBookingsPage.jsx
+  │   │   ├── FavoritesPage.jsx
+  │   │   ├── MyTicketsPage.jsx
+  │   │   └── ProfilePage.jsx
+  │   ├── owner/
+  │   │   ├── OwnerDashboard.jsx
+  │   │   ├── MyListingsPage.jsx
+  │   │   ├── CreateListingPage.jsx
+  │   │   ├── EditListingPage.jsx
+  │   │   ├── TenantManagementPage.jsx
+  │   │   ├── BookingRequestsPage.jsx
+  │   │   └── OwnerTicketsPage.jsx
+  │   ├── provider/
+  │   │   ├── ProviderDashboard.jsx
+  │   │   └── MyTasksPage.jsx
+  │   └── admin/
+  │       ├── AdminDashboard.jsx
+  │       ├── UserManagementPage.jsx
+  │       ├── ListingModerationPage.jsx
+  │       ├── ReportsPage.jsx
+  │       ├── TransactionsPage.jsx
+  │       ├── TicketEscalationsPage.jsx
+  │       ├── NotificationConsolePage.jsx
+  │       └── AuditLogPage.jsx
+  ├── hooks/
+  │   ├── useAuth.js
+  │   ├── useDebounce.js
+  │   └── useNotifications.js
+  ├── utils/
+  │   ├── formatters.js           # Date, currency formatters
+  │   ├── validators.js           # Client-side validation
+  │   └── constants.js            # Enums, config constants
+  ├── layouts/
+  │   ├── PublicLayout.jsx
+  │   ├── StudentLayout.jsx
+  │   ├── OwnerLayout.jsx
+  │   ├── ProviderLayout.jsx
+  │   └── AdminLayout.jsx
+  ├── routes/
+  │   ├── AppRouter.jsx
+  │   ├── PrivateRoute.jsx
+  │   └── RoleRoute.jsx
+  ├── App.jsx
+  └── index.jsx
+  ```
+- [x] Set up Axios instance with base URL + JWT interceptor
+- [x] Set up Redux store with auth slice
+- [x] Set up React Router with public/private/role routes
+- [ ] Create layout components (Public, Student, Owner, Provider, Admin)
+- [ ] Create reusable UI components (Navbar, Footer, Spinner, Modal, Pagination)
+- [ ] Test: `npm start` → React app running on `http://localhost:3000`
+
+## 0.4 Database Setup
+
+- [x] Create all 18 Mongoose model files from `DATABASE_MODLES.txt`
+- [x] Set up User discriminators (Student, Owner, ServiceProvider, Admin)
+- [x] Verify all indexes are created (2dsphere, text, compound, TTL, unique)
+- [ ] Create database seeder script (`server/seeds/seed.js`)
+- [ ] Run seeder → verify sample data in MongoDB Compass
+
+## 0.5 Shared Middleware & Utilities
+
+- [x] Create `auth.middleware.js` — JWT token verification
+- [x] Create `role.middleware.js` — `authorize('student', 'owner', 'admin')`
+- [x] Create `validate.middleware.js` — express-validator wrapper
+- [x] Create `upload.middleware.js` — Multer config (images, videos, docs)
+- [x] Create `error.middleware.js` — global error handler with status codes
+- [x] Create `email.util.js` — Nodemailer transporter + send function
+- [x] Create `token.util.js` — generateAccessToken, generateRefreshToken, verifyToken
+- [x] Create `pagination.util.js` — paginate(model, query, options)
+- [x] Create `auditLog.util.js` — logAction(userId, action, entity, details)
+- [x] Create `notification.util.js` — createNotification(recipient, type, data)
+
+---
+
+---
+
+# Phase 1 — Module 1: Authentication & User Management
+
+## 1.1 Backend — Models
+
+- [ ] `models/User.js` — Base user schema with discriminator key
+- [ ] `models/Student.js` — Student discriminator (sliitEmail, studentId, batch, faculty, favorites)
+- [ ] `models/Owner.js` — Owner discriminator (nic, bankDetails, verificationDocuments)
+- [ ] `models/ServiceProvider.js` — Provider discriminator (serviceCategories, areasOfOperation, certifications)
+- [ ] `models/Admin.js` — Admin discriminator (adminLevel, permissions, 2FA)
+
+## 1.2 Backend — Auth APIs
+
+### `POST /api/auth/register/student`
+- [ ] Route: `routes/auth.routes.js`
+- [ ] Validator: validate SLIIT email regex, password strength, required fields
+- [ ] Controller: hash password, create Student, generate verification token, send email
+- [ ] Test with Postman → 201 Created
+
+### `POST /api/auth/register/owner`
+- [ ] Route definition
+- [ ] Validator: validate NIC, email, required fields
+- [ ] Controller: hash password, create Owner, handle document upload, send verification email
+- [ ] Test → 201 Created
+
+### `POST /api/auth/register/service-provider`
+- [ ] Route definition
+- [ ] Validator: validate NIC, serviceCategories enum, required fields
+- [ ] Controller: create ServiceProvider with status "pending", notify admin
+- [ ] Test → 201 Created
+
+### `POST /api/auth/login`
+- [ ] Route definition
+- [ ] Validator: email + password required
+- [ ] Controller: find user, compare password, check email verified, check account status, generate JWT + refresh token, update lastLogin
+- [ ] Test → 200 with tokens
+
+### `POST /api/auth/refresh-token`
+- [ ] Route definition
+- [ ] Controller: verify refresh token, generate new access token
+- [ ] Test → 200 with new access token
+
+### `POST /api/auth/logout`
+- [ ] Route definition (protected)
+- [ ] Controller: invalidate refresh token
+- [ ] Test → 200 Logged out
+
+### `GET /api/auth/verify-email/:token`
+- [ ] Route definition
+- [ ] Controller: find user by token, check expiry, set isEmailVerified=true, clear token
+- [ ] Test → 200 Email verified
+
+### `POST /api/auth/forgot-password`
+- [ ] Route definition
+- [ ] Controller: find by email, generate reset token, save, send email
+- [ ] Test → 200 Reset link sent
+
+### `POST /api/auth/reset-password/:token`
+- [ ] Route definition
+- [ ] Controller: verify token, hash new password, update, clear token
+- [ ] Test → 200 Password reset
+
+## 1.3 Backend — User Profile APIs
+
+### `GET /api/users/profile`
+- [ ] Route (protected: any authenticated user)
+- [ ] Controller: return user with role-specific populated fields
+- [ ] Test → 200 with full profile
+
+### `PUT /api/users/profile`
+- [ ] Route (protected)
+- [ ] Controller: update allowed fields (name, phone, address, profileImage)
+- [ ] Handle profile image upload with Multer
+- [ ] Test → 200 Updated
+
+### `PUT /api/users/change-password`
+- [ ] Route (protected)
+- [ ] Controller: verify current password, hash + update new password
+- [ ] Test → 200 Changed
+
+### `PUT /api/users/notification-preferences`
+- [ ] Route (protected)
+- [ ] Controller: update notificationPreferences subdocument
+- [ ] Test → 200 Updated
+
+## 1.4 Frontend — Auth Pages
+
+### Register Pages
+- [ ] `components/auth/StudentRegisterForm.jsx` — SLIIT email field, student ID, batch, faculty
+- [ ] `components/auth/OwnerRegisterForm.jsx` — NIC, bank details, document upload
+- [ ] `components/auth/ProviderRegisterForm.jsx` — service categories, area of operation
+- [ ] `pages/public/RegisterPage.jsx` — tab/step switcher for 3 registration types
+- [ ] Form validation (react-hook-form)
+- [ ] API integration (authAPI.js → register endpoints)
+- [ ] Success toast + redirect to login
+- [ ] Error handling (duplicate email, invalid SLIIT format)
+
+### Login Page
+- [ ] `pages/public/LoginPage.jsx` — email + password form
+- [ ] API integration → store tokens in Redux + localStorage
+- [ ] Redirect by role (student→dashboard, owner→dashboard, admin→admin panel)
+- [ ] Forgot password link → modal/page
+
+### Forgot & Reset Password
+- [ ] `components/auth/ForgotPasswordModal.jsx` — email input → API call
+- [ ] `pages/public/ResetPasswordPage.jsx` — token from URL, new password form
+
+### Email Verification
+- [ ] `pages/public/VerifyEmailPage.jsx` — extract token from URL, call verify API
+
+### Profile Page
+- [ ] `pages/student/ProfilePage.jsx` (also used by owner/provider with role checks)
+- [ ] Display profile info with edit mode
+- [ ] Profile image upload with preview
+- [ ] Change password section
+- [ ] Notification preferences toggles (email, in-app, SMS, WhatsApp)
+- [ ] API integration for GET profile, PUT update, PUT change-password, PUT preferences
+
+## 1.5 Frontend — Auth State & Routing
+
+- [ ] `features/auth/authSlice.js` — login, logout, register, loadUser actions
+- [ ] `features/auth/authAPI.js` — all auth API calls
+- [ ] `api/axios.js` — interceptor: attach token, handle 401 → auto refresh
+- [ ] `routes/PrivateRoute.jsx` — redirect to login if not authenticated
+- [ ] `routes/RoleRoute.jsx` — restrict by role (student, owner, provider, admin)
+- [ ] `hooks/useAuth.js` — custom hook returning user, isAuthenticated, role
+
+---
+
+---
+
+# Phase 2 — Module 2: Accommodation Management
+
+## 2.1 Backend — Models
+
+- [ ] `models/Accommodation.js` — Full schema with GeoJSON, text index, all embedded objects
+- [ ] `models/Room.js` — Room schema with accommodation ref
+
+## 2.2 Backend — Accommodation APIs
+
+### `POST /api/accommodations`
+- [ ] Route (protected: owner)
+- [ ] Validator: required fields (title, description, type, location, pricing)
+- [ ] Controller: create listing with owner ref, handle photo/video uploads, set status=draft
+- [ ] Test → 201 Created
+
+### `GET /api/accommodations`
+- [ ] Route (public)
+- [ ] Controller: build filter query from query params (keyword, city, price range, gender, roomType, facilities, distance, billsIncluded, minimumPeriod, accommodationType)
+- [ ] Implement text search ($text)
+- [ ] Implement geospatial query ($near with coordinates)
+- [ ] Implement sort (price_asc, price_desc, nearest, rating, newest)
+- [ ] Implement pagination (page, limit)
+- [ ] Populate owner (firstName, lastName)
+- [ ] Test with various filter combinations
+
+### `GET /api/accommodations/:id`
+- [ ] Route (public)
+- [ ] Controller: findById, populate owner, fetch rooms, fetch approved reviews, fetch AI summary
+- [ ] Increment viewCount
+- [ ] Test → 200 with full details
+
+### `PUT /api/accommodations/:id`
+- [ ] Route (protected: listing owner only)
+- [ ] Middleware: verify req.user._id === accommodation.owner
+- [ ] Controller: update fields, handle new photo uploads, handle removePhotos array
+- [ ] Test → 200 Updated
+
+### `PATCH /api/accommodations/:id/publish`
+- [ ] Route (protected: owner)
+- [ ] Controller: set status to pending_review or active
+- [ ] Test → 200
+
+### `PATCH /api/accommodations/:id/unpublish`
+- [ ] Route (protected: owner)
+- [ ] Controller: set status to unpublished
+- [ ] Test → 200
+
+### `DELETE /api/accommodations/:id`
+- [ ] Route (protected: owner/admin)
+- [ ] Controller: check no active bookings, soft delete
+- [ ] Test → 200 / 409
+
+### `GET /api/accommodations/owner/my-listings`
+- [ ] Route (protected: owner)
+- [ ] Controller: find by owner with status filter, return stats (total, active, draft, pending)
+- [ ] Test → 200
+
+## 2.3 Backend — Room APIs
+
+### `POST /api/accommodations/:accommodationId/rooms`
+- [ ] Route (protected: listing owner)
+- [ ] Controller: create room linked to accommodation, update totalRooms/availableRooms
+- [ ] Test → 201
+
+### `GET /api/accommodations/:accommodationId/rooms`
+- [ ] Route (protected: owner/admin)
+- [ ] Controller: find rooms by accommodation, populate currentTenants
+- [ ] Test → 200
+
+### `PUT /api/rooms/:roomId`
+- [ ] Route (protected: owner)
+- [ ] Controller: update room fields
+- [ ] Test → 200
+
+### `DELETE /api/rooms/:roomId`
+- [ ] Route (protected: owner)
+- [ ] Controller: check not occupied, delete, update counts
+- [ ] Test → 200 / 409
+
+## 2.4 Backend — Tenant Management APIs
+
+### `GET /api/accommodations/:id/tenants`
+- [ ] Route (protected: owner)
+- [ ] Controller: find confirmed bookings, populate student + room + payment status
+- [ ] Test → 200
+
+### `PATCH /api/bookings/:bookingId/assign-room`
+- [ ] Route (protected: owner)
+- [ ] Controller: verify room available, assign to booking, update room status + currentTenants
+- [ ] Test → 200
+
+### `POST /api/accommodations/:id/notices`
+- [ ] Route (protected: owner)
+- [ ] Controller: find all active tenants, create notification for each
+- [ ] Test → 200
+
+## 2.5 Frontend — Owner Accommodation Pages
+
+### Create Listing Page
+- [ ] `pages/owner/CreateListingPage.jsx` — Multi-step form:
+  - [ ] Step 1: Basic Info (title, description, type)
+  - [ ] Step 2: Location (district dropdown, city, address, map pin with Google Maps / Leaflet)
+  - [ ] Step 3: Room Types & Pricing (monthlyRent, keyMoney, deposit, bills)
+  - [ ] Step 4: Facilities (checkbox grid — WiFi, furniture, kitchen, etc.)
+  - [ ] Step 5: House Rules (gender, visitors, smoking, pets, quiet hours)
+  - [ ] Step 6: Photos & Videos upload (drag-drop, preview, set primary)
+  - [ ] Step 7: Booking Rules (minimum period, cancellation policy)
+  - [ ] Step 8: Review & Publish (summary + publish/save draft buttons)
+- [ ] Form validation per step
+- [ ] API integration → POST /api/accommodations + file upload
+- [ ] Success redirect to My Listings
+
+### Edit Listing Page
+- [ ] `pages/owner/EditListingPage.jsx` — Pre-filled form from GET /:id
+- [ ] Photo management (add new, remove existing)
+- [ ] API integration → PUT /api/accommodations/:id
+
+### My Listings Page
+- [ ] `pages/owner/MyListingsPage.jsx`
+- [ ] Status filter tabs (All, Active, Draft, Pending, Frozen)
+- [ ] Listing cards with status badges, view count, booking count
+- [ ] Actions: Edit, Publish/Unpublish, Delete
+- [ ] Stats summary header (total, active, draft, pending)
+
+### Room Management (within listing)
+- [ ] `components/accommodation/RoomManager.jsx`
+- [ ] Add room form (roomNumber, type, floor, rent, facilities)
+- [ ] Room list with status badges
+- [ ] Edit/Delete room actions
+
+### Tenant Management Page
+- [ ] `pages/owner/TenantManagementPage.jsx`
+- [ ] Accommodation selector dropdown
+- [ ] Tenant list with student info, room, contract period, payment status
+- [ ] Assign room action (for confirmed bookings without room)
+- [ ] Send notice button → notice form modal
+
+## 2.6 Frontend — Public Search & Listing Pages
+
+### Search/Browse Page
+- [ ] `pages/public/SearchPage.jsx`
+- [ ] Search bar with keyword input
+- [ ] Filter panel (sidebar or collapsible):
+  - [ ] Monthly fee range (min-max slider or dropdowns)
+  - [ ] Gender allowed (Boys/Girls/Mixed radio)
+  - [ ] Room type checkboxes (Single/Double/Shared)
+  - [ ] Distance to campus range
+  - [ ] Facilities checkboxes (WiFi, Furnished, A/C, Bathroom, Kitchen)
+  - [ ] Bills included toggle
+  - [ ] Minimum period dropdown
+  - [ ] Accommodation type dropdown
+- [ ] Sort dropdown (Lowest Price, Nearest, Rating, Newest)
+- [ ] Results grid/list view toggle
+- [ ] Listing cards with: primary photo, title, price, location, gender badge, rating, facilities icons
+- [ ] Pagination
+- [ ] "No results" state with suggestions
+- [ ] API integration → GET /api/accommodations with query params
+
+### Listing Detail Page
+- [ ] `pages/public/ListingDetailPage.jsx`
+- [ ] Photo gallery (carousel/lightbox)
+- [ ] Info sections: Type, Location (with map), Pricing breakdown, Facilities, House Rules, Booking Rules
+- [ ] Availability status badge
+- [ ] Owner info card (name, phone — conditional on auth)
+- [ ] Action buttons: Book Now, Contact Owner, Save/Favorite, Report
+- [ ] Reviews section: average rating, sentiment label, AI summary, individual reviews with pagination
+- [ ] API integration → GET /api/accommodations/:id
+
+## 2.7 Frontend — State Management
+
+- [ ] `features/accommodations/accommodationSlice.js` — list, single, myListings, filters
+- [ ] `features/accommodations/accommodationAPI.js` — all accommodation API calls
+- [ ] `features/rooms/roomSlice.js` + `roomAPI.js`
+
+---
+
+---
+
+# Phase 3 — Module 3: Booking & Search Management
+
+## 3.1 Backend — Models
+
+- [ ] `models/Booking.js` — Full schema with costSummary, status enum, paymentStatus
+- [ ] `models/Inquiry.js` — Communication schema with messages array
+
+## 3.2 Backend — Booking APIs
+
+### `POST /api/bookings`
+- [ ] Route (protected: student)
+- [ ] Validator: accommodationId, roomType, checkInDate, contractPeriod
+- [ ] Controller: verify accommodation available, generate bookingNumber, calculate costSummary, create booking, send email to owner + student, create notifications
+- [ ] Test → 201
+
+### `GET /api/bookings`
+- [ ] Route (protected: student/owner)
+- [ ] Controller: if student → find by student, if owner → find by owner, with status filter + pagination
+- [ ] Populate accommodation (title, location, photo), student/owner info
+- [ ] Test → 200
+
+### `GET /api/bookings/:id`
+- [ ] Route (protected: own booking or own property)
+- [ ] Controller: findById, populate all refs, fetch payments + invoices for this booking
+- [ ] Test → 200
+
+### `PATCH /api/bookings/:id/accept`
+- [ ] Route (protected: owner)
+- [ ] Controller: verify pending status, set confirmed, generate initial invoice, send email to student, create notifications
+- [ ] Test → 200
+
+### `PATCH /api/bookings/:id/reject`
+- [ ] Route (protected: owner)
+- [ ] Controller: set rejected + rejectionReason, send email to student
+- [ ] Test → 200
+
+### `PATCH /api/bookings/:id/cancel`
+- [ ] Route (protected: student/owner)
+- [ ] Controller: set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
+- [ ] Test → 200
+
+### `PATCH /api/bookings/:id/complete`
+- [ ] Route (protected: owner/admin)
+- [ ] Controller: verify contract period ended, set completed
+- [ ] Test → 200
+
+## 3.3 Backend — Favorites APIs
+
+### `POST /api/favorites/:accommodationId`
+- [ ] Route (protected: student)
+- [ ] Controller: push to student.favorites if not exists
+- [ ] Test → 200
+
+### `DELETE /api/favorites/:accommodationId`
+- [ ] Route (protected: student)
+- [ ] Controller: pull from student.favorites
+- [ ] Test → 200
+
+### `GET /api/favorites`
+- [ ] Route (protected: student)
+- [ ] Controller: find student, populate favorites array
+- [ ] Test → 200
+
+## 3.4 Backend — Inquiry/Communication APIs
+
+### `POST /api/inquiries`
+- [ ] Route (protected: student)
+- [ ] Controller: create inquiry with first message, notify owner
+- [ ] Test → 201
+
+### `GET /api/inquiries`
+- [ ] Route (protected: student/owner)
+- [ ] Controller: find by student or owner, populate refs, return last message preview
+- [ ] Test → 200
+
+### `POST /api/inquiries/:inquiryId/messages`
+- [ ] Route (protected: student/owner — participants only)
+- [ ] Controller: push message to messages array, notify recipient
+- [ ] Test → 201
+
+### `PATCH /api/inquiries/:inquiryId/close`
+- [ ] Route (protected: student/owner)
+- [ ] Controller: set status=closed
+- [ ] Test → 200
+
+## 3.5 Frontend — Student Booking Pages
+
+### Booking Flow (on Listing Detail Page)
+- [ ] `components/booking/BookingForm.jsx`
+  - [ ] Room type selector
+  - [ ] Check-in date picker
+  - [ ] Contract period dropdown
+  - [ ] Cost summary display (auto-calculated: rent + keyMoney + deposit)
+  - [ ] Special requests textarea
+  - [ ] Emergency contact fields
+  - [ ] Submit booking button
+- [ ] API integration → POST /api/bookings
+- [ ] Success modal with booking number
+
+### My Bookings Page
+- [ ] `pages/student/MyBookingsPage.jsx`
+- [ ] Status filter tabs (All, Pending, Confirmed, Cancelled, Completed)
+- [ ] Booking cards: accommodation thumbnail, booking number, status badge, dates, cost
+- [ ] Click → booking detail page
+- [ ] Cancel booking button (with reason modal)
+
+### Booking Detail Page
+- [ ] `components/booking/BookingDetail.jsx`
+- [ ] Full booking info: accommodation, room, dates, cost breakdown
+- [ ] Status timeline (Pending → Confirmed → Completed)
+- [ ] Payment history table
+- [ ] Actions: Cancel, Pay Now (link to payment), Write Review (if completed)
+
+### Owner — Booking Requests Page
+- [ ] `pages/owner/BookingRequestsPage.jsx`
+- [ ] Filter by accommodation + status
+- [ ] Request cards: student info, accommodation, room type, dates, cost
+- [ ] Accept / Reject buttons (reject → reason modal)
+- [ ] Auto-generate invoice on accept
+
+### Favorites Page
+- [ ] `pages/student/FavoritesPage.jsx`
+- [ ] Grid of saved listings with remove button
+- [ ] Click → listing detail
+- [ ] Heart icon toggle on listing cards (across SearchPage + DetailPage)
+
+### Inquiry / Chat
+- [ ] `components/inquiry/InquiryList.jsx` — list of conversations
+- [ ] `components/inquiry/ChatWindow.jsx` — message thread with send input
+- [ ] `components/inquiry/ContactOwnerModal.jsx` — choose method (in-app/WhatsApp/form)
+- [ ] WhatsApp deep link generation (wa.me/phone?text=...)
+- [ ] API integration for all inquiry endpoints
+
+## 3.6 Frontend — State Management
+
+- [ ] `features/bookings/bookingSlice.js` + `bookingAPI.js`
+- [ ] `features/favorites/favoriteSlice.js` + `favoriteAPI.js`
+- [ ] `features/inquiries/inquirySlice.js` + `inquiryAPI.js`
+
+---
+
+---
+
+# Phase 4 — Module 4: Reviews & AI Summary
+
+## 4.1 Backend — Models
+
+- [ ] `models/Review.js` — Rating schema with categories, moderation, unique per student+booking
+- [ ] `models/AIReviewSummary.js` — AI summary with sentiment, keywords, themes
+
+## 4.2 Backend — Review APIs
+
+### `POST /api/reviews`
+- [ ] Route (protected: student)
+- [ ] Validator: accommodationId, bookingId, overallRating (1-5), content (min 10 chars)
+- [ ] Controller: verify booking belongs to student + completed/active, check no duplicate, create with pending_approval status
+- [ ] Test → 201
+
+### `GET /api/reviews/accommodation/:accommodationId`
+- [ ] Route (public)
+- [ ] Controller: find approved reviews, populate student, sort + paginate, calculate rating distribution
+- [ ] Test → 200
+
+### `PUT /api/reviews/:id`
+- [ ] Route (protected: student — own only)
+- [ ] Controller: update rating/content, reset to pending_approval
+- [ ] Test → 200
+
+### `DELETE /api/reviews/:id`
+- [ ] Route (protected: student own / admin)
+- [ ] Controller: delete, trigger rating recalculation
+- [ ] Test → 200
+
+### `POST /api/reviews/:id/helpful`
+- [ ] Route (protected: student)
+- [ ] Controller: increment helpfulCount (idempotent per user — can use a Set or separate collection)
+- [ ] Test → 200
+
+## 4.3 Backend — AI Summary APIs
+
+### `GET /api/ai-summaries/:accommodationId`
+- [ ] Route (public)
+- [ ] Controller: findOne by accommodation
+- [ ] Test → 200
+
+### `POST /api/ai-summaries/:accommodationId/regenerate`
+- [ ] Route (protected: admin)
+- [ ] Controller: fetch all approved reviews, call AI analysis function (keyword extraction, sentiment scoring, summary generation), upsert AIReviewSummary, update accommodation.ratingsSummary
+- [ ] Implement AI summary logic (OpenAI API or rule-based keyword analysis)
+- [ ] Test → 200
+
+## 4.4 Frontend — Review Components
+
+### Review Section (on Listing Detail Page)
+- [ ] `components/review/ReviewSummaryCard.jsx` — average rating, star bars, sentiment badge, AI summary
+- [ ] `components/review/ReviewList.jsx` — individual review cards with pagination
+- [ ] `components/review/ReviewCard.jsx` — student name, rating, date, content, helpful button
+- [ ] `components/review/WriteReviewForm.jsx` — star rating input (overall + categories), textarea, submit
+
+### Review Integration
+- [ ] Show "Write a Review" button only for completed/active bookings
+- [ ] API calls: POST review, GET reviews, POST helpful
+- [ ] Toast notifications on submit/error
+
+## 4.5 Frontend — State
+
+- [ ] `features/reviews/reviewSlice.js` + `reviewAPI.js`
+
+---
+
+---
+
+# Phase 5 — Module 5: Payment Management
+
+## 5.1 Backend — Models
+
+- [ ] `models/Payment.js` — Full schema with gateway details, refund tracking
+- [ ] `models/Invoice.js` — Invoice schema with line items, recurring support
+
+## 5.2 Backend — Payment APIs
+
+### `POST /api/payments/initiate`
+- [ ] Route (protected: student)
+- [ ] Controller: find invoice, verify unpaid, create Payment with status=processing, integrate with payment gateway (Stripe/PayHere), return redirect URL or client secret
+- [ ] Test → 200
+
+### `POST /api/payments/webhook/:gateway`
+- [ ] Route (public — gateway signature verification)
+- [ ] Controller: verify signature, find payment by gatewayTransactionId, update status, generate receipt, send email, update booking.paymentStatus
+- [ ] Test with gateway sandbox
+
+### `GET /api/payments`
+- [ ] Route (protected: student/owner)
+- [ ] Controller: find by paidBy (student) or paidTo (owner), with filters + pagination
+- [ ] Test → 200
+
+### `GET /api/payments/:id`
+- [ ] Route (protected: own payment)
+- [ ] Controller: findById, populate booking + user refs
+- [ ] Test → 200
+
+### `GET /api/payments/:id/receipt`
+- [ ] Route (protected)
+- [ ] Controller: generate PDF receipt or return receiptUrl
+- [ ] Test → PDF download
+
+### `POST /api/payments/:paymentId/refund`
+- [ ] Route (protected: admin)
+- [ ] Controller: verify amount <= original, call gateway refund, update payment status, send notifications
+- [ ] Test → 200
+
+## 5.3 Backend — Invoice APIs
+
+### `GET /api/invoices`
+- [ ] Route (protected: student/owner)
+- [ ] Controller: find by student or booking.owner, filter by status + booking
+- [ ] Test → 200
+
+### `GET /api/invoices/:id`
+- [ ] Route (protected)
+- [ ] Controller: findById with populated refs
+- [ ] Test → 200
+
+### Auto Invoice Generation (internal)
+- [ ] Create utility: `generateMonthlyInvoices()` — cron job or on-demand
+- [ ] Find all confirmed bookings → generate next month invoice
+- [ ] Set up monthly cron with node-cron or agenda
+
+## 5.4 Frontend — Payment Pages
+
+### Payment Flow
+- [ ] `components/payment/InvoiceCard.jsx` — invoice number, amount, due date, status, Pay Now button
+- [ ] `components/payment/PaymentGateway.jsx` — gateway selection (Stripe/PayHere), redirect handling
+- [ ] `pages/student/PaymentSuccessPage.jsx` — post-payment redirect confirmation
+- [ ] `pages/student/PaymentFailedPage.jsx` — error + retry
+
+### Payment History
+- [ ] `components/payment/PaymentHistory.jsx` — table with filters (status, type, date range)
+- [ ] `components/payment/PaymentDetail.jsx` — full payment info + download receipt
+- [ ] Integrate into Student Dashboard + Booking Detail Page
+
+### Invoices View
+- [ ] `components/payment/InvoiceList.jsx` — table with status badges (sent, paid, overdue)
+- [ ] Overdue invoices highlighted in red
+- [ ] API integration for all payment/invoice endpoints
+
+## 5.5 Frontend — State
+
+- [ ] `features/payments/paymentSlice.js` + `paymentAPI.js`
+- [ ] `features/invoices/invoiceSlice.js` + `invoiceAPI.js`
+
+---
+
+---
+
+# Phase 6 — Module 6: Maintenance & Support
+
+## 6.1 Backend — Models
+
+- [ ] `models/MaintenanceTicket.js` — Full schema with statusHistory, SLA, completion, ratings
+
+## 6.2 Backend — Ticket APIs
+
+### `POST /api/tickets`
+- [ ] Route (protected: student — active booking required)
+- [ ] Validator: accommodationId, category, title, description
+- [ ] Controller: generate ticketNumber, create with status=open, calculate SLA deadlines, send notification to owner
+- [ ] Test → 201
+
+### `GET /api/tickets`
+- [ ] Route (protected: student/owner/provider)
+- [ ] Controller: role-based query (student=createdBy, owner=owner, provider=assignedProvider), with status/priority/category filters + pagination
+- [ ] Return stats (open, inProgress, completed counts)
+- [ ] Test → 200
+
+### `GET /api/tickets/:id`
+- [ ] Route (protected: participants)
+- [ ] Controller: findById, populate all refs, include statusHistory
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/approve`
+- [ ] Route (protected: owner)
+- [ ] Controller: set status=approved, push to statusHistory
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/assign`
+- [ ] Route (protected: owner)
+- [ ] Controller: set assignedProvider + scheduledVisit, status=assigned, notify provider + student
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/accept-task`
+- [ ] Route (protected: provider)
+- [ ] Controller: set status=in_progress, push to statusHistory
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/decline-task`
+- [ ] Route (protected: provider)
+- [ ] Controller: clear assignedProvider, set status=approved, notify owner to reassign
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/complete`
+- [ ] Route (protected: provider)
+- [ ] Controller: set completionDetails (notes, cost, proof photos), status=completed, notify student + owner
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/confirm`
+- [ ] Route (protected: student)
+- [ ] Controller: if isResolved=true → status=closed, else → status=re_opened + notify owner
+- [ ] Test → 200
+
+### `POST /api/tickets/:id/rate`
+- [ ] Route (protected: student)
+- [ ] Controller: set providerRating + ownerRating, update provider.averageRating
+- [ ] Test → 200
+
+### `GET /api/service-providers`
+- [ ] Route (protected: owner)
+- [ ] Controller: find approved + available providers, filter by category/district/city
+- [ ] Test → 200
+
+## 6.3 Frontend — Student Ticket Pages
+
+### Create Ticket
+- [ ] `components/ticket/CreateTicketForm.jsx`
+  - [ ] Category dropdown (plumbing, electrical, cleaning, etc.)
+  - [ ] Title + description fields
+  - [ ] Priority selector (Low/Medium/High/Urgent)
+  - [ ] Photo/video upload (max 5)
+  - [ ] Accommodation + room auto-populated from active booking
+  - [ ] Submit button
+- [ ] API integration → POST /api/tickets
+
+### My Tickets Page
+- [ ] `pages/student/MyTicketsPage.jsx`
+- [ ] Status filter tabs
+- [ ] Ticket cards: number, category icon, title, priority badge, status, date
+- [ ] Click → ticket detail
+
+### Ticket Detail Page
+- [ ] `components/ticket/TicketDetail.jsx`
+- [ ] Status timeline (Open → Approved → Assigned → In Progress → Completed → Closed)
+- [ ] Issue details + attachments (photo viewer)
+- [ ] Assigned provider info + scheduled visit
+- [ ] Completion proof photos
+- [ ] Confirm resolution button (Yes resolved / Not resolved)
+- [ ] Rate provider + owner form (after closure)
+
+## 6.4 Frontend — Owner Ticket Pages
+
+### Owner Tickets Page
+- [ ] `pages/owner/OwnerTicketsPage.jsx`
+- [ ] Filter by accommodation + status + priority
+- [ ] Ticket list with actions:
+  - [ ] Approve button (for open tickets)
+  - [ ] Assign provider button → provider selection modal
+- [ ] Provider selection modal:
+  - [ ] Filter by category + area
+  - [ ] Provider cards (name, rating, completed tasks, availability)
+  - [ ] Date picker + time slot selector
+  - [ ] Assign button
+
+## 6.5 Frontend — Provider Pages
+
+### Provider Dashboard
+- [ ] `pages/provider/ProviderDashboard.jsx`
+- [ ] Stats: assigned, in progress, completed counts
+- [ ] Upcoming scheduled visits
+- [ ] Recent task notifications
+
+### My Tasks Page
+- [ ] `pages/provider/MyTasksPage.jsx`
+- [ ] Status filter tabs (Assigned, In Progress, Completed)
+- [ ] Task cards with: category, title, location, scheduled date, priority
+- [ ] Accept/Decline buttons (for assigned tasks)
+- [ ] Mark complete form:
+  - [ ] Completion notes textarea
+  - [ ] Cost input (optional)
+  - [ ] Upload completion proof photos
+  - [ ] Submit button
+
+## 6.6 Frontend — State
+
+- [ ] `features/tickets/ticketSlice.js` + `ticketAPI.js`
+- [ ] `features/providers/providerSlice.js` + `providerAPI.js`
+
+---
+
+---
+
+# Phase 7 — Module 7: Admin Panel
+
+## 7.1 Backend — Admin APIs
+
+### User Management
+- [ ] `GET /api/admin/users` — list all users with role/status filters + search
+- [ ] `PATCH /api/admin/users/:id/status` — approve/suspend/delete user
+- [ ] `PATCH /api/admin/owners/:id/verify` — verify/reject owner
+- [ ] `PATCH /api/admin/providers/:id/verify` — approve/reject provider
+
+### Listing Moderation
+- [ ] `GET /api/admin/accommodations` — listings with status filters
+- [ ] `PATCH /api/admin/accommodations/:id/moderate` — approve/reject/freeze/unfreeze
+
+### Report Management
+- [ ] `POST /api/reports/listing` — student submits listing report
+- [ ] `GET /api/admin/reports/listings` — all reports with status filter
+- [ ] `PATCH /api/admin/reports/:id/resolve` — resolve with action
+
+### Review Moderation
+- [ ] `GET /api/admin/reviews/pending` — pending reviews
+- [ ] `PATCH /api/admin/reviews/:id/moderate` — approve/reject
+
+### Analytics
+- [ ] `GET /api/admin/analytics/dashboard` — overview stats
+- [ ] `GET /api/admin/analytics/revenue` — revenue breakdown by period
+
+### Transactions
+- [ ] `GET /api/admin/transactions` — all payments with filters
+
+### Escalated Tickets
+- [ ] `GET /api/admin/tickets/escalated` — SLA-exceeded tickets
+
+### Notification Console
+- [ ] `GET /api/admin/notifications/logs` — notification logs
+- [ ] `POST /api/admin/notifications/retry-failed` — retry failed notifications
+- [ ] `POST /api/admin/notifications/broadcast` — system announcement
+- [ ] `GET /api/admin/notification-templates` — list templates
+- [ ] `PUT /api/admin/notification-templates/:id` — update template
+
+### Audit Logs
+- [ ] `GET /api/admin/audit-logs` — security logs with filters
+
+## 7.2 Frontend — Admin Pages
+
+### Admin Dashboard
+- [ ] `pages/admin/AdminDashboard.jsx`
+- [ ] Stats cards: total users, active listings, bookings this month, revenue, open tickets, pending reports
+- [ ] Quick charts: bookings over time, revenue over time, user growth
+- [ ] Recent activity feed
+- [ ] API → GET /api/admin/analytics/dashboard
+
+### User Management Page
+- [ ] `pages/admin/UserManagementPage.jsx`
+- [ ] Role tabs (Students, Owners, Providers, All)
+- [ ] Search bar + status filter
+- [ ] User table: name, email, role, status, registered date, actions
+- [ ] Actions: View Profile modal, Approve, Suspend, Delete
+- [ ] Owner verification: view documents, approve/reject
+- [ ] Provider approval: view certifications, approve/reject
+
+### Listing Moderation Page
+- [ ] `pages/admin/ListingModerationPage.jsx`
+- [ ] Status tabs (Pending Review, Active, Frozen, Reported)
+- [ ] Listing cards with owner info + report count
+- [ ] Actions: Approve, Reject (with reason), Freeze, Unfreeze, Unpublish
+- [ ] Click → full listing preview
+
+### Reports Page
+- [ ] `pages/admin/ReportsPage.jsx`
+- [ ] Pending/resolved tabs
+- [ ] Report cards: reported listing, reporter, reason, evidence, date
+- [ ] Resolve modal: resolution note + action dropdown (none/warning/freeze/unpublish/suspend owner)
+
+### Review Moderation
+- [ ] `components/admin/PendingReviewsList.jsx`
+- [ ] Review cards: student, accommodation, rating, content
+- [ ] Approve / Reject (with reason) buttons
+
+### Transactions Page
+- [ ] `pages/admin/TransactionsPage.jsx`
+- [ ] Table: payment number, student, owner, amount, type, method, status, date
+- [ ] Filters: status, date range, payment type
+- [ ] Refund button → refund modal (amount, reason)
+
+### Ticket Escalations Page
+- [ ] `pages/admin/TicketEscalationsPage.jsx`
+- [ ] Escalated tickets list with SLA overdue time
+- [ ] View details + contact owner action
+
+### Notification Console Page
+- [ ] `pages/admin/NotificationConsolePage.jsx`
+- [ ] Notification logs table with delivery status
+- [ ] Filters: type, channel, status, date
+- [ ] Retry failed button
+- [ ] Broadcast announcement form (title, message, target group, channels)
+- [ ] Template management section (edit templates)
+
+### Analytics/Reports Page
+- [ ] Revenue chart (monthly bar chart)
+- [ ] Bookings trend (line chart)
+- [ ] User distribution (pie chart)
+- [ ] Export to CSV/PDF button
+
+### Audit Log Page
+- [ ] `pages/admin/AuditLogPage.jsx`
+- [ ] Table: timestamp, user, action, entity, IP, description
+- [ ] Filters: action type, user, entity type, date range
+- [ ] Search functionality
+
+## 7.3 Frontend — State
+
+- [ ] `features/admin/adminSlice.js` + `adminAPI.js`
+
+---
+
+---
+
+# Phase 8 — Notifications System (Cross-Cutting)
+
+## 8.1 Backend
+
+- [ ] `models/Notification.js` — Full schema with TTL index, idempotency
+- [ ] `models/NotificationTemplate.js` — Template schema
+- [ ] `models/AuditLog.js` — Audit trail schema
+- [ ] `utils/notification.util.js`:
+  - [ ] `createNotification(recipientId, type, category, data)` — create in-app notification
+  - [ ] `sendEmailNotification(to, templateName, variables)` — render template + send via Nodemailer
+  - [ ] `checkIdempotency(key)` — prevent duplicate notifications
+- [ ] Integrate notification calls into all controllers:
+  - [ ] Registration → confirmation email
+  - [ ] Booking request → owner email + in-app
+  - [ ] Booking accept/reject → student email + in-app
+  - [ ] Payment success/fail → email + in-app
+  - [ ] Invoice generated → email + in-app
+  - [ ] Ticket created → owner notification
+  - [ ] Ticket assigned → provider notification
+  - [ ] Ticket completed → student notification
+  - [ ] Report submitted → admin notification
+
+### Notification User APIs
+- [ ] `GET /api/notifications` — user's notifications with unread count
+- [ ] `PATCH /api/notifications/:id/read` — mark as read
+- [ ] `PATCH /api/notifications/read-all` — mark all read
+
+## 8.2 Frontend
+
+- [ ] `components/notification/NotificationBell.jsx` — navbar bell icon with unread badge count
+- [ ] `components/notification/NotificationDropdown.jsx` — dropdown list of recent notifications
+- [ ] `components/notification/NotificationItem.jsx` — icon + title + time + read/unread style
+- [ ] Click notification → navigate to related entity (booking, ticket, payment, etc.)
+- [ ] Mark as read on click
+- [ ] "Mark all as read" button
+- [ ] Polling or WebSocket for real-time updates (optional: Socket.io)
+- [ ] `hooks/useNotifications.js` — custom hook for notification polling
+- [ ] `features/notifications/notificationSlice.js` + `notificationAPI.js`
+
+---
+
+---
+
+# Phase 9 — Testing, Deployment & Documentation
+
+## 9.1 Backend Testing
+
+- [ ] Unit tests for all utility functions (token, email, pagination, auditLog)
+- [ ] Integration tests for auth endpoints (register, login, verify, reset)
+- [ ] Integration tests for accommodation CRUD
+- [ ] Integration tests for booking flow (create → accept → pay → complete)
+- [ ] Integration tests for ticket flow (create → assign → complete → close)
+- [ ] Integration tests for admin endpoints
+- [ ] Test payment gateway webhooks with sandbox
+- [ ] Test email sending (use Mailtrap or Ethereal for testing)
+- [ ] Load test with concurrent bookings
+
+## 9.2 Frontend Testing
+
+- [ ] Component tests for auth forms (Register, Login)
+- [ ] Component tests for search filters
+- [ ] Component tests for booking form
+- [ ] Page-level tests for key flows
+- [ ] E2E tests with Cypress:
+  - [ ] Student: register → verify → search → book → pay → review
+  - [ ] Owner: register → verify → create listing → manage bookings → manage tickets
+  - [ ] Admin: login → moderate listing → resolve report → view analytics
+
+## 9.3 Deployment
+
+- [ ] Set up production MongoDB (Atlas)
+- [ ] Set up file storage (AWS S3 / Cloudinary) for images/videos/documents
+- [ ] Configure environment variables for production
+- [ ] Deploy backend to (Render / Railway / AWS EC2 / DigitalOcean)
+- [ ] Deploy frontend to (Vercel / Netlify / AWS Amplify)
+- [ ] Set up domain + SSL certificate
+- [ ] Configure CORS for production domain
+- [ ] Set up CI/CD pipeline (GitHub Actions)
+- [ ] Set up monitoring (PM2 for Node, UptimeRobot for health checks)
+
+## 9.4 Documentation
+
+- [ ] API documentation (Swagger/Postman collection)
+- [ ] Database schema document (completed ✅)
+- [ ] Use case document (completed ✅)
+- [ ] User manual (student, owner, provider, admin guides)
+- [ ] System architecture diagram
+- [ ] Deployment guide
+
+---
+
+---
+
+# 📊 Task Summary
+
+| Phase | Module | Backend Tasks | Frontend Tasks | Total |
+|-------|--------|:---:|:---:|:---:|
+| Phase 0 | Project Setup | 25 | 20 | 45 |
+| Phase 1 | Auth & Users | 35 | 30 | 65 |
+| Phase 2 | Accommodations | 30 | 40 | 70 |
+| Phase 3 | Bookings & Search | 25 | 35 | 60 |
+| Phase 4 | Reviews & AI | 15 | 12 | 27 |
+| Phase 5 | Payments | 18 | 15 | 33 |
+| Phase 6 | Maintenance | 25 | 30 | 55 |
+| Phase 7 | Admin Panel | 22 | 30 | 52 |
+| Phase 8 | Notifications | 15 | 10 | 25 |
+| Phase 9 | Testing & Deploy | 20 | 15 | 35 |
+| **TOTAL** | | **230** | **237** | **467** |
+
+---
+
+> **💡 Pro Tips:**
+> - Complete phases in order — each depends on the previous
+> - Backend API first → test with Postman → then build frontend
+> - Commit after each completed API/page (small, frequent commits)
+> - Use Postman collection to document & test every endpoint
+> - Keep `.env.example` updated as you add new variables
