@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -79,4 +79,4 @@ auditLogSchema.index({ entityType: 1, entityId: 1 });
 
 const AuditLog = mongoose.model("AuditLog", auditLogSchema);
 
-module.exports = AuditLog;
+export default AuditLog;

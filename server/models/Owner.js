@@ -4,9 +4,9 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
-const User = require("./User");
+import User from "./User.js";
 
 // ────────────────────────────────────────────────────────────────────────────
 // 3. OWNER (Extends User)
@@ -47,4 +47,4 @@ const ownerSchema = new Schema({
 
 const Owner = User.discriminator("owner", ownerSchema);
 
-module.exports = Owner;
+export default Owner;

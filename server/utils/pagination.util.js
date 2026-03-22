@@ -116,7 +116,7 @@ const createPaginationResponse = (data, page, limit, total) => {
   };
 };
 
-module.exports = {
+export {
   paginate,
   getPaginationParams,
   createPaginationResponse

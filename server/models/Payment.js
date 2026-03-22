@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -82,4 +82,4 @@ paymentSchema.index({ paymentNumber: 1 });
 
 const Payment = mongoose.model("Payment", paymentSchema);
 
-module.exports = Payment;
+export default Payment;

@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -73,4 +73,4 @@ listingReportSchema.index({ reportedBy: 1, accommodation: 1 }, { unique: true })
 
 const ListingReport = mongoose.model("ListingReport", listingReportSchema);
 
-module.exports = ListingReport;
+export default ListingReport;

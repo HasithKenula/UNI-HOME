@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -44,4 +44,4 @@ const notificationTemplateSchema = new Schema(
 
 const NotificationTemplate = mongoose.model("NotificationTemplate", notificationTemplateSchema);
 
-module.exports = NotificationTemplate;
+export default NotificationTemplate;

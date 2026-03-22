@@ -2,8 +2,8 @@
 // Token Utility - JWT Helper Functions
 // ============================================================================
 
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 /**
  * Generate JWT access token
@@ -100,7 +100,7 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
     });
 };
 
-module.exports = {
+export {
   generateAccessToken,
   generateRefreshToken,
   verifyToken,

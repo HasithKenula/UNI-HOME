@@ -4,9 +4,9 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
-const User = require("./User");
+import User from "./User.js";
 
 // ────────────────────────────────────────────────────────────────────────────
 // 2. STUDENT (Extends User)
@@ -32,4 +32,4 @@ const studentSchema = new Schema({
 
 const Student = User.discriminator("student", studentSchema);
 
-module.exports = Student;
+export default Student;

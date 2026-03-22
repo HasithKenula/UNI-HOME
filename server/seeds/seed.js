@@ -2,23 +2,24 @@
 // Database Seeder - Populate MongoDB with Sample Data
 // ============================================================================
 
-require('dotenv').config();
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import dotenv from 'dotenv';
+dotenv.config();
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 // Import all models
-const User = require('../models/User');
-const Student = require('../models/Student');
-const Owner = require('../models/Owner');
-const ServiceProvider = require('../models/ServiceProvider');
-const Admin = require('../models/Admin');
-const Accommodation = require('../models/Accommodation');
-const Room = require('../models/Room');
-const Booking = require('../models/Booking');
-const Payment = require('../models/Payment');
-const Review = require('../models/Review');
-const MaintenanceTicket = require('../models/MaintenanceTicket');
-const Notification = require('../models/Notification');
+import User from '../models/User.js';
+import Student from '../models/Student.js';
+import Owner from '../models/Owner.js';
+import ServiceProvider from '../models/ServiceProvider.js';
+import Admin from '../models/Admin.js';
+import Accommodation from '../models/Accommodation.js';
+import Room from '../models/Room.js';
+import Booking from '../models/Booking.js';
+import Payment from '../models/Payment.js';
+import Review from '../models/Review.js';
+import MaintenanceTicket from '../models/MaintenanceTicket.js';
+import Notification from '../models/Notification.js';
 
 // Connect to MongoDB
 const connectDB = async () => {

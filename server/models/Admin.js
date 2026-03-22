@@ -4,9 +4,9 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
-const User = require("./User");
+import User from "./User.js";
 
 // ────────────────────────────────────────────────────────────────────────────
 // 5. ADMIN (Extends User)
@@ -44,4 +44,4 @@ const adminSchema = new Schema({
 
 const Admin = User.discriminator("admin", adminSchema);
 
-module.exports = Admin;
+export default Admin;

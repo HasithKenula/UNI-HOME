@@ -2,7 +2,7 @@
 // Email Utility - Nodemailer Helper Functions
 // ============================================================================
 
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 /**
  * Create reusable transporter
@@ -192,7 +192,7 @@ const sendWelcomeEmail = async (user) => {
   });
 };
 
-module.exports = {
+export {
   sendEmail,
   sendVerificationEmail,
   sendPasswordResetEmail,
