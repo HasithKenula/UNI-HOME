@@ -4,9 +4,9 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
-const User = require("./User");
+import User from "./User.js";
 
 // ────────────────────────────────────────────────────────────────────────────
 // 4. SERVICE PROVIDER (Extends User)
@@ -53,4 +53,4 @@ const serviceProviderSchema = new Schema({
 
 const ServiceProvider = User.discriminator("service_provider", serviceProviderSchema);
 
-module.exports = ServiceProvider;
+export default ServiceProvider;

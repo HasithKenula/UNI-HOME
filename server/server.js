@@ -2,20 +2,22 @@
 // SLIIT Student Accommodation Management System - Server Entry Point
 // ============================================================================
 
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
+import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 
 // Import database connection
-const connectDB = require('./config/db');
+import connectDB from './config/db.js';
 
 // Import middleware
-const errorHandler = require('./middleware/error.middleware');
+import errorHandler from './middleware/error.middleware.js';
 
 // Initialize Express app
 const app = express();
@@ -126,4 +128,4 @@ process.on('unhandledRejection', (err, promise) => {
   server.close(() => process.exit(1));
 });
 
-module.exports = app;
+export default app;

@@ -2,8 +2,8 @@
 // Notification Utility - Multi-channel notification dispatch
 // ============================================================================
 
-const Notification = require('../models/Notification');
-const { sendEmail } = require('./email.util');
+import Notification from '../models/Notification.js';
+import { sendEmail } from './email.util.js';
 
 /**
  * Create and dispatch notification
@@ -276,7 +276,7 @@ const getUserNotifications = async (userId, options = {}) => {
   };
 };
 
-module.exports = {
+export {
   createNotification,
   dispatchNotification,
   NotificationTemplates,

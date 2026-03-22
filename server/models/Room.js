@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -66,4 +66,4 @@ roomSchema.index({ accommodation: 1, status: 1 });
 
 const Room = mongoose.model("Room", roomSchema);
 
-module.exports = Room;
+export default Room;

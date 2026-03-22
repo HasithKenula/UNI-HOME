@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -64,4 +64,4 @@ const aiReviewSummarySchema = new Schema(
 
 const AIReviewSummary = mongoose.model("AIReviewSummary", aiReviewSummarySchema);
 
-module.exports = AIReviewSummary;
+export default AIReviewSummary;

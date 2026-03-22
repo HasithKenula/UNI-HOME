@@ -132,9 +132,4 @@ const approvedProviderOnly = (req, res, next) => {
   next();
 };
 
-module.exports = {
-  authorize,
-  isOwnerOrAdmin,
-  verifiedOwnerOnly,
-  approvedProviderOnly
-};
+export { authorize, isOwnerOrAdmin, verifiedOwnerOnly, approvedProviderOnly };

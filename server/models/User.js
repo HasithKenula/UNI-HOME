@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -73,4 +73,4 @@ userSchema.index({ role: 1, accountStatus: 1 });
 
 const User = mongoose.model("User", userSchema);
 
-module.exports = User;
+export default User;

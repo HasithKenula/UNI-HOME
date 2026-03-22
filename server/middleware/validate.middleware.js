@@ -2,7 +2,7 @@
 // Validation Middleware - Express Validator Wrapper
 // ============================================================================
 
-const { validationResult } = require('express-validator');
+import { validationResult } from 'express-validator';
 
 /**
  * Validation result handler
@@ -30,4 +30,4 @@ const validate = (req, res, next) => {
   next();
 };
 
-module.exports = validate;
+export default validate;

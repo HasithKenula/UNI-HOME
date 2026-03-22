@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -76,4 +76,4 @@ invoiceSchema.index({ dueDate: 1, status: 1 });
 
 const Invoice = mongoose.model("Invoice", invoiceSchema);
 
-module.exports = Invoice;
+export default Invoice;

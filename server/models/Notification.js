@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -114,4 +114,4 @@ notificationSchema.index({ idempotencyKey: 1 });
 
 const Notification = mongoose.model("Notification", notificationSchema);
 
-module.exports = Notification;
+export default Notification;

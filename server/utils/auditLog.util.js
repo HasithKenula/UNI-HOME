@@ -2,7 +2,7 @@
 // Audit Log Utility - System-wide activity logging
 // ============================================================================
 
-const AuditLog = require('../models/AuditLog');
+import AuditLog from '../models/AuditLog.js';
 
 /**
  * Log user action to audit trail
@@ -170,7 +170,7 @@ const auditMiddleware = (entity) => {
   };
 };
 
-module.exports = {
+export {
   logAction,
   logAuth,
   logCRUD,

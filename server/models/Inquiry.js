@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -75,4 +75,4 @@ inquirySchema.index({ owner: 1, status: 1 });
 
 const Inquiry = mongoose.model("Inquiry", inquirySchema);
 
-module.exports = Inquiry;
+export default Inquiry;

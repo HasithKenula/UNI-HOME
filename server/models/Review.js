@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -68,4 +68,4 @@ reviewSchema.index({ student: 1, booking: 1 }, { unique: true });
 
 const Review = mongoose.model("Review", reviewSchema);
 
-module.exports = Review;
+export default Review;

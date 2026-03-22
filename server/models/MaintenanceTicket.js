@@ -4,7 +4,7 @@
 // Version: 1.0 | March 2026
 // ============================================================================
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -130,4 +130,4 @@ maintenanceTicketSchema.index({ ticketNumber: 1 });
 
 const MaintenanceTicket = mongoose.model("MaintenanceTicket", maintenanceTicketSchema);
 
-module.exports = MaintenanceTicket;
+export default MaintenanceTicket;

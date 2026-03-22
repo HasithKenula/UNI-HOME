@@ -2,8 +2,8 @@
 // Authentication Middleware - JWT Token Verification
 // ============================================================================
 
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 /**
  * Protect routes - Verify JWT token
@@ -108,7 +108,4 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
-module.exports = {
-  protect,
-  optionalAuth
-};
+export { protect, optionalAuth };
