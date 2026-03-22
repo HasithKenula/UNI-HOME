@@ -27,8 +27,8 @@
 
 ## 0.1 Repository & Folder Structure
 
-- [ ] Create GitHub repository `sliit-accommodation-system`
-- [ ] Initialize monorepo structure:
+- [x] Create GitHub repository `sliit-accommodation-system`
+- [x] Initialize monorepo structure:
   ```
   /
   ├── client/          (React frontend)
@@ -36,25 +36,25 @@
   ├── docs/            (Documentation)
   └── README.md
   ```
-- [ ] Create `.gitignore` (node_modules, .env, build, uploads)
-- [ ] Create `README.md` with project overview
-- [ ] Set up branch strategy (main, develop, feature/*)
+- [x] Create `.gitignore` (node_modules, .env, build, uploads)
+- [x] Create `README.md` with project overview
+- [x] Set up branch strategy (main, develop, feature/*)
 
 ## 0.2 Backend Initialization (server/)
 
-- [ ] `cd server && npm init -y`
-- [ ] Install core dependencies:
+- [x] `cd server && npm init -y`
+- [x] Install core dependencies:
   ```bash
   npm install express mongoose dotenv cors helmet morgan
   npm install bcryptjs jsonwebtoken cookie-parser
   npm install express-validator multer nodemailer
   npm install express-rate-limit
   ```
-- [ ] Install dev dependencies:
+- [x] Install dev dependencies:
   ```bash
   npm install -D nodemon jest supertest
   ```
-- [ ] Create backend folder structure:
+- [x] Create backend folder structure:
   ```
   server/
   ├── config/
@@ -132,9 +132,9 @@
   ├── server.js                   # Entry point
   └── .env
   ```
-- [ ] Create `server.js` — Express app setup with middleware
-- [ ] Create `config/db.js` — MongoDB connection with Mongoose
-- [ ] Create `.env` file:
+- [x] Create `server.js` — Express app setup with middleware
+- [x] Create `config/db.js` — MongoDB connection with Mongoose
+- [x] Create `.env` file:
   ```env
   PORT=5000
   MONGO_URI=mongodb://localhost:27017/sliit_accommodation_db
@@ -147,14 +147,14 @@
   EMAIL_PASS=your_app_password
   CLIENT_URL=http://localhost:3000
   ```
-- [ ] Create global error handler middleware
+- [x] Create global error handler middleware
 - [ ] Test server starts: `npm run dev` → `Server running on port 5000`
 - [ ] Test MongoDB connection → `MongoDB Connected`
 
 ## 0.3 Frontend Initialization (client/)
 
-- [ ] `npx create-react-app client` or `npm create vite@latest client -- --template react`
-- [ ] Install core dependencies:
+- [x] `npx create-react-app client` or `npm create vite@latest client -- --template react`
+- [x] Install core dependencies:
   ```bash
   npm install react-router-dom axios
   npm install @reduxjs/toolkit react-redux
@@ -162,8 +162,8 @@
   npm install react-icons lucide-react
   npm install tailwindcss @tailwindcss/forms postcss autoprefixer
   ```
-- [ ] Configure Tailwind CSS (`tailwind.config.js`, `postcss.config.js`)
-- [ ] Create frontend folder structure:
+- [x] Configure Tailwind CSS (`tailwind.config.js`, `postcss.config.js`)
+- [x] Create frontend folder structure:
   ```
   client/src/
   ├── api/
@@ -255,33 +255,33 @@
   ├── App.jsx
   └── index.jsx
   ```
-- [ ] Set up Axios instance with base URL + JWT interceptor
-- [ ] Set up Redux store with auth slice
-- [ ] Set up React Router with public/private/role routes
+- [x] Set up Axios instance with base URL + JWT interceptor
+- [x] Set up Redux store with auth slice
+- [x] Set up React Router with public/private/role routes
 - [ ] Create layout components (Public, Student, Owner, Provider, Admin)
 - [ ] Create reusable UI components (Navbar, Footer, Spinner, Modal, Pagination)
 - [ ] Test: `npm start` → React app running on `http://localhost:3000`
 
 ## 0.4 Database Setup
 
-- [ ] Create all 18 Mongoose model files from `DATABASE_MODLES.txt`
-- [ ] Set up User discriminators (Student, Owner, ServiceProvider, Admin)
-- [ ] Verify all indexes are created (2dsphere, text, compound, TTL, unique)
+- [x] Create all 18 Mongoose model files from `DATABASE_MODLES.txt`
+- [x] Set up User discriminators (Student, Owner, ServiceProvider, Admin)
+- [x] Verify all indexes are created (2dsphere, text, compound, TTL, unique)
 - [ ] Create database seeder script (`server/seeds/seed.js`)
 - [ ] Run seeder → verify sample data in MongoDB Compass
 
 ## 0.5 Shared Middleware & Utilities
 
-- [ ] Create `auth.middleware.js` — JWT token verification
-- [ ] Create `role.middleware.js` — `authorize('student', 'owner', 'admin')`
-- [ ] Create `validate.middleware.js` — express-validator wrapper
-- [ ] Create `upload.middleware.js` — Multer config (images, videos, docs)
-- [ ] Create `error.middleware.js` — global error handler with status codes
-- [ ] Create `email.util.js` — Nodemailer transporter + send function
-- [ ] Create `token.util.js` — generateAccessToken, generateRefreshToken, verifyToken
-- [ ] Create `pagination.util.js` — paginate(model, query, options)
-- [ ] Create `auditLog.util.js` — logAction(userId, action, entity, details)
-- [ ] Create `notification.util.js` — createNotification(recipient, type, data)
+- [x] Create `auth.middleware.js` — JWT token verification
+- [x] Create `role.middleware.js` — `authorize('student', 'owner', 'admin')`
+- [x] Create `validate.middleware.js` — express-validator wrapper
+- [x] Create `upload.middleware.js` — Multer config (images, videos, docs)
+- [x] Create `error.middleware.js` — global error handler with status codes
+- [x] Create `email.util.js` — Nodemailer transporter + send function
+- [x] Create `token.util.js` — generateAccessToken, generateRefreshToken, verifyToken
+- [x] Create `pagination.util.js` — paginate(model, query, options)
+- [x] Create `auditLog.util.js` — logAction(userId, action, entity, details)
+- [x] Create `notification.util.js` — createNotification(recipient, type, data)
 
 ---
 
