@@ -76,9 +76,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes (to be added in Phase 1+)
-// app.use('/api/auth', require('./routes/auth.routes'));
-// app.use('/api/users', require('./routes/user.routes'));
+// Import routes
+import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+
+// Additional routes (to be added in future phases)
 // app.use('/api/accommodations', require('./routes/accommodation.routes'));
 // app.use('/api/rooms', require('./routes/room.routes'));
 // app.use('/api/bookings', require('./routes/booking.routes'));
