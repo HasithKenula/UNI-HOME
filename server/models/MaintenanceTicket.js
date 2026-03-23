@@ -126,7 +126,6 @@ const maintenanceTicketSchema = new Schema(
 
 maintenanceTicketSchema.index({ status: 1, priority: 1 });
 maintenanceTicketSchema.index({ assignedProvider: 1, status: 1 });
-maintenanceTicketSchema.index({ ticketNumber: 1 });
 
 const MaintenanceTicket = mongoose.model("MaintenanceTicket", maintenanceTicketSchema);
 

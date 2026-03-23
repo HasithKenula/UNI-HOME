@@ -196,6 +196,15 @@ const authSlice = createSlice({
         localStorage.removeItem('refreshToken');
         toast.success('Logged out successfully');
       })
+      .addCase(logoutAsync.rejected, (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.loading = false;
+        localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        toast.warning('Logged out locally (server unavailable)');
+      })
       // Load User
       .addCase(loadUserAsync.fulfilled, (state, action) => {
         state.user = action.payload.data;

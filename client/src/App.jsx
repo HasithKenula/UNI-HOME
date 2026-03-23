@@ -11,6 +11,10 @@ import CreateListingPage from './pages/owner/CreateListingPage';
 import EditListingPage from './pages/owner/EditListingPage';
 import MyListingsPage from './pages/owner/MyListingsPage';
 import TenantManagementPage from './pages/owner/TenantManagementPage';
+import OwnerTicketsPage from './pages/owner/OwnerTicketsPage';
+import ProviderDashboard from './pages/provider/ProviderDashboard';
+import MyTasksPage from './pages/provider/MyTasksPage';
+import MyTicketsPage from './pages/student/MyTicketsPage';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
 
@@ -55,8 +59,19 @@ function App() {
                       <a className="text-blue-600 font-semibold" href="/owner/my-listings">My Listings</a>
                       <a className="text-blue-600 font-semibold" href="/owner/listings/create">Create Listing</a>
                       <a className="text-blue-600 font-semibold" href="/owner/tenants">Tenant Management</a>
+                      <a className="text-blue-600 font-semibold" href="/owner/tickets">Owner Tickets</a>
                     </div>
                   </div>
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student/tickets"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student', 'admin']}>
+                  <MyTicketsPage />
                 </RoleRoute>
               </PrivateRoute>
             }
@@ -102,15 +117,32 @@ function App() {
             }
           />
           <Route
+            path="/owner/tickets"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <OwnerTicketsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/provider/dashboard"
             element={
               <PrivateRoute>
-                <div className="container mx-auto px-4 py-8">
-                  <h1 className="text-3xl font-bold">Service Provider Dashboard</h1>
-                  <p className="text-gray-600 mt-4">
-                    This page will be implemented in the next phase.
-                  </p>
-                </div>
+                <RoleRoute allowedRoles={['service_provider', 'admin']}>
+                  <ProviderDashboard />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/provider/tasks"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['service_provider', 'admin']}>
+                  <MyTasksPage />
+                </RoleRoute>
               </PrivateRoute>
             }
           />

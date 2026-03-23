@@ -100,12 +100,14 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import accommodationRoutes from './routes/accommodation.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
+import ticketRoutes from './routes/ticket.routes.js';
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/accommodations', accommodationRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 // Additional routes (to be added in future phases)
 // app.use('/api/rooms', require('./routes/room.routes'));
