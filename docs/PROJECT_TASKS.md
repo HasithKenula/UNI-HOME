@@ -639,160 +639,160 @@
 
 ## 3.1 Backend — Models
 
-- [ ] `models/Booking.js` — Full schema with costSummary, status enum, paymentStatus
-- [ ] `models/Inquiry.js` — Communication schema with messages array
+- [x] `models/Booking.js` — Full schema with costSummary, status enum, paymentStatus
+- [x] `models/Inquiry.js` — Communication schema with messages array
 
 ## 3.2 Backend — Booking APIs
 
 ### `POST /api/bookings`
 
-- [ ] Route (protected: student)
-- [ ] Validator: accommodationId, roomType, checkInDate, contractPeriod
-- [ ] Controller: verify accommodation available, generate bookingNumber, calculate costSummary, create booking, send email to owner + student, create notifications
+- [x] Route (protected: student)
+- [x] Validator: accommodationId, roomType, checkInDate, contractPeriod
+- [x] Controller: verify accommodation available, generate bookingNumber, calculate costSummary, create booking, send email to owner + student, create notifications
 - [ ] Test → 201
 
 ### `GET /api/bookings`
 
-- [ ] Route (protected: student/owner)
-- [ ] Controller: if student → find by student, if owner → find by owner, with status filter + pagination
-- [ ] Populate accommodation (title, location, photo), student/owner info
+- [x] Route (protected: student/owner)
+- [x] Controller: if student → find by student, if owner → find by owner, with status filter + pagination
+- [x] Populate accommodation (title, location, photo), student/owner info
 - [ ] Test → 200
 
 ### `GET /api/bookings/:id`
 
-- [ ] Route (protected: own booking or own property)
-- [ ] Controller: findById, populate all refs, fetch payments + invoices for this booking
+- [x] Route (protected: own booking or own property)
+- [x] Controller: findById, populate all refs, fetch payments + invoices for this booking
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/accept`
 
-- [ ] Route (protected: owner)
-- [ ] Controller: verify pending status, set confirmed, generate initial invoice, send email to student, create notifications
+- [x] Route (protected: owner)
+- [x] Controller: verify pending status, set confirmed, generate initial invoice, send email to student, create notifications
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/reject`
 
-- [ ] Route (protected: owner)
-- [ ] Controller: set rejected + rejectionReason, send email to student
+- [x] Route (protected: owner)
+- [x] Controller: set rejected + rejectionReason, send email to student
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/cancel`
 
-- [ ] Route (protected: student/owner)
-- [ ] Controller: set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
+- [x] Route (protected: student/owner)
+- [x] Controller: set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/complete`
 
-- [ ] Route (protected: owner/admin)
-- [ ] Controller: verify contract period ended, set completed
+- [x] Route (protected: owner/admin)
+- [x] Controller: verify contract period ended, set completed
 - [ ] Test → 200
 
 ## 3.3 Backend — Favorites APIs
 
 ### `POST /api/favorites/:accommodationId`
 
-- [ ] Route (protected: student)
-- [ ] Controller: push to student.favorites if not exists
+- [x] Route (protected: student)
+- [x] Controller: push to student.favorites if not exists
 - [ ] Test → 200
 
 ### `DELETE /api/favorites/:accommodationId`
 
-- [ ] Route (protected: student)
-- [ ] Controller: pull from student.favorites
+- [x] Route (protected: student)
+- [x] Controller: pull from student.favorites
 - [ ] Test → 200
 
 ### `GET /api/favorites`
 
-- [ ] Route (protected: student)
-- [ ] Controller: find student, populate favorites array
+- [x] Route (protected: student)
+- [x] Controller: find student, populate favorites array
 - [ ] Test → 200
 
 ## 3.4 Backend — Inquiry/Communication APIs
 
 ### `POST /api/inquiries`
 
-- [ ] Route (protected: student)
-- [ ] Controller: create inquiry with first message, notify owner
+- [x] Route (protected: student)
+- [x] Controller: create inquiry with first message, notify owner
 - [ ] Test → 201
 
 ### `GET /api/inquiries`
 
-- [ ] Route (protected: student/owner)
-- [ ] Controller: find by student or owner, populate refs, return last message preview
+- [x] Route (protected: student/owner)
+- [x] Controller: find by student or owner, populate refs, return last message preview
 - [ ] Test → 200
 
 ### `POST /api/inquiries/:inquiryId/messages`
 
-- [ ] Route (protected: student/owner — participants only)
-- [ ] Controller: push message to messages array, notify recipient
+- [x] Route (protected: student/owner — participants only)
+- [x] Controller: push message to messages array, notify recipient
 - [ ] Test → 201
 
 ### `PATCH /api/inquiries/:inquiryId/close`
 
-- [ ] Route (protected: student/owner)
-- [ ] Controller: set status=closed
+- [x] Route (protected: student/owner)
+- [x] Controller: set status=closed
 - [ ] Test → 200
 
 ## 3.5 Frontend — Student Booking Pages
 
 ### Booking Flow (on Listing Detail Page)
 
-- [ ] `components/booking/BookingForm.jsx`
-  - [ ] Room type selector
-  - [ ] Check-in date picker
-  - [ ] Contract period dropdown
-  - [ ] Cost summary display (auto-calculated: rent + keyMoney + deposit)
-  - [ ] Special requests textarea
-  - [ ] Emergency contact fields
-  - [ ] Submit booking button
-- [ ] API integration → POST /api/bookings
-- [ ] Success modal with booking number
+- [x] `components/booking/BookingForm.jsx`
+  - [x] Room type selector
+  - [x] Check-in date picker
+  - [x] Contract period dropdown
+  - [x] Cost summary display (auto-calculated: rent + keyMoney + deposit)
+  - [x] Special requests textarea
+  - [x] Emergency contact fields
+  - [x] Submit booking button
+- [x] API integration → POST /api/bookings
+- [x] Success modal with booking number
 
 ### My Bookings Page
 
-- [ ] `pages/student/MyBookingsPage.jsx`
-- [ ] Status filter tabs (All, Pending, Confirmed, Cancelled, Completed)
-- [ ] Booking cards: accommodation thumbnail, booking number, status badge, dates, cost
-- [ ] Click → booking detail page
-- [ ] Cancel booking button (with reason modal)
+- [x] `pages/student/MyBookingsPage.jsx`
+- [x] Status filter tabs (All, Pending, Confirmed, Cancelled, Completed)
+- [x] Booking cards: accommodation thumbnail, booking number, status badge, dates, cost
+- [x] Click → booking detail page
+- [x] Cancel booking button (with reason modal)
 
 ### Booking Detail Page
 
-- [ ] `components/booking/BookingDetail.jsx`
-- [ ] Full booking info: accommodation, room, dates, cost breakdown
-- [ ] Status timeline (Pending → Confirmed → Completed)
-- [ ] Payment history table
-- [ ] Actions: Cancel, Pay Now (link to payment), Write Review (if completed)
+- [x] `components/booking/BookingDetail.jsx`
+- [x] Full booking info: accommodation, room, dates, cost breakdown
+- [x] Status timeline (Pending → Confirmed → Completed)
+- [x] Payment history table
+- [x] Actions: Cancel, Pay Now (link to payment), Write Review (if completed)
 
 ### Owner — Booking Requests Page
 
-- [ ] `pages/owner/BookingRequestsPage.jsx`
-- [ ] Filter by accommodation + status
-- [ ] Request cards: student info, accommodation, room type, dates, cost
-- [ ] Accept / Reject buttons (reject → reason modal)
-- [ ] Auto-generate invoice on accept
+- [x] `pages/owner/BookingRequestsPage.jsx`
+- [x] Filter by accommodation + status
+- [x] Request cards: student info, accommodation, room type, dates, cost
+- [x] Accept / Reject buttons (reject → reason modal)
+- [x] Auto-generate invoice on accept
 
 ### Favorites Page
 
-- [ ] `pages/student/FavoritesPage.jsx`
-- [ ] Grid of saved listings with remove button
-- [ ] Click → listing detail
-- [ ] Heart icon toggle on listing cards (across SearchPage + DetailPage)
+- [x] `pages/student/FavoritesPage.jsx`
+- [x] Grid of saved listings with remove button
+- [x] Click → listing detail
+- [x] Heart icon toggle on listing cards (across SearchPage + DetailPage)
 
 ### Inquiry / Chat
 
-- [ ] `components/inquiry/InquiryList.jsx` — list of conversations
-- [ ] `components/inquiry/ChatWindow.jsx` — message thread with send input
-- [ ] `components/inquiry/ContactOwnerModal.jsx` — choose method (in-app/WhatsApp/form)
-- [ ] WhatsApp deep link generation (wa.me/phone?text=...)
-- [ ] API integration for all inquiry endpoints
+- [x] `components/inquiry/InquiryList.jsx` — list of conversations
+- [x] `components/inquiry/ChatWindow.jsx` — message thread with send input
+- [x] `components/inquiry/ContactOwnerModal.jsx` — choose method (in-app/WhatsApp/form)
+- [x] WhatsApp deep link generation (wa.me/phone?text=...)
+- [x] API integration for all inquiry endpoints
 
 ## 3.6 Frontend — State Management
 
-- [ ] `features/bookings/bookingSlice.js` + `bookingAPI.js`
-- [ ] `features/favorites/favoriteSlice.js` + `favoriteAPI.js`
-- [ ] `features/inquiries/inquirySlice.js` + `inquiryAPI.js`
+- [x] `features/bookings/bookingSlice.js` + `bookingAPI.js`
+- [x] `features/favorites/favoriteSlice.js` + `favoriteAPI.js`
+- [x] `features/inquiries/inquirySlice.js` + `inquiryAPI.js`
 
 ---
 

@@ -11,6 +11,12 @@ import CreateListingPage from './pages/owner/CreateListingPage';
 import EditListingPage from './pages/owner/EditListingPage';
 import MyListingsPage from './pages/owner/MyListingsPage';
 import TenantManagementPage from './pages/owner/TenantManagementPage';
+import BookingRequestsPage from './pages/owner/BookingRequestsPage';
+import MyBookingsPage from './pages/student/MyBookingsPage';
+import FavoritesPage from './pages/student/FavoritesPage';
+import BookingDetailPage from './pages/student/BookingDetailPage';
+import InquiriesPage from './pages/student/InquiriesPage';
+import StudentDashboard from './pages/student/StudentDashboard';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
 
@@ -32,12 +38,9 @@ function App() {
             path="/student/dashboard"
             element={
               <PrivateRoute>
-                <div className="container mx-auto px-4 py-8">
-                  <h1 className="text-3xl font-bold">Student Dashboard</h1>
-                  <p className="text-gray-600 mt-4">
-                    This page will be implemented in the next phase.
-                  </p>
-                </div>
+                <RoleRoute allowedRoles={['student']}>
+                  <StudentDashboard />
+                </RoleRoute>
               </PrivateRoute>
             }
           />
@@ -97,6 +100,56 @@ function App() {
               <PrivateRoute>
                 <RoleRoute allowedRoles={['owner', 'admin']}>
                   <TenantManagementPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/booking-requests"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <BookingRequestsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student/bookings"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student']}>
+                  <MyBookingsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student/bookings/:id"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student', 'owner', 'admin']}>
+                  <BookingDetailPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student/favorites"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student']}>
+                  <FavoritesPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student/inquiries"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student', 'owner']}>
+                  <InquiriesPage />
                 </RoleRoute>
               </PrivateRoute>
             }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
     Search,
     Grid3x3,
@@ -13,7 +14,8 @@ import {
     Calendar,
     ChevronDown,
     Filter,
-    X
+    X,
+    Heart
 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -21,6 +23,12 @@ import Select from '../../components/common/Select';
 import LoadingSkeleton from '../../components/common/LoadingSkeleton';
 import EmptyState from '../../components/common/EmptyState';
 import { getAccommodations } from '../../features/accommodations/accommodationAPI';
+import useAuth from '../../hooks/useAuth';
+import {
+    addFavoriteAsync,
+    fetchFavoritesAsync,
+    removeFavoriteAsync,
+} from '../../features/favorites/favoriteSlice';
 
 const defaultFilters = {
     keyword: '',
@@ -40,6 +48,9 @@ const roomTypes = ['single', 'double', 'shared', 'studio'];
 const facilities = ['wifi', 'furniture', 'airConditioning', 'attachedBathroom', 'kitchen'];
 
 const SearchPage = () => {
+    const dispatch = useDispatch();
+    const { isAuthenticated, isStudent } = useAuth();
+    const { favoriteIds } = useSelector((state) => state.favorites);
     const [searchParams, setSearchParams] = useSearchParams();
     const [filters, setFilters] = useState(defaultFilters);
     const [results, setResults] = useState([]);
@@ -90,6 +101,25 @@ const SearchPage = () => {
 
         fetchResults();
     }, [searchParams, page]);
+
+    useEffect(() => {
+        if (isAuthenticated && isStudent) {
+            dispatch(fetchFavoritesAsync());
+        }
+    }, [dispatch, isAuthenticated, isStudent]);
+
+    const toggleFavorite = async (event, listingId) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!isAuthenticated || !isStudent) return;
+
+        if (favoriteIds.includes(listingId)) {
+            await dispatch(removeFavoriteAsync(listingId));
+        } else {
+            await dispatch(addFavoriteAsync(listingId));
+        }
+    };
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -206,7 +236,7 @@ const SearchPage = () => {
                         </div>
 
                         <div className="mb-5">
-                            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <label className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                                 <DollarSign className="w-4 h-4 text-blue-600" />
                                 Price Range
                             </label>
@@ -229,7 +259,7 @@ const SearchPage = () => {
                         </div>
 
                         <div className="mb-5">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 <User className="w-4 h-4 text-blue-600" />
                                 Gender Preference
                             </label>
@@ -273,7 +303,7 @@ const SearchPage = () => {
                         </div>
 
                         <div className="mb-5">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-blue-600" />
                                 Max Distance to Campus (km)
                             </label>
@@ -323,7 +353,7 @@ const SearchPage = () => {
                         </label>
 
                         <div className="mb-5">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 <Calendar className="w-4 h-4 text-blue-600" />
                                 Minimum Period
                             </label>
@@ -340,7 +370,7 @@ const SearchPage = () => {
                         </div>
 
                         <div className="mb-5">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 <Home className="w-4 h-4 text-blue-600" />
                                 Accommodation Type
                             </label>
@@ -357,7 +387,7 @@ const SearchPage = () => {
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 <ChevronDown className="w-4 h-4 text-blue-600" />
                                 Sort By
                             </label>
@@ -428,6 +458,21 @@ const SearchPage = () => {
                                                         {listing.ratingsSummary.averageRating.toFixed(1)}
                                                     </span>
                                                 </div>
+                                            )}
+                                            {isAuthenticated && isStudent && (
+                                                <button
+                                                    onClick={(event) => toggleFavorite(event, listing._id)}
+                                                    className="absolute bottom-3 right-3 rounded-full bg-white/95 p-2 shadow-lg transition-all hover:bg-red-50"
+                                                    aria-label="Toggle favorite"
+                                                >
+                                                    <Heart
+                                                        className={`h-4 w-4 ${
+                                                            favoriteIds.includes(listing._id)
+                                                                ? 'text-red-500 fill-current'
+                                                                : 'text-gray-600'
+                                                        }`}
+                                                    />
+                                                </button>
                                             )}
                                         </div>
                                         <div className="p-4 flex-1">
