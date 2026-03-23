@@ -1,6 +1,7 @@
 {
   "name": "sliit-accommodation-client",
   "version": "1.0.0",
+  "type": "module",
   "description": "Frontend for SLIIT Student Accommodation Management System",
   "private": true,
   "dependencies": {
