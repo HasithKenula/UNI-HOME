@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useDispatch, useSelector } from 'react-redux';
 import {
     MapPin,
     DollarSign,
@@ -30,19 +31,32 @@ import {
 import Button from '../../components/common/Button';
 import ImageGalleryModal from '../../components/common/ImageGalleryModal';
 import LoadingSkeleton from '../../components/common/LoadingSkeleton';
+import BookingForm from '../../components/booking/BookingForm';
+import ContactOwnerModal from '../../components/inquiry/ContactOwnerModal';
 import useAuth from '../../hooks/useAuth';
 import { getAccommodationById } from '../../features/accommodations/accommodationAPI';
+import {
+    addFavoriteAsync,
+    fetchFavoritesAsync,
+    removeFavoriteAsync,
+} from '../../features/favorites/favoriteSlice';
 
 const REVIEWS_PER_PAGE = 4;
 
 const ListingDetailPage = () => {
+    const dispatch = useDispatch();
+    const { favoriteIds } = useSelector((state) => state.favorites);
     const { id } = useParams();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isStudent } = useAuth();
     const [activeImage, setActiveImage] = useState(0);
     const [reviewPage, setReviewPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [listing, setListing] = useState(null);
     const [showGallery, setShowGallery] = useState(false);
+    const [showContactModal, setShowContactModal] = useState(false);
+    const [showBookingModal, setShowBookingModal] = useState(false);
+    const [latestBookingNumber, setLatestBookingNumber] = useState('');
+    const [showBookingSuccessModal, setShowBookingSuccessModal] = useState(false);
 
     useEffect(() => {
         const fetchListing = async () => {
@@ -60,6 +74,12 @@ const ListingDetailPage = () => {
         fetchListing();
     }, [id]);
 
+    useEffect(() => {
+        if (isAuthenticated && isStudent) {
+            dispatch(fetchFavoritesAsync());
+        }
+    }, [dispatch, isAuthenticated, isStudent]);
+
     const photos = listing?.media?.photos || [];
     const paginatedReviews = useMemo(() => {
         const allReviews = listing?.reviews || [];
@@ -72,6 +92,21 @@ const ListingDetailPage = () => {
     }, [listing, reviewPage]);
 
     const handleAction = (message) => toast.info(message);
+
+    const isFavorite = favoriteIds.includes(id);
+
+    const toggleFavorite = async () => {
+        if (!isAuthenticated || !isStudent) {
+            toast.info('Login as a student to use favorites');
+            return;
+        }
+
+        if (isFavorite) {
+            await dispatch(removeFavoriteAsync(id));
+        } else {
+            await dispatch(addFavoriteAsync(id));
+        }
+    };
 
     const facilityIcons = {
         wifi: Wifi,
@@ -119,6 +154,51 @@ const ListingDetailPage = () => {
                     onClose={() => setShowGallery(false)}
                     onNavigate={setActiveImage}
                 />
+            )}
+
+            {showBookingModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-2xl font-bold text-gray-900">Book This Property</h3>
+                        <p className="mt-1 text-sm text-gray-600">Fill in your details to request this booking.</p>
+
+                        <div className="mt-4">
+                            <BookingForm
+                                listing={listing}
+                                onSuccess={(booking) => {
+                                    setLatestBookingNumber(booking?.bookingNumber || '');
+                                    setShowBookingModal(false);
+                                    setShowBookingSuccessModal(true);
+                                }}
+                            />
+                        </div>
+
+                        <div className="mt-4 text-right">
+                            <Button variant="secondary" onClick={() => setShowBookingModal(false)}>
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <ContactOwnerModal listing={listing} open={showContactModal} onClose={() => setShowContactModal(false)} />
+
+            {showBookingSuccessModal && latestBookingNumber && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-2xl font-bold text-gray-900">Booking Submitted</h3>
+                        <p className="mt-2 text-gray-700">
+                            Your booking request has been submitted successfully.
+                        </p>
+                        <p className="mt-3 rounded-lg bg-green-50 p-3 text-green-700">
+                            Booking Number: <span className="font-bold">{latestBookingNumber}</span>
+                        </p>
+                        <div className="mt-4 text-right">
+                            <Button onClick={() => setShowBookingSuccessModal(false)}>Done</Button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <div className="grid gap-8 lg:grid-cols-[1.6fr,1fr]">
@@ -206,10 +286,16 @@ const ListingDetailPage = () => {
                                     <Share2 className="w-5 h-5 text-gray-700" />
                                 </button>
                                 <button
-                                    onClick={() => handleAction('Favorite feature coming soon')}
+                                    onClick={toggleFavorite}
                                     className="p-3 rounded-xl bg-white border-2 border-gray-200 hover:border-red-500 hover:bg-red-50 transition-all group"
                                 >
-                                    <Heart className="w-5 h-5 text-gray-700 group-hover:text-red-500 group-hover:fill-current" />
+                                    <Heart
+                                        className={`w-5 h-5 ${
+                                            isFavorite
+                                                ? 'text-red-500 fill-current'
+                                                : 'text-gray-700 group-hover:text-red-500 group-hover:fill-current'
+                                        }`}
+                                    />
                                 </button>
                             </div>
                         </div>
@@ -482,7 +568,13 @@ const ListingDetailPage = () => {
                         <div className="space-y-3">
                             <Button
                                 fullWidth
-                                onClick={() => handleAction('Booking flow is in Phase 3 and will be added next.')}
+                                onClick={() => {
+                                    if (!isAuthenticated || !isStudent) {
+                                        toast.info('Login as a student to place a booking');
+                                        return;
+                                    }
+                                    setShowBookingModal(true);
+                                }}
                             >
                                 <Calendar className="w-5 h-5 mr-2" />
                                 Book Now
@@ -490,7 +582,13 @@ const ListingDetailPage = () => {
                             <Button
                                 fullWidth
                                 variant="outline"
-                                onClick={() => handleAction('Inquiry flow is in Phase 3 and will be added next.')}
+                                onClick={() => {
+                                    if (!isAuthenticated || !isStudent) {
+                                        toast.info('Login as a student to contact the owner');
+                                        return;
+                                    }
+                                    setShowContactModal(true);
+                                }}
                             >
                                 <Mail className="w-5 h-5 mr-2" />
                                 Contact Owner
@@ -498,7 +596,7 @@ const ListingDetailPage = () => {
                             <div className="grid grid-cols-2 gap-3">
                                 <Button
                                     variant="secondary"
-                                    onClick={() => handleAction('Favorites flow is in Phase 3 and will be added next.')}
+                                    onClick={toggleFavorite}
                                 >
                                     <Heart className="w-5 h-5" />
                                 </Button>
