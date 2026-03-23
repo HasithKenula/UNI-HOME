@@ -94,7 +94,6 @@ const bookingSchema = new Schema(
   }
 );
 
-bookingSchema.index({ bookingNumber: 1 });
 bookingSchema.index({ student: 1, status: 1 });
 bookingSchema.index({ accommodation: 1, status: 1 });
 bookingSchema.index({ owner: 1, status: 1 });

@@ -33,9 +33,28 @@ connectDB();
 app.use(helmet());
 
 // CORS configuration
+const configuredClientUrls = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
+
+const allowedOrigins = new Set([
+  ...configuredClientUrls,
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5174',
+]);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow non-browser requests (no Origin header) and configured browser origins.
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
 }));
 
 // Body parser
@@ -79,13 +98,16 @@ app.get('/api/health', (req, res) => {
 // Import routes
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import accommodationRoutes from './routes/accommodation.routes.js';
+import bookingRoutes from './routes/booking.routes.js';
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/accommodations', accommodationRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Additional routes (to be added in future phases)
-// app.use('/api/accommodations', require('./routes/accommodation.routes'));
 // app.use('/api/rooms', require('./routes/room.routes'));
 // app.use('/api/bookings', require('./routes/booking.routes'));
 // app.use('/api/payments', require('./routes/payment.routes'));
@@ -114,18 +136,34 @@ app.use(errorHandler);
 // START SERVER
 // ============================================================================
 
-const PORT = process.env.PORT || 5000;
+const BASE_PORT = Number(process.env.PORT) || 5000;
+let server;
 
-const server = app.listen(PORT, () => {
-  console.log(`
+const startServer = (port) => {
+  server = app.listen(port, () => {
+    console.log(`
   ╔════════════════════════════════════════════════════════════╗
   ║  🏠 SLIIT Accommodation System - Server Running           ║
-  ║  📡 Port: ${PORT}                                        ║
+  ║  📡 Port: ${port}                                        ║
   ║  🌍 Environment: ${process.env.NODE_ENV || 'development'}                        ║
   ║  📅 Started: ${new Date().toLocaleString()}               ║
   ╚════════════════════════════════════════════════════════════╝
   `);
-});
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      const nextPort = port + 1;
+      console.warn(`Port ${port} is in use. Retrying on port ${nextPort}...`);
+      startServer(nextPort);
+      return;
+    }
+
+    throw err;
+  });
+};
+
+startServer(BASE_PORT);
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
