@@ -9,7 +9,11 @@ import {
     fetchProviderTasksAsync,
 } from '../../features/providers/providerSlice';
 
-const tabs = ['all', 'assigned', 'in_progress', 'completed'];
+const tabs = [
+    { value: 'all', label: 'All' },
+    { value: 'incomplete', label: 'Incomplete' },
+    { value: 'completed', label: 'Finished' },
+];
 
 const MyTasksPage = () => {
     const dispatch = useDispatch();
@@ -26,7 +30,12 @@ const MyTasksPage = () => {
     });
 
     const fetchTasks = () => {
-        dispatch(fetchProviderTasksAsync(activeTab === 'all' ? {} : { status: activeTab }));
+        if (activeTab === 'completed') {
+            dispatch(fetchProviderTasksAsync({ status: 'completed' }));
+            return;
+        }
+
+        dispatch(fetchProviderTasksAsync({}));
     };
 
     useEffect(() => {
@@ -35,7 +44,10 @@ const MyTasksPage = () => {
 
     const filteredTasks = useMemo(() => {
         if (activeTab === 'all') return tasks;
-        return tasks.filter((task) => task.status === activeTab);
+        if (activeTab === 'incomplete') {
+            return tasks.filter((task) => ['assigned', 'in_progress'].includes(task.status));
+        }
+        return tasks.filter((task) => task.status === 'completed');
     }, [tasks, activeTab]);
 
     const handleAccept = async (id) => {
@@ -67,13 +79,13 @@ const MyTasksPage = () => {
             <div className="mt-6 flex flex-wrap gap-2">
                 {tabs.map((tab) => (
                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
+                        key={tab.value}
+                        onClick={() => setActiveTab(tab.value)}
                         className={`rounded-full px-4 py-2 text-sm font-semibold capitalize ${
-                            activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                            activeTab === tab.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
                         }`}
                     >
-                        {tab.replace('_', ' ')}
+                        {tab.label}
                     </button>
                 ))}
             </div>

@@ -6,7 +6,7 @@ import { fetchProviderTasksAsync } from '../../features/providers/providerSlice'
 
 const ProviderDashboard = () => {
     const dispatch = useDispatch();
-    const { tasks, stats, loading } = useSelector((state) => state.providers);
+    const { tasks, loading } = useSelector((state) => state.providers);
 
     useEffect(() => {
         dispatch(fetchProviderTasksAsync({ page: 1, limit: 20 }));
@@ -25,6 +25,14 @@ const ProviderDashboard = () => {
         [tasks]
     );
 
+    const taskStats = useMemo(() => {
+        const assigned = tasks.filter((task) => task.status === 'assigned').length;
+        const inProgress = tasks.filter((task) => task.status === 'in_progress').length;
+        const completed = tasks.filter((task) => task.status === 'completed').length;
+
+        return { assigned, inProgress, completed };
+    }, [tasks]);
+
     return (
         <div className="mx-auto max-w-6xl px-4 py-10">
             <h1 className="text-3xl font-bold text-gray-900">Provider Dashboard</h1>
@@ -32,15 +40,15 @@ const ProviderDashboard = () => {
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-4">
                     <p className="text-sm text-blue-700">Assigned</p>
-                    <p className="text-3xl font-bold text-blue-700">{stats.inProgress || 0}</p>
+                    <p className="text-3xl font-bold text-blue-700">{taskStats.assigned}</p>
                 </div>
                 <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm text-amber-700">Open</p>
-                    <p className="text-3xl font-bold text-amber-700">{stats.open || 0}</p>
+                    <p className="text-sm text-amber-700">In Progress</p>
+                    <p className="text-3xl font-bold text-amber-700">{taskStats.inProgress}</p>
                 </div>
                 <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4">
                     <p className="text-sm text-green-700">Completed</p>
-                    <p className="text-3xl font-bold text-green-700">{stats.completed || 0}</p>
+                    <p className="text-3xl font-bold text-green-700">{taskStats.completed}</p>
                 </div>
             </div>
 

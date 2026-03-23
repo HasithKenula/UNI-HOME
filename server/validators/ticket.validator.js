@@ -3,6 +3,7 @@ import { body, param, query } from 'express-validator';
 const ticketIdValidator = [param('id').isMongoId().withMessage('Invalid ticket id')];
 
 const createTicketValidator = [
+    body('bookingId').optional().isMongoId().withMessage('Invalid booking id'),
     body('accommodationId').isMongoId().withMessage('Valid accommodationId is required'),
     body('category')
         .isIn(['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'general', 'other'])
@@ -39,6 +40,11 @@ const assignTicketValidator = [
     body('providerId').isMongoId().withMessage('Valid providerId is required'),
     body('scheduledDate').optional().isISO8601().withMessage('scheduledDate must be a valid date'),
     body('timeSlot').optional().isString().withMessage('timeSlot must be text'),
+];
+
+const rejectTicketValidator = [
+    ...ticketIdValidator,
+    body('reason').optional().isString().withMessage('reason must be text'),
 ];
 
 const declineTaskValidator = [
@@ -86,6 +92,7 @@ export {
     getTicketsValidator,
     ticketIdValidator,
     assignTicketValidator,
+    rejectTicketValidator,
     declineTaskValidator,
     completeTaskValidator,
     confirmTicketValidator,

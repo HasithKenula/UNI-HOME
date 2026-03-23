@@ -65,6 +65,7 @@ const canAccessTicket = (ticket, user) => {
 const createTicket = async (req, res) => {
     try {
         const {
+            bookingId,
             accommodationId,
             category,
             title,
@@ -82,19 +83,24 @@ const createTicket = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Accommodation not found' });
         }
 
-        const today = new Date();
-        const activeBooking = await Booking.findOne({
+        const bookingQuery = {
             student: req.user._id,
             accommodation: accommodation._id,
-            status: 'confirmed',
-            checkInDate: { $lte: today },
-            $or: [{ checkOutDate: { $exists: false } }, { checkOutDate: null }, { checkOutDate: { $gte: today } }],
-        }).select('_id room');
+            status: 'completed',
+        };
+
+        if (bookingId) {
+            bookingQuery._id = bookingId;
+        }
+
+        const activeBooking = await Booking.findOne(bookingQuery)
+            .sort({ createdAt: -1 })
+            .select('_id room');
 
         if (!activeBooking) {
             return res.status(403).json({
                 success: false,
-                message: 'Active booking is required to create a maintenance ticket',
+                message: 'A completed booking is required to create a maintenance ticket',
             });
         }
 
@@ -270,6 +276,41 @@ const approveTicket = async (req, res) => {
         res.status(200).json({ success: true, message: 'Ticket approved successfully', data: ticket });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to approve ticket', error: error.message });
+    }
+};
+
+const rejectTicket = async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const ticket = await MaintenanceTicket.findById(req.params.id);
+
+        if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
+        if (ticket.owner.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: 'Not authorized to reject this ticket' });
+        }
+
+        if (!['open', 're_opened', 'approved'].includes(ticket.status)) {
+            return res.status(400).json({ success: false, message: 'Only open, reopened, or approved tickets can be rejected' });
+        }
+
+        ticket.status = 'closed';
+        ticket.closedAt = new Date();
+        pushStatusHistory(ticket, 'closed', req.user._id, reason || 'Rejected by owner');
+        await ticket.save();
+
+        await Notification.create({
+            recipient: ticket.createdBy,
+            title: 'Ticket rejected',
+            message: `${ticket.ticketNumber} was rejected by the owner`,
+            type: 'ticket_update',
+            category: 'maintenance',
+            channel: 'in_app',
+            relatedEntity: { entityType: 'ticket', entityId: ticket._id },
+        });
+
+        res.status(200).json({ success: true, message: 'Ticket rejected successfully', data: ticket });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to reject ticket', error: error.message });
     }
 };
 
@@ -615,6 +656,7 @@ export {
     getTickets,
     getTicketById,
     approveTicket,
+    rejectTicket,
     assignTicket,
     acceptTask,
     declineTask,

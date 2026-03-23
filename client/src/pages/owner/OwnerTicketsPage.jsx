@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
-import { approveTicketAsync, assignTicketAsync, fetchTicketsAsync } from '../../features/tickets/ticketSlice';
+import { approveTicketAsync, assignTicketAsync, fetchTicketsAsync, rejectTicketAsync } from '../../features/tickets/ticketSlice';
 import { fetchAvailableProvidersAsync } from '../../features/providers/providerSlice';
 
 const statusOptions = [
@@ -50,6 +50,7 @@ const OwnerTicketsPage = () => {
         scheduledDate: '',
         timeSlot: '',
     });
+    const [rejectModal, setRejectModal] = useState({ open: false, ticketId: null, reason: '' });
 
     const fetchTickets = () => {
         const params = {};
@@ -99,6 +100,13 @@ const OwnerTicketsPage = () => {
 
     const handleApprove = async (ticketId) => {
         await dispatch(approveTicketAsync(ticketId));
+        fetchTickets();
+    };
+
+    const handleReject = async () => {
+        if (!rejectModal.ticketId) return;
+        await dispatch(rejectTicketAsync({ id: rejectModal.ticketId, reason: rejectModal.reason }));
+        setRejectModal({ open: false, ticketId: null, reason: '' });
         fetchTickets();
     };
 
@@ -173,9 +181,29 @@ const OwnerTicketsPage = () => {
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                    {ticket.status === 'open' && (
-                                        <Button size="sm" loading={actionLoading} onClick={() => handleApprove(ticket._id)}>
-                                            Approve
+                                    {(ticket.status === 'open' || ticket.status === 're_opened') && (
+                                        <>
+                                            <Button size="sm" loading={actionLoading} onClick={() => handleApprove(ticket._id)}>
+                                                Approve
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="danger"
+                                                loading={actionLoading}
+                                                onClick={() => setRejectModal({ open: true, ticketId: ticket._id, reason: '' })}
+                                            >
+                                                Reject
+                                            </Button>
+                                        </>
+                                    )}
+                                    {ticket.status === 'approved' && (
+                                        <Button
+                                            size="sm"
+                                            variant="danger"
+                                            loading={actionLoading}
+                                            onClick={() => setRejectModal({ open: true, ticketId: ticket._id, reason: '' })}
+                                        >
+                                            Reject
                                         </Button>
                                     )}
                                     {(ticket.status === 'approved' || ticket.status === 'assigned') && (
@@ -261,6 +289,23 @@ const OwnerTicketsPage = () => {
                         <div className="mt-5 flex justify-end gap-2">
                             <Button variant="secondary" onClick={closeAssignModal}>Cancel</Button>
                             <Button loading={actionLoading} onClick={handleAssign}>Assign</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {rejectModal.open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-xl font-bold text-gray-900">Reject Ticket</h3>
+                        <Input
+                            label="Reason (optional)"
+                            value={rejectModal.reason}
+                            onChange={(event) => setRejectModal((prev) => ({ ...prev, reason: event.target.value }))}
+                        />
+                        <div className="mt-4 flex justify-end gap-2">
+                            <Button variant="secondary" onClick={() => setRejectModal({ open: false, ticketId: null, reason: '' })}>Cancel</Button>
+                            <Button variant="danger" loading={actionLoading} onClick={handleReject}>Reject</Button>
                         </div>
                     </div>
                 </div>

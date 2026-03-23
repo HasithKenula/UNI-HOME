@@ -23,6 +23,11 @@ export const approveTicket = async (id) => {
     return response.data;
 };
 
+export const rejectTicket = async (id, reason) => {
+    const response = await axios.patch(`/tickets/${id}/reject`, { reason });
+    return response.data;
+};
+
 export const assignTicket = async (id, payload) => {
     const response = await axios.patch(`/tickets/${id}/assign`, payload);
     return response.data;

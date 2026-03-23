@@ -315,9 +315,11 @@
 
 ### `POST /api/auth/register/service-provider`
 
-- [ ] Route definition
-- [ ] Validator: validate NIC, serviceCategories enum, required fields
-- [ ] Controller: create ServiceProvider with status "pending", notify admin
+- [x] Route definition
+- [x] Validator: validate NIC, serviceCategories enum, required fields
+- [x] Controller: create ServiceProvider with status "pending"
+- [x] Fix: normalize `serviceCategories`, `areasOfOperation`, and `certifications` payloads to schema shape
+- [ ] Controller: notify admin
 - [ ] Test → 201 Created
 
 ### `POST /api/auth/login`
@@ -391,6 +393,7 @@
 - [ ] `components/auth/StudentRegisterForm.jsx` — SLIIT email field, student ID, batch, faculty
 - [ ] `components/auth/OwnerRegisterForm.jsx` — NIC, bank details, document upload
 - [ ] `components/auth/ProviderRegisterForm.jsx` — service categories, area of operation
+- [x] `components/auth/ServiceProviderRegisterForm.jsx` — service categories, area of operation, payload mapping fix
 - [ ] `pages/public/RegisterPage.jsx` — tab/step switcher for 3 registration types
 - [ ] Form validation (react-hook-form)
 - [ ] API integration (authAPI.js → register endpoints)
@@ -981,7 +984,7 @@
 
 ### `POST /api/tickets`
 
-- [x] Route (protected: student — active booking required)
+- [x] Route (protected: student — confirmed booking required)
 - [x] Validator: accommodationId, category, title, description
 - [x] Controller: generate ticketNumber, create with status=open, calculate SLA deadlines, send notification to owner
 - [ ] Test → 201
@@ -1003,6 +1006,12 @@
 
 - [x] Route (protected: owner)
 - [x] Controller: set status=approved, push to statusHistory
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/reject`
+
+- [x] Route (protected: owner)
+- [x] Controller: reject ticket request by owner with reason + status history
 - [ ] Test → 200
 
 ### `PATCH /api/tickets/:id/assign`
@@ -1056,7 +1065,7 @@
   - [x] Title + description fields
   - [x] Priority selector (Low/Medium/High/Urgent)
   - [x] Photo/video upload (max 5)
-  - [x] Accommodation + room auto-populated from active booking
+  - [x] Accommodation + room auto-populated from completed booking
   - [x] Submit button
 - [x] API integration → POST /api/tickets
 
@@ -1082,9 +1091,11 @@
 ### Owner Tickets Page
 
 - [x] `pages/owner/OwnerTicketsPage.jsx`
+- [x] Owner dashboard ticket request visibility (`pages/owner/OwnerDashboard.jsx`)
 - [x] Filter by accommodation + status + priority
 - [x] Ticket list with actions:
   - [x] Approve button (for open tickets)
+  - [x] Reject button (for open/approved tickets)
   - [x] Assign provider button → provider selection modal
 - [x] Provider selection modal:
   - [x] Filter by category + area
@@ -1104,7 +1115,7 @@
 ### My Tasks Page
 
 - [x] `pages/provider/MyTasksPage.jsx`
-- [x] Status filter tabs (Assigned, In Progress, Completed)
+- [x] Status filter tabs (Incomplete, Finished)
 - [x] Task cards with: category, title, location, scheduled date, priority
 - [x] Accept/Decline buttons (for assigned tasks)
 - [x] Mark complete form:

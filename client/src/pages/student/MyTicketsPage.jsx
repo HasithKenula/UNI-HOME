@@ -14,20 +14,15 @@ const MyTicketsPage = () => {
     const [activeTab, setActiveTab] = useState('all');
 
     useEffect(() => {
-        dispatch(fetchBookingsAsync({ status: 'confirmed', page: 1, limit: 20 }));
+        dispatch(fetchBookingsAsync({ status: 'completed', page: 1, limit: 20 }));
     }, [dispatch]);
 
     useEffect(() => {
         dispatch(fetchTicketsAsync(activeTab === 'all' ? {} : { status: activeTab }));
     }, [dispatch, activeTab]);
 
-    const activeBooking = useMemo(() => {
-        const today = new Date();
-        return (bookingList || []).find((booking) => {
-            const checkInValid = booking.checkInDate ? new Date(booking.checkInDate) <= today : true;
-            const checkOutValid = booking.checkOutDate ? new Date(booking.checkOutDate) >= today : true;
-            return booking.status === 'confirmed' && checkInValid && checkOutValid;
-        });
+    const completedBookings = useMemo(() => {
+        return (bookingList || []).filter((booking) => booking.status === 'completed');
     }, [bookingList]);
 
     const tickets = useMemo(() => {
@@ -43,7 +38,7 @@ const MyTicketsPage = () => {
         <div className="mx-auto max-w-6xl space-y-6 px-4 py-10">
             <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
 
-            <CreateTicketForm booking={activeBooking} onCreated={handleCreated} />
+            <CreateTicketForm bookings={completedBookings} onCreated={handleCreated} />
 
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-md">
                 <div className="flex flex-wrap gap-2">

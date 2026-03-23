@@ -12,6 +12,7 @@ import EditListingPage from './pages/owner/EditListingPage';
 import MyListingsPage from './pages/owner/MyListingsPage';
 import TenantManagementPage from './pages/owner/TenantManagementPage';
 import BookingRequestsPage from './pages/owner/BookingRequestsPage';
+import OwnerDashboard from './pages/owner/OwnerDashboard';
 import MyBookingsPage from './pages/student/MyBookingsPage';
 import FavoritesPage from './pages/student/FavoritesPage';
 import BookingDetailPage from './pages/student/BookingDetailPage';
@@ -54,17 +55,7 @@ function App() {
             element={
               <PrivateRoute>
                 <RoleRoute allowedRoles={['owner', 'admin']}>
-                  <div className="container mx-auto px-4 py-8">
-                    <h1 className="text-3xl font-bold">Owner Dashboard</h1>
-                    <p className="text-gray-600 mt-4">
-                      Use the pages below to manage your listings.
-                    </p>
-                    <div className="mt-6 flex flex-wrap gap-3">
-                      <a className="text-blue-600 font-semibold" href="/owner/my-listings">My Listings</a>
-                      <a className="text-blue-600 font-semibold" href="/owner/listings/create">Create Listing</a>
-                      <a className="text-blue-600 font-semibold" href="/owner/tenants">Tenant Management</a>
-                    </div>
-                  </div>
+                  <OwnerDashboard />
                 </RoleRoute>
               </PrivateRoute>
             }

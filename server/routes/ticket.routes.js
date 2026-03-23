@@ -8,6 +8,7 @@ import {
     getTickets,
     getTicketById,
     approveTicket,
+    rejectTicket,
     assignTicket,
     acceptTask,
     declineTask,
@@ -20,6 +21,7 @@ import {
     getTicketsValidator,
     ticketIdValidator,
     assignTicketValidator,
+    rejectTicketValidator,
     declineTaskValidator,
     completeTaskValidator,
     confirmTicketValidator,
@@ -35,6 +37,8 @@ router.get('/', protect, authorize('student', 'owner', 'service_provider', 'admi
 router.get('/:id', protect, authorize('student', 'owner', 'service_provider', 'admin'), ticketIdValidator, validate, getTicketById);
 
 router.patch('/:id/approve', protect, authorize('owner', 'admin'), ticketIdValidator, validate, approveTicket);
+
+router.patch('/:id/reject', protect, authorize('owner', 'admin'), rejectTicketValidator, validate, rejectTicket);
 
 router.patch('/:id/assign', protect, authorize('owner', 'admin'), assignTicketValidator, validate, assignTicket);
 

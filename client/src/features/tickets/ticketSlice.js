@@ -56,6 +56,17 @@ export const approveTicketAsync = createAsyncThunk(
     }
 );
 
+export const rejectTicketAsync = createAsyncThunk(
+    'tickets/reject',
+    async ({ id, reason }, { rejectWithValue }) => {
+        try {
+            return await ticketAPI.rejectTicket(id, reason);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to reject ticket' });
+        }
+    }
+);
+
 export const assignTicketAsync = createAsyncThunk(
     'tickets/assign',
     async ({ id, payload }, { rejectWithValue }) => {
@@ -162,6 +173,20 @@ const ticketSlice = createSlice({
             .addCase(approveTicketAsync.rejected, (state, action) => {
                 state.actionLoading = false;
                 toast.error(action.payload?.message || 'Failed to approve ticket');
+            })
+            .addCase(rejectTicketAsync.pending, (state) => {
+                state.actionLoading = true;
+            })
+            .addCase(rejectTicketAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                if (action.payload.data) {
+                    replaceInList(state, action.payload.data);
+                }
+                toast.success(action.payload?.message || 'Ticket rejected');
+            })
+            .addCase(rejectTicketAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                toast.error(action.payload?.message || 'Failed to reject ticket');
             })
             .addCase(assignTicketAsync.pending, (state) => {
                 state.actionLoading = true;
