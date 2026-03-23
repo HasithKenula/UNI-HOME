@@ -110,7 +110,6 @@ const notificationSchema = new Schema(
 notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
 notificationSchema.index({ type: 1, channel: 1 });
 notificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index
-notificationSchema.index({ idempotencyKey: 1 });
 
 const Notification = mongoose.model("Notification", notificationSchema);
 

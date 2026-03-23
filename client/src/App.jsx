@@ -5,7 +5,14 @@ import Footer from './components/common/Footer';
 import HomePage from './pages/public/HomePage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
+import SearchPage from './pages/public/SearchPage';
+import ListingDetailPage from './pages/public/ListingDetailPage';
+import CreateListingPage from './pages/owner/CreateListingPage';
+import EditListingPage from './pages/owner/EditListingPage';
+import MyListingsPage from './pages/owner/MyListingsPage';
+import TenantManagementPage from './pages/owner/TenantManagementPage';
 import PrivateRoute from './routes/PrivateRoute';
+import RoleRoute from './routes/RoleRoute';
 
 function App() {
   return (
@@ -17,6 +24,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/listings/:id" element={<ListingDetailPage />} />
 
           {/* Protected Routes - To be implemented in future phases */}
           <Route
@@ -36,12 +45,59 @@ function App() {
             path="/owner/dashboard"
             element={
               <PrivateRoute>
-                <div className="container mx-auto px-4 py-8">
-                  <h1 className="text-3xl font-bold">Owner Dashboard</h1>
-                  <p className="text-gray-600 mt-4">
-                    This page will be implemented in the next phase.
-                  </p>
-                </div>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <div className="container mx-auto px-4 py-8">
+                    <h1 className="text-3xl font-bold">Owner Dashboard</h1>
+                    <p className="text-gray-600 mt-4">
+                      Use the pages below to manage your listings.
+                    </p>
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      <a className="text-blue-600 font-semibold" href="/owner/my-listings">My Listings</a>
+                      <a className="text-blue-600 font-semibold" href="/owner/listings/create">Create Listing</a>
+                      <a className="text-blue-600 font-semibold" href="/owner/tenants">Tenant Management</a>
+                    </div>
+                  </div>
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/my-listings"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <MyListingsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/listings/create"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <CreateListingPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/listings/:id/edit"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <EditListingPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/tenants"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <TenantManagementPage />
+                </RoleRoute>
               </PrivateRoute>
             }
           />
@@ -73,15 +129,6 @@ function App() {
           />
 
           {/* Placeholder Routes */}
-          <Route
-            path="/search"
-            element={
-              <div className="container mx-auto px-4 py-8">
-                <h1 className="text-3xl font-bold">Search Accommodations</h1>
-                <p className="text-gray-600 mt-4">This page will be implemented in Phase 2.</p>
-              </div>
-            }
-          />
           <Route
             path="/about"
             element={
