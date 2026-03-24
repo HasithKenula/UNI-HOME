@@ -1145,132 +1145,132 @@
 
 ### User Management
 
-- [ ] `GET /api/admin/users` — list all users with role/status filters + search
-- [ ] `PATCH /api/admin/users/:id/status` — approve/suspend/delete user
-- [ ] `PATCH /api/admin/owners/:id/verify` — verify/reject owner
-- [ ] `PATCH /api/admin/providers/:id/verify` — approve/reject provider
+- [x] `GET /api/admin/users` — list all users with role/status filters + search
+- [x] `PATCH /api/admin/users/:id/status` — approve/suspend/delete user
+- [x] `PATCH /api/admin/owners/:id/verify` — verify/reject owner
+- [x] `PATCH /api/admin/providers/:id/verify` — approve/reject provider
 
 ### Listing Moderation
 
-- [ ] `GET /api/admin/accommodations` — listings with status filters
-- [ ] `PATCH /api/admin/accommodations/:id/moderate` — approve/reject/freeze/unfreeze
+- [x] `GET /api/admin/accommodations` — listings with status filters
+- [x] `PATCH /api/admin/accommodations/:id/moderate` — approve/reject/freeze/unfreeze
 
 ### Report Management
 
-- [ ] `POST /api/reports/listing` — student submits listing report
-- [ ] `GET /api/admin/reports/listings` — all reports with status filter
-- [ ] `PATCH /api/admin/reports/:id/resolve` — resolve with action
+- [x] `POST /api/reports/listing` — student submits listing report
+- [x] `GET /api/admin/reports/listings` — all reports with status filter
+- [x] `PATCH /api/admin/reports/:id/resolve` — resolve with action
 
 ### Review Moderation
 
-- [ ] `GET /api/admin/reviews/pending` — pending reviews
-- [ ] `PATCH /api/admin/reviews/:id/moderate` — approve/reject
+- [x] `GET /api/admin/reviews/pending` — pending reviews
+- [x] `PATCH /api/admin/reviews/:id/moderate` — approve/reject
 
 ### Analytics
 
-- [ ] `GET /api/admin/analytics/dashboard` — overview stats
-- [ ] `GET /api/admin/analytics/revenue` — revenue breakdown by period
+- [x] `GET /api/admin/analytics/dashboard` — overview stats
+- [x] `GET /api/admin/analytics/revenue` — revenue breakdown by period
 
 ### Transactions
 
-- [ ] `GET /api/admin/transactions` — all payments with filters
+- [x] `GET /api/admin/transactions` — all payments with filters
 
 ### Escalated Tickets
 
-- [ ] `GET /api/admin/tickets/escalated` — SLA-exceeded tickets
+- [x] `GET /api/admin/tickets/escalated` — SLA-exceeded tickets
 
 ### Notification Console
 
-- [ ] `GET /api/admin/notifications/logs` — notification logs
-- [ ] `POST /api/admin/notifications/retry-failed` — retry failed notifications
-- [ ] `POST /api/admin/notifications/broadcast` — system announcement
-- [ ] `GET /api/admin/notification-templates` — list templates
-- [ ] `PUT /api/admin/notification-templates/:id` — update template
+- [x] `GET /api/admin/notifications/logs` — notification logs
+- [x] `POST /api/admin/notifications/retry-failed` — retry failed notifications
+- [x] `POST /api/admin/notifications/broadcast` — system announcement
+- [x] `GET /api/admin/notification-templates` — list templates
+- [x] `PUT /api/admin/notification-templates/:id` — update template
 
 ### Audit Logs
 
-- [ ] `GET /api/admin/audit-logs` — security logs with filters
+- [x] `GET /api/admin/audit-logs` — security logs with filters
 
 ## 7.2 Frontend — Admin Pages
 
 ### Admin Dashboard
 
-- [ ] `pages/admin/AdminDashboard.jsx`
-- [ ] Stats cards: total users, active listings, bookings this month, revenue, open tickets, pending reports
-- [ ] Quick charts: bookings over time, revenue over time, user growth
-- [ ] Recent activity feed
-- [ ] API → GET /api/admin/analytics/dashboard
+- [x] `pages/admin/AdminDashboard.jsx`
+- [x] Stats cards: total users, active listings, bookings this month, revenue, open tickets, pending reports
+- [x] Quick charts: bookings over time, revenue over time, user growth
+- [x] Recent activity feed
+- [x] API → GET /api/admin/analytics/dashboard
 
 ### User Management Page
 
-- [ ] `pages/admin/UserManagementPage.jsx`
-- [ ] Role tabs (Students, Owners, Providers, All)
-- [ ] Search bar + status filter
-- [ ] User table: name, email, role, status, registered date, actions
-- [ ] Actions: View Profile modal, Approve, Suspend, Delete
-- [ ] Owner verification: view documents, approve/reject
-- [ ] Provider approval: view certifications, approve/reject
+- [x] `pages/admin/UserManagementPage.jsx`
+- [x] Role tabs (Students, Owners, Providers, All)
+- [x] Search bar + status filter
+- [x] User table: name, email, role, status, registered date, actions
+- [x] Actions: View Profile modal, Approve, Suspend, Delete
+- [x] Owner verification: view documents, approve/reject
+- [x] Provider approval: view certifications, approve/reject
 
 ### Listing Moderation Page
 
-- [ ] `pages/admin/ListingModerationPage.jsx`
-- [ ] Status tabs (Pending Review, Active, Frozen, Reported)
-- [ ] Listing cards with owner info + report count
-- [ ] Actions: Approve, Reject (with reason), Freeze, Unfreeze, Unpublish
-- [ ] Click → full listing preview
+- [x] `pages/admin/ListingModerationPage.jsx`
+- [x] Status tabs (Pending Review, Active, Frozen, Reported)
+- [x] Listing cards with owner info + report count
+- [x] Actions: Approve, Reject (with reason), Freeze, Unfreeze, Unpublish
+- [x] Click → full listing preview
 
 ### Reports Page
 
-- [ ] `pages/admin/ReportsPage.jsx`
-- [ ] Pending/resolved tabs
-- [ ] Report cards: reported listing, reporter, reason, evidence, date
-- [ ] Resolve modal: resolution note + action dropdown (none/warning/freeze/unpublish/suspend owner)
+- [x] `pages/admin/ReportsPage.jsx`
+- [x] Pending/resolved tabs
+- [x] Report cards: reported listing, reporter, reason, evidence, date
+- [x] Resolve modal: resolution note + action dropdown (none/warning/freeze/unpublish/suspend owner)
 
 ### Review Moderation
 
-- [ ] `components/admin/PendingReviewsList.jsx`
-- [ ] Review cards: student, accommodation, rating, content
-- [ ] Approve / Reject (with reason) buttons
+- [x] `components/admin/PendingReviewsList.jsx`
+- [x] Review cards: student, accommodation, rating, content
+- [x] Approve / Reject (with reason) buttons
 
 ### Transactions Page
 
-- [ ] `pages/admin/TransactionsPage.jsx`
-- [ ] Table: payment number, student, owner, amount, type, method, status, date
-- [ ] Filters: status, date range, payment type
-- [ ] Refund button → refund modal (amount, reason)
+- [x] `pages/admin/TransactionsPage.jsx`
+- [x] Table: payment number, student, owner, amount, type, method, status, date
+- [x] Filters: status, date range, payment type
+- [x] Refund button → refund modal (amount, reason)
 
 ### Ticket Escalations Page
 
-- [ ] `pages/admin/TicketEscalationsPage.jsx`
-- [ ] Escalated tickets list with SLA overdue time
-- [ ] View details + contact owner action
+- [x] `pages/admin/TicketEscalationsPage.jsx`
+- [x] Escalated tickets list with SLA overdue time
+- [x] View details + contact owner action
 
 ### Notification Console Page
 
-- [ ] `pages/admin/NotificationConsolePage.jsx`
-- [ ] Notification logs table with delivery status
-- [ ] Filters: type, channel, status, date
-- [ ] Retry failed button
-- [ ] Broadcast announcement form (title, message, target group, channels)
-- [ ] Template management section (edit templates)
+- [x] `pages/admin/NotificationConsolePage.jsx`
+- [x] Notification logs table with delivery status
+- [x] Filters: type, channel, status, date
+- [x] Retry failed button
+- [x] Broadcast announcement form (title, message, target group, channels)
+- [x] Template management section (edit templates)
 
 ### Analytics/Reports Page
 
-- [ ] Revenue chart (monthly bar chart)
-- [ ] Bookings trend (line chart)
-- [ ] User distribution (pie chart)
-- [ ] Export to CSV/PDF button
+- [x] Revenue chart (monthly bar chart)
+- [x] Bookings trend (line chart)
+- [x] User distribution (pie chart)
+- [x] Export to CSV/PDF button
 
 ### Audit Log Page
 
-- [ ] `pages/admin/AuditLogPage.jsx`
-- [ ] Table: timestamp, user, action, entity, IP, description
-- [ ] Filters: action type, user, entity type, date range
-- [ ] Search functionality
+- [x] `pages/admin/AuditLogPage.jsx`
+- [x] Table: timestamp, user, action, entity, IP, description
+- [x] Filters: action type, user, entity type, date range
+- [x] Search functionality
 
 ## 7.3 Frontend — State
 
-- [ ] `features/admin/adminSlice.js` + `adminAPI.js`
+- [x] `features/admin/adminSlice.js` + `adminAPI.js`
 
 ---
 
