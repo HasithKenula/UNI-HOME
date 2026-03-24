@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
+import LocationMapPicker from '../../components/accommodation/LocationMapPicker';
 import {
     createAccommodation,
     publishAccommodation,
@@ -32,9 +33,16 @@ const stepLabels = [
     'Facilities',
     'House Rules',
     'Media',
-    'Booking Rules',
     'Review & Publish',
 ];
+
+const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+
+const formatFileSize = (bytes = 0) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const initialData = {
     title: '',
@@ -58,7 +66,6 @@ const initialData = {
     },
     bookingRules: {
         minimumPeriod: '6_months',
-        cancellationPolicy: 'moderate',
     },
     facilities: {},
     houseRules: {
@@ -105,6 +112,12 @@ const CreateListingPage = () => {
                 toast.error('Complete location details');
                 return false;
             }
+
+            const coordinates = formData.location.coordinates?.coordinates;
+            if (!Array.isArray(coordinates) || coordinates.length !== 2 || !coordinates.every((item) => Number.isFinite(Number(item)))) {
+                toast.error('Please pin your location on the map');
+                return false;
+            }
         }
 
         if (step === 2 && !formData.pricing.monthlyRent) {
@@ -121,6 +134,37 @@ const CreateListingPage = () => {
     };
 
     const prevStep = () => setStep((prev) => Math.max(0, prev - 1));
+
+    const handlePhotoSelection = (event) => {
+        const selected = Array.from(event.target.files || []);
+        if (selected.length === 0) return;
+
+        setPhotos((prev) => [...prev, ...selected]);
+        event.target.value = '';
+    };
+
+    const handleVideoSelection = (event) => {
+        const selected = Array.from(event.target.files || []);
+        if (selected.length === 0) return;
+
+        const oversize = selected.find((file) => file.size > MAX_VIDEO_SIZE_BYTES);
+        if (oversize) {
+            toast.error(`Video ${oversize.name} is larger than 50MB`);
+            event.target.value = '';
+            return;
+        }
+
+        setVideos((prev) => [...prev, ...selected]);
+        event.target.value = '';
+    };
+
+    const removePhoto = (indexToRemove) => {
+        setPhotos((prev) => prev.filter((_, index) => index !== indexToRemove));
+    };
+
+    const removeVideo = (indexToRemove) => {
+        setVideos((prev) => prev.filter((_, index) => index !== indexToRemove));
+    };
 
     const handleSubmit = async (publishNow = false) => {
         setSaving(true);
@@ -159,7 +203,9 @@ const CreateListingPage = () => {
             toast.success(publishNow ? 'Listing created and published' : 'Listing saved as draft');
             navigate('/owner/my-listings');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to create listing');
+            const apiMessage = error.response?.data?.message;
+            const apiDetail = error.response?.data?.error;
+            toast.error(apiDetail ? `${apiMessage}: ${apiDetail}` : (apiMessage || 'Failed to create listing'));
         } finally {
             setSaving(false);
         }
@@ -198,46 +244,10 @@ const CreateListingPage = () => {
                 );
             case 1:
                 return (
-                    <>
-                        <Input
-                            label="District"
-                            value={formData.location.district}
-                            onChange={(e) => updatePath(['location', 'district'], e.target.value)}
-                            required
-                        />
-                        <Input
-                            label="City"
-                            value={formData.location.city}
-                            onChange={(e) => updatePath(['location', 'city'], e.target.value)}
-                            required
-                        />
-                        <Input
-                            label="Address"
-                            value={formData.location.address}
-                            onChange={(e) => updatePath(['location', 'address'], e.target.value)}
-                            required
-                        />
-                        <Input
-                            label="Distance to SLIIT (km)"
-                            type="number"
-                            value={formData.location.distanceToSLIIT}
-                            onChange={(e) => updatePath(['location', 'distanceToSLIIT'], e.target.value)}
-                        />
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <Input
-                                label="Longitude"
-                                type="number"
-                                value={formData.location.coordinates.coordinates[0]}
-                                onChange={(e) => updatePath(['location', 'coordinates', 'coordinates', 0], e.target.value)}
-                            />
-                            <Input
-                                label="Latitude"
-                                type="number"
-                                value={formData.location.coordinates.coordinates[1]}
-                                onChange={(e) => updatePath(['location', 'coordinates', 'coordinates', 1], e.target.value)}
-                            />
-                        </div>
-                    </>
+                    <LocationMapPicker
+                        value={formData.location}
+                        onChange={(location) => updatePath(['location'], location)}
+                    />
                 );
             case 2:
                 return (
@@ -288,6 +298,18 @@ const CreateListingPage = () => {
                                 Bills included
                             </label>
                         </div>
+
+                        <Select
+                            label="Minimum Booking Period"
+                            value={formData.bookingRules.minimumPeriod}
+                            onChange={(e) => updatePath(['bookingRules', 'minimumPeriod'], e.target.value)}
+                            options={[
+                                { value: '1_month', label: '1 Month' },
+                                { value: '3_months', label: '3 Months' },
+                                { value: '6_months', label: '6 Months' },
+                                { value: '1_year', label: '1 Year' },
+                            ]}
+                        />
                     </>
                 );
             case 3:
@@ -334,52 +356,74 @@ const CreateListingPage = () => {
             case 5:
                 return (
                     <>
-                        <div>
-                            <label className="mb-2 block text-sm font-semibold text-gray-700">Photos</label>
+                        <div className="rounded-xl border border-gray-200 p-4">
+                            <label className="mb-2 block text-sm font-semibold text-gray-700">Images</label>
                             <input
                                 type="file"
                                 multiple
                                 accept="image/*"
-                                onChange={(e) => setPhotos(Array.from(e.target.files || []))}
+                                onChange={handlePhotoSelection}
                             />
-                            <p className="mt-2 text-xs text-gray-500">Selected {photos.length} photo(s)</p>
+
+                            <p className="mt-2 text-xs text-gray-500">
+                                Upload multiple images. You can remove selected items before saving.
+                            </p>
+
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                                {photos.map((file, index) => (
+                                    <div key={`${file.name}-${index}`} className="rounded-lg border border-gray-200 p-2">
+                                        <img
+                                            src={URL.createObjectURL(file)}
+                                            alt={file.name}
+                                            className="h-28 w-full rounded object-cover"
+                                        />
+                                        <p className="mt-1 truncate text-xs text-gray-600">{file.name}</p>
+                                        <button
+                                            type="button"
+                                            className="mt-2 w-full rounded bg-red-50 py-1 text-xs font-semibold text-red-600"
+                                            onClick={() => removePhoto(index)}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="mt-4">
-                            <label className="mb-2 block text-sm font-semibold text-gray-700">Videos</label>
+
+                        <div className="mt-4 rounded-xl border border-gray-200 p-4">
+                            <label className="mb-2 block text-sm font-semibold text-gray-700">Videos (up to 50MB each)</label>
                             <input
                                 type="file"
                                 multiple
                                 accept="video/*"
-                                onChange={(e) => setVideos(Array.from(e.target.files || []))}
+                                onChange={handleVideoSelection}
                             />
-                            <p className="mt-2 text-xs text-gray-500">Selected {videos.length} video(s)</p>
+
+                            <p className="mt-2 text-xs text-gray-500">
+                                Add, remove, and update videos before publishing.
+                            </p>
+
+                            <div className="mt-3 space-y-2">
+                                {videos.map((file, index) => (
+                                    <div key={`${file.name}-${index}`} className="rounded-lg border border-gray-200 p-2 text-sm">
+                                        <video controls className="h-40 w-full rounded bg-black" src={URL.createObjectURL(file)} />
+                                        <div className="mt-2 flex items-center justify-between gap-3">
+                                            <div>
+                                            <p className="font-medium text-gray-700">{file.name}</p>
+                                            <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="rounded bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
+                                                onClick={() => removeVideo(index)}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </>
-                );
-            case 6:
-                return (
-                    <>
-                        <Select
-                            label="Minimum Period"
-                            value={formData.bookingRules.minimumPeriod}
-                            onChange={(e) => updatePath(['bookingRules', 'minimumPeriod'], e.target.value)}
-                            options={[
-                                { value: '1_month', label: '1 Month' },
-                                { value: '3_months', label: '3 Months' },
-                                { value: '6_months', label: '6 Months' },
-                                { value: '1_year', label: '1 Year' },
-                            ]}
-                        />
-                        <Select
-                            label="Cancellation Policy"
-                            value={formData.bookingRules.cancellationPolicy}
-                            onChange={(e) => updatePath(['bookingRules', 'cancellationPolicy'], e.target.value)}
-                            options={[
-                                { value: 'flexible', label: 'Flexible' },
-                                { value: 'moderate', label: 'Moderate' },
-                                { value: 'strict', label: 'Strict' },
-                            ]}
-                        />
                     </>
                 );
             default:
@@ -396,6 +440,15 @@ const CreateListingPage = () => {
                         </p>
                         <p>
                             <span className="font-semibold">Monthly Rent:</span> LKR {formData.pricing.monthlyRent || 0}
+                        </p>
+                        <p>
+                            <span className="font-semibold">Minimum Period:</span> {formData.bookingRules.minimumPeriod}
+                        </p>
+                        <p>
+                            <span className="font-semibold">Images:</span> {photos.length}
+                        </p>
+                        <p>
+                            <span className="font-semibold">Videos:</span> {videos.length}
                         </p>
                     </div>
                 );

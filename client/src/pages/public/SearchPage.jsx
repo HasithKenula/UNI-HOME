@@ -46,6 +46,16 @@ const defaultFilters = {
 
 const roomTypes = ['single', 'double', 'shared', 'studio'];
 const facilities = ['wifi', 'furniture', 'airConditioning', 'attachedBathroom', 'kitchen'];
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const getMediaUrlWithFallback = (url = '') => {
+    const primary = `${API_ORIGIN}${url}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
 
 const SearchPage = () => {
     const dispatch = useDispatch();
@@ -437,14 +447,32 @@ const SearchPage = () => {
                                             <img
                                                 src={
                                                     listing.media?.photos?.[0]?.url
-                                                        ? `http://localhost:5000${listing.media.photos[0].url}`
+                                                        ? getMediaUrlWithFallback(listing.media.photos[0].url).primary
                                                         : 'https://placehold.co/640x360?text=No+Image'
                                                 }
                                                 alt={listing.title}
                                                 className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
                                                     viewMode === 'list' ? 'h-full w-full' : 'h-48 w-full'
                                                 }`}
+                                                onError={(event) => {
+                                                    const mediaUrl = listing.media?.photos?.[0]?.url;
+                                                    if (!mediaUrl) return;
+                                                    const { fallback } = getMediaUrlWithFallback(mediaUrl);
+                                                    if (event.currentTarget.src !== fallback) {
+                                                        event.currentTarget.src = fallback;
+                                                    }
+                                                }}
                                             />
+                                            <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                                                <span className="rounded-full bg-black/70 px-2 py-1 text-xs font-semibold text-white">
+                                                    {listing.media?.photos?.length || 0} photos
+                                                </span>
+                                                {(listing.media?.videos?.length || 0) > 0 && (
+                                                    <span className="rounded-full bg-black/70 px-2 py-1 text-xs font-semibold text-white">
+                                                        {listing.media.videos.length} videos
+                                                    </span>
+                                                )}
+                                            </div>
                                             {/* Overlay Badge */}
                                             <div className="absolute top-3 right-3">
                                                 <span className="rounded-full bg-white/95 backdrop-blur-sm px-3 py-1.5 text-xs font-bold text-blue-700 shadow-lg">

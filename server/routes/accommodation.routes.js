@@ -19,6 +19,7 @@ import { protect } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/role.middleware.js';
 import validate from '../middleware/validate.middleware.js';
 import { uploadFields } from '../middleware/upload.middleware.js';
+import normalizeMultipartBody from '../middleware/normalizeMultipart.middleware.js';
 import {
     createAccommodationValidator,
     updateAccommodationValidator,
@@ -44,6 +45,7 @@ router.post(
         { name: 'photos', maxCount: 12 },
         { name: 'videos', maxCount: 3 },
     ]),
+    normalizeMultipartBody,
     createAccommodationValidator,
     validate,
     createAccommodation
@@ -57,6 +59,7 @@ router.put(
         { name: 'photos', maxCount: 12 },
         { name: 'videos', maxCount: 3 },
     ]),
+    normalizeMultipartBody,
     updateAccommodationValidator,
     validate,
     updateAccommodation

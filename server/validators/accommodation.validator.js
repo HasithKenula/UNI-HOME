@@ -41,6 +41,11 @@ const updateAccommodationValidator = [
         .isArray()
         .withMessage('removePhotos must be an array of media URLs'),
     body('removePhotos.*').optional().isString().withMessage('Invalid photo URL'),
+    body('removeVideos')
+        .optional()
+        .isArray()
+        .withMessage('removeVideos must be an array of media URLs'),
+    body('removeVideos.*').optional().isString().withMessage('Invalid video URL'),
 ];
 
 const accommodationIdValidator = [
