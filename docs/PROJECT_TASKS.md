@@ -363,27 +363,27 @@
 
 ### `GET /api/users/profile`
 
-- [ ] Route (protected: any authenticated user)
-- [ ] Controller: return user with role-specific populated fields
+- [x] Route (protected: any authenticated user)
+- [x] Controller: return user with role-specific populated fields
 - [ ] Test → 200 with full profile
 
 ### `PUT /api/users/profile`
 
-- [ ] Route (protected)
-- [ ] Controller: update allowed fields (name, phone, address, profileImage)
-- [ ] Handle profile image upload with Multer
+- [x] Route (protected)
+- [x] Controller: update allowed fields (name, phone, address, profileImage)
+- [x] Handle profile image upload with Multer
 - [ ] Test → 200 Updated
 
 ### `PUT /api/users/change-password`
 
-- [ ] Route (protected)
-- [ ] Controller: verify current password, hash + update new password
+- [x] Route (protected)
+- [x] Controller: verify current password, hash + update new password
 - [ ] Test → 200 Changed
 
 ### `PUT /api/users/notification-preferences`
 
-- [ ] Route (protected)
-- [ ] Controller: update notificationPreferences subdocument
+- [x] Route (protected)
+- [x] Controller: update notificationPreferences subdocument
 - [ ] Test → 200 Updated
 
 ## 1.4 Frontend — Auth Pages
@@ -418,12 +418,13 @@
 
 ### Profile Page
 
-- [ ] `pages/student/ProfilePage.jsx` (also used by owner/provider with role checks)
-- [ ] Display profile info with edit mode
-- [ ] Profile image upload with preview
-- [ ] Change password section
-- [ ] Notification preferences toggles (email, in-app, SMS, WhatsApp)
-- [ ] API integration for GET profile, PUT update, PUT change-password, PUT preferences
+- [x] `pages/student/ProfilePage.jsx` (also used by owner/provider with role checks)
+- [x] Display profile info with edit mode
+- [x] Profile image upload with preview
+- [x] Change password section
+- [x] Notification preferences toggles (email, in-app, SMS, WhatsApp)
+- [x] API integration for GET profile and PUT update profile
+- [x] API integration for PUT change-password and PUT notification preferences
 
 ## 1.5 Frontend — Auth State & Routing
 

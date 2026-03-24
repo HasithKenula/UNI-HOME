@@ -17,6 +17,7 @@ const initialState = {
   user: loadUserFromStorage(),
   isAuthenticated: !!localStorage.getItem('accessToken'),
   loading: false,
+  profileLoading: false,
   error: null,
 };
 
@@ -89,6 +90,54 @@ export const loadUserAsync = createAsyncThunk(
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || { message: 'Failed to load user' });
+    }
+  }
+);
+
+export const fetchStudentProfileAsync = createAsyncThunk(
+  'auth/fetchStudentProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await authAPI.getStudentProfile();
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to fetch student profile' });
+    }
+  }
+);
+
+export const updateStudentProfileAsync = createAsyncThunk(
+  'auth/updateStudentProfile',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const data = await authAPI.updateStudentProfile(payload);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to update student profile' });
+    }
+  }
+);
+
+export const changePasswordAsync = createAsyncThunk(
+  'auth/changePassword',
+  async ({ currentPassword, newPassword }, { rejectWithValue }) => {
+    try {
+      const data = await authAPI.changePassword({ currentPassword, newPassword });
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to change password' });
+    }
+  }
+);
+
+export const updateNotificationPreferencesAsync = createAsyncThunk(
+  'auth/updateNotificationPreferences',
+  async (preferences, { rejectWithValue }) => {
+    try {
+      const data = await authAPI.updateNotificationPreferences(preferences);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to update notification preferences' });
     }
   }
 );
@@ -208,6 +257,71 @@ const authSlice = createSlice({
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+      })
+      // Student Profile
+      .addCase(fetchStudentProfileAsync.pending, (state) => {
+        state.profileLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchStudentProfileAsync.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        state.user = action.payload.data;
+        localStorage.setItem('user', JSON.stringify(action.payload.data));
+      })
+      .addCase(fetchStudentProfileAsync.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.error = action.payload?.message || 'Failed to fetch student profile';
+        toast.error(state.error);
+      })
+      .addCase(updateStudentProfileAsync.pending, (state) => {
+        state.profileLoading = true;
+        state.error = null;
+      })
+      .addCase(updateStudentProfileAsync.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        state.user = action.payload.data;
+        localStorage.setItem('user', JSON.stringify(action.payload.data));
+        toast.success(action.payload?.message || 'Student profile updated successfully');
+      })
+      .addCase(updateStudentProfileAsync.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.error = action.payload?.message || 'Failed to update student profile';
+        toast.error(state.error);
+      })
+      // Change Password
+      .addCase(changePasswordAsync.pending, (state) => {
+        state.profileLoading = true;
+        state.error = null;
+      })
+      .addCase(changePasswordAsync.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        toast.success(action.payload?.message || 'Password changed successfully');
+      })
+      .addCase(changePasswordAsync.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.error = action.payload?.message || 'Failed to change password';
+        toast.error(state.error);
+      })
+      // Notification Preferences
+      .addCase(updateNotificationPreferencesAsync.pending, (state) => {
+        state.profileLoading = true;
+        state.error = null;
+      })
+      .addCase(updateNotificationPreferencesAsync.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        state.user = {
+          ...state.user,
+          notificationPreferences: action.payload.data || state.user?.notificationPreferences,
+        };
+        if (state.user) {
+          localStorage.setItem('user', JSON.stringify(state.user));
+        }
+        toast.success(action.payload?.message || 'Notification preferences updated successfully');
+      })
+      .addCase(updateNotificationPreferencesAsync.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.error = action.payload?.message || 'Failed to update notification preferences';
+        toast.error(state.error);
       });
   },
 });

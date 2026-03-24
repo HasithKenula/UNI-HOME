@@ -45,6 +45,52 @@ export const getCurrentUser = async () => {
   return response.data;
 };
 
+// Get student profile
+export const getStudentProfile = async () => {
+  const response = await axios.get('/users/me/student-profile');
+  return response.data;
+};
+
+// Create or update student profile
+export const updateStudentProfile = async (payload) => {
+  const formData = new FormData();
+
+  Object.entries(payload || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+
+    if (key === 'address' && typeof value === 'object') {
+      formData.append('address', JSON.stringify(value));
+      return;
+    }
+
+    if (key === 'profileImage' && value instanceof File) {
+      formData.append('profileImage', value);
+      return;
+    }
+
+    formData.append(key, value);
+  });
+
+  const response = await axios.put('/users/me/student-profile', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+// Change user password
+export const changePassword = async ({ currentPassword, newPassword }) => {
+  const response = await axios.put('/users/change-password', { currentPassword, newPassword });
+  return response.data;
+};
+
+// Update notification preferences
+export const updateNotificationPreferences = async (preferences) => {
+  const response = await axios.put('/users/notification-preferences', preferences);
+  return response.data;
+};
+
 // Refresh access token
 export const refreshToken = async (refreshToken) => {
   const response = await axios.post('/auth/refresh', { refreshToken });
