@@ -6,6 +6,80 @@ import Owner from '../models/Owner.js';
 import ServiceProvider from '../models/ServiceProvider.js';
 import crypto from 'crypto';
 
+const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'general', 'other'];
+
+const normalizeServiceCategories = (categories = []) => {
+  if (!Array.isArray(categories)) return [];
+  return [...new Set(
+    categories
+      .map((category) => String(category || '').trim().toLowerCase())
+      .filter((category) => SERVICE_PROVIDER_CATEGORIES.includes(category)),
+  )];
+};
+
+const normalizeAreasOfOperation = (areas = []) => {
+  if (!Array.isArray(areas)) return [];
+
+  return areas
+    .map((area) => {
+      if (typeof area === 'string') {
+        const district = area.trim();
+        if (!district) return null;
+        return { district, cities: [district] };
+      }
+
+      if (area && typeof area === 'object') {
+        const district = String(area.district || '').trim();
+        const cities = Array.isArray(area.cities)
+          ? area.cities.map((city) => String(city || '').trim()).filter(Boolean)
+          : [];
+
+        if (!district && cities.length === 0) return null;
+
+        return {
+          district: district || cities[0],
+          cities: cities.length > 0 ? cities : [district],
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+};
+
+const normalizeCertifications = (certifications) => {
+  if (!certifications) return [];
+
+  if (Array.isArray(certifications)) {
+    return certifications
+      .map((item) => {
+        if (typeof item === 'string') {
+          const name = item.trim();
+          return name ? { name } : null;
+        }
+
+        if (item && typeof item === 'object') {
+          const name = String(item.name || '').trim();
+          const fileUrl = item.fileUrl ? String(item.fileUrl).trim() : undefined;
+          return name ? { name, ...(fileUrl ? { fileUrl } : {}) } : null;
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof certifications === 'string') {
+    return certifications
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((name) => ({ name }));
+  }
+
+  return [];
+};
+
 // Generate JWT Token
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -86,15 +160,35 @@ export const register = async (req, res) => {
         break;
 
       case 'service_provider':
+        {
+          const normalizedServiceCategories = normalizeServiceCategories(roleSpecificData.serviceCategories);
+          const normalizedAreasOfOperation = normalizeAreasOfOperation(roleSpecificData.areasOfOperation);
+          const normalizedCertifications = normalizeCertifications(roleSpecificData.certifications);
+
+          if (normalizedServiceCategories.length === 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'At least one valid service category is required',
+            });
+          }
+
+          if (normalizedAreasOfOperation.length === 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'At least one valid area of operation is required',
+            });
+          }
+
         user = await ServiceProvider.create({
           ...userData,
           nic: roleSpecificData.nic,
           businessName: roleSpecificData.businessName,
-          serviceCategories: roleSpecificData.serviceCategories,
-          areasOfOperation: roleSpecificData.areasOfOperation,
+          serviceCategories: normalizedServiceCategories,
+          areasOfOperation: normalizedAreasOfOperation,
           experience: roleSpecificData.experience,
-          certifications: roleSpecificData.certifications,
+          certifications: normalizedCertifications,
         });
+        }
         break;
 
       default:
@@ -121,6 +215,24 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+
+    if (error.name === 'ValidationError') {
+      const details = Object.values(error.errors || {}).map((item) => item.message);
+      return res.status(400).json({
+        success: false,
+        message: details[0] || 'Validation failed',
+        errors: details,
+      });
+    }
+
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0] || 'field';
+      return res.status(409).json({
+        success: false,
+        message: `${duplicateField} already exists`,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Registration failed',

@@ -109,6 +109,8 @@ import accommodationRoutes from './routes/accommodation.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import favoriteRoutes from './routes/favorite.routes.js';
 import inquiryRoutes from './routes/inquiry.routes.js';
+import ticketRoutes from './routes/ticket.routes.js';
+import serviceProviderRoutes from './routes/serviceProvider.routes.js';
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -117,6 +119,8 @@ app.use('/api/accommodations', accommodationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/inquiries', inquiryRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/service-providers', serviceProviderRoutes);
 
 // Additional routes (to be added in future phases)
 // app.use('/api/rooms', require('./routes/room.routes'));
