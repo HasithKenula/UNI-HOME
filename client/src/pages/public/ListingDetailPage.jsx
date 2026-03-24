@@ -42,6 +42,16 @@ import {
 } from '../../features/favorites/favoriteSlice';
 
 const REVIEWS_PER_PAGE = 4;
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const withFallbackMedia = (url = '') => {
+    const primary = `${API_ORIGIN}${url}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
 
 const ListingDetailPage = () => {
     const dispatch = useDispatch();
@@ -81,6 +91,7 @@ const ListingDetailPage = () => {
     }, [dispatch, isAuthenticated, isStudent]);
 
     const photos = listing?.media?.photos || [];
+    const videos = listing?.media?.videos || [];
     const paginatedReviews = useMemo(() => {
         const allReviews = listing?.reviews || [];
         const start = (reviewPage - 1) * REVIEWS_PER_PAGE;
@@ -119,9 +130,10 @@ const ListingDetailPage = () => {
     };
 
     const imageUrls = useMemo(() => {
-        return photos.map((photo) =>
-            photo.url ? `http://localhost:5000${photo.url}` : 'https://placehold.co/900x500?text=No+Image'
-        );
+        return photos.map((photo) => {
+            if (!photo.url) return 'https://placehold.co/900x500?text=No+Image';
+            return withFallbackMedia(photo.url).primary;
+        });
     }, [photos]);
 
     if (loading) {
@@ -257,16 +269,47 @@ const ListingDetailPage = () => {
                                     <img
                                         src={
                                             photo.url
-                                                ? `http://localhost:5000${photo.url}`
+                                                ? withFallbackMedia(photo.url).primary
                                                 : 'https://placehold.co/140x90?text=Image'
                                         }
                                         alt={`Preview ${index + 1}`}
                                         className="h-20 w-full object-cover"
+                                        onError={(event) => {
+                                            const target = event.currentTarget;
+                                            if (!photo.url) return;
+                                            const { fallback } = withFallbackMedia(photo.url);
+                                            if (target.src !== fallback) {
+                                                target.src = fallback;
+                                            }
+                                        }}
                                     />
                                 </button>
                             ))}
                         </div>
                     </div>
+
+                    {videos.length > 0 && (
+                        <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
+                            <h2 className="mb-4 text-2xl font-bold text-gray-900">Videos</h2>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {videos.map((video, index) => (
+                                    <video
+                                        key={`${video.url}-${index}`}
+                                        controls
+                                        className="h-64 w-full rounded-xl bg-black object-cover"
+                                        src={withFallbackMedia(video.url).primary}
+                                        onError={(event) => {
+                                            const target = event.currentTarget;
+                                            const { fallback } = withFallbackMedia(video.url);
+                                            if (target.src !== fallback) {
+                                                target.src = fallback;
+                                            }
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     {/* Title & Description Section */}
                     <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-gradient-to-br from-white to-blue-50/30 p-6 shadow-lg">

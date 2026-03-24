@@ -5,6 +5,7 @@ import Invoice from '../models/Invoice.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { sendEmail } from '../utils/email.util.js';
+import mongoose from 'mongoose';
 
 const CONTRACT_MONTHS = {
     '1_month': 1,
@@ -51,6 +52,34 @@ const sendSafeEmail = async (options) => {
     }
 };
 
+const reserveAccommodationSlot = async (accommodationId) => {
+    const reserved = await Accommodation.findOneAndUpdate(
+        {
+            _id: accommodationId,
+            isDeleted: false,
+            status: 'active',
+            availableRooms: { $gt: 0 },
+        },
+        { $inc: { availableRooms: -1 } },
+        { new: true }
+    );
+
+    return reserved;
+};
+
+const releaseAccommodationSlot = async (accommodationId) => {
+    const accommodation = await Accommodation.findById(accommodationId).select('availableRooms totalRooms');
+    if (!accommodation) return;
+
+    const nextValue = Math.min(
+        Number(accommodation.totalRooms || 0),
+        Number(accommodation.availableRooms || 0) + 1
+    );
+
+    accommodation.availableRooms = Math.max(0, nextValue);
+    await accommodation.save();
+};
+
 const createBooking = async (req, res) => {
     try {
         const {
@@ -92,6 +121,14 @@ const createBooking = async (req, res) => {
             }
         }
 
+        const reservedAccommodation = await reserveAccommodationSlot(accommodationId);
+        if (!reservedAccommodation) {
+            return res.status(409).json({
+                success: false,
+                message: 'No rooms available for this accommodation',
+            });
+        }
+
         const bookingNumber = await generateBookingNumber();
         const monthlyRent = Number(accommodation.pricing?.monthlyRent || 0);
         const keyMoney = Number(accommodation.pricing?.keyMoney || 0);
@@ -99,30 +136,36 @@ const createBooking = async (req, res) => {
         const totalInitialPayment = monthlyRent + keyMoney + deposit;
         const checkOutDate = addMonths(checkInDate, CONTRACT_MONTHS[contractPeriod]);
 
-        const booking = await Booking.create({
-            bookingNumber,
-            student: req.user._id,
-            accommodation: accommodation._id,
-            owner: accommodation.owner?._id,
-            roomType,
-            checkInDate,
-            checkOutDate,
-            contractPeriod,
-            costSummary: {
-                monthlyRent,
-                keyMoney,
-                deposit,
-                totalInitialPayment,
-                billsIncluded: Boolean(accommodation.pricing?.billsIncluded),
-            },
-            studentDetails: {
-                specialRequests,
-                emergencyContact,
-            },
-            paymentStatus: {
-                outstandingAmount: totalInitialPayment,
-            },
-        });
+        let booking;
+        try {
+            booking = await Booking.create({
+                bookingNumber,
+                student: req.user._id,
+                accommodation: accommodation._id,
+                owner: accommodation.owner?._id,
+                roomType,
+                checkInDate,
+                checkOutDate,
+                contractPeriod,
+                costSummary: {
+                    monthlyRent,
+                    keyMoney,
+                    deposit,
+                    totalInitialPayment,
+                    billsIncluded: Boolean(accommodation.pricing?.billsIncluded),
+                },
+                studentDetails: {
+                    specialRequests,
+                    emergencyContact,
+                },
+                paymentStatus: {
+                    outstandingAmount: totalInitialPayment,
+                },
+            });
+        } catch (bookingError) {
+            await releaseAccommodationSlot(accommodationId);
+            throw bookingError;
+        }
 
         const studentName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim();
 
@@ -171,13 +214,21 @@ const createBooking = async (req, res) => {
 
 const getBookings = async (req, res) => {
     try {
-        const { status, page = 1, limit = 10 } = req.query;
+        const { status, accommodationId, page = 1, limit = 10 } = req.query;
         const query = {};
+
+        if (accommodationId && !mongoose.Types.ObjectId.isValid(accommodationId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid accommodationId query value',
+            });
+        }
 
         if (req.user.role === 'student') query.student = req.user._id;
         if (req.user.role === 'owner') query.owner = req.user._id;
 
         if (status) query.status = status;
+        if (accommodationId) query.accommodation = accommodationId;
 
         const pageNum = Math.max(1, Number(page));
         const limitNum = Math.min(100, Math.max(1, Number(limit)));
@@ -334,6 +385,7 @@ const rejectBooking = async (req, res) => {
         booking.status = 'rejected';
         booking.rejectionReason = rejectionReason;
         await booking.save();
+        await releaseAccommodationSlot(booking.accommodation);
 
         const student = await User.findById(booking.student).select('firstName email');
         if (student?.email) {
@@ -381,6 +433,7 @@ const cancelBooking = async (req, res) => {
         booking.cancelledBy = isStudent ? 'student' : 'owner';
         booking.cancelledAt = new Date();
         await booking.save();
+        await releaseAccommodationSlot(booking.accommodation);
 
         await Notification.create({
             recipient: isStudent ? booking.owner : booking.student,
@@ -436,6 +489,7 @@ const completeBooking = async (req, res) => {
         booking.status = 'completed';
         booking.completedAt = new Date();
         await booking.save();
+        await releaseAccommodationSlot(booking.accommodation);
 
         await Notification.create({
             recipient: booking.student,

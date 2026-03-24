@@ -33,3 +33,28 @@
     @apply bg-white rounded-lg shadow-md p-6;
   }
 }
+
+.leaflet-container {
+  z-index: 0;
+}
+
+.sliit-pin {
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.35);
+  white-space: nowrap;
+}
+
+.accommodation-pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
