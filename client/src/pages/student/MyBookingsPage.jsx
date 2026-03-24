@@ -7,6 +7,16 @@ import Input from '../../components/common/Input';
 import { cancelBookingAsync, fetchBookingsAsync } from '../../features/bookings/bookingSlice';
 
 const tabs = ['all', 'pending', 'confirmed', 'cancelled', 'completed'];
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const getMediaUrlWithFallback = (url = '') => {
+    const primary = `${API_ORIGIN}${url}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
 
 const MyBookingsPage = () => {
     const dispatch = useDispatch();
@@ -64,11 +74,19 @@ const MyBookingsPage = () => {
                                     <img
                                         src={
                                             booking.accommodation?.media?.photos?.[0]?.url
-                                                ? `http://localhost:5000${booking.accommodation.media.photos[0].url}`
+                                                ? getMediaUrlWithFallback(booking.accommodation.media.photos[0].url).primary
                                                 : 'https://placehold.co/200x140?text=Listing'
                                         }
                                         alt={booking.accommodation?.title || 'Accommodation'}
                                         className="h-20 w-28 rounded-lg object-cover"
+                                        onError={(event) => {
+                                            const mediaUrl = booking.accommodation?.media?.photos?.[0]?.url;
+                                            if (!mediaUrl) return;
+                                            const { fallback } = getMediaUrlWithFallback(mediaUrl);
+                                            if (event.currentTarget.src !== fallback) {
+                                                event.currentTarget.src = fallback;
+                                            }
+                                        }}
                                     />
                                     <div>
                                     <p className="text-xs text-gray-500">{booking.bookingNumber}</p>

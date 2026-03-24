@@ -5,7 +5,7 @@ export const createBooking = async (payload) => {
     return response.data;
 };
 
-export const getMyBookings = async (params = {}) => {
+export const getBookings = async (params = {}) => {
     const response = await axios.get('/bookings', { params });
     return response.data;
 };

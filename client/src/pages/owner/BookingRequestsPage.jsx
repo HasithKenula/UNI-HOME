@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { ClipboardList } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import { getMyListings } from '../../features/accommodations/accommodationAPI';
 import {
     acceptBookingAsync,
     fetchBookingsAsync,
@@ -10,41 +12,69 @@ import {
 } from '../../features/bookings/bookingSlice';
 
 const BookingRequestsPage = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const dispatch = useDispatch();
     const { list, loading } = useSelector((state) => state.bookings);
+    const [ownerListings, setOwnerListings] = useState([]);
     const [statusFilter, setStatusFilter] = useState('pending');
     const [accommodationFilter, setAccommodationFilter] = useState('all');
     const [rejectModal, setRejectModal] = useState({ open: false, bookingId: null, reason: '' });
 
     useEffect(() => {
-        dispatch(fetchBookingsAsync(statusFilter ? { status: statusFilter } : {}));
-    }, [dispatch, statusFilter]);
+        const queryAccommodationId = searchParams.get('accommodationId');
+        const queryStatus = searchParams.get('status');
+
+        if (queryAccommodationId) setAccommodationFilter(queryAccommodationId);
+        if (queryStatus) setStatusFilter(queryStatus);
+    }, [searchParams]);
+
+    useEffect(() => {
+        const params = {};
+        if (statusFilter) params.status = statusFilter;
+        if (accommodationFilter !== 'all') params.accommodationId = accommodationFilter;
+        dispatch(fetchBookingsAsync(params));
+    }, [dispatch, statusFilter, accommodationFilter]);
+
+    useEffect(() => {
+        const next = new URLSearchParams();
+        if (statusFilter) next.set('status', statusFilter);
+        if (accommodationFilter !== 'all') next.set('accommodationId', accommodationFilter);
+        setSearchParams(next, { replace: true });
+    }, [statusFilter, accommodationFilter, setSearchParams]);
+
+    useEffect(() => {
+        const loadListings = async () => {
+            try {
+                const response = await getMyListings();
+                setOwnerListings(response?.data || []);
+            } catch (error) {
+                setOwnerListings([]);
+            }
+        };
+
+        loadListings();
+    }, []);
 
     const requests = useMemo(() => list || [], [list]);
     const accommodationOptions = useMemo(() => {
-        const map = new Map();
-        (list || []).forEach((item) => {
-            if (item.accommodation?._id) {
-                map.set(item.accommodation._id, item.accommodation.title);
-            }
-        });
-        return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
-    }, [list]);
-
-    const filteredRequests = useMemo(() => {
-        if (accommodationFilter === 'all') return requests;
-        return requests.filter((item) => item.accommodation?._id === accommodationFilter);
-    }, [requests, accommodationFilter]);
+        return ownerListings.map((listing) => ({ value: listing._id, label: listing.title }));
+    }, [ownerListings]);
 
     const handleAccept = async (id) => {
         await dispatch(acceptBookingAsync(id));
-        dispatch(fetchBookingsAsync(statusFilter ? { status: statusFilter } : {}));
+        const params = {};
+        if (statusFilter) params.status = statusFilter;
+        if (accommodationFilter !== 'all') params.accommodationId = accommodationFilter;
+        dispatch(fetchBookingsAsync(params));
     };
 
     const handleReject = async () => {
         await dispatch(rejectBookingAsync({ id: rejectModal.bookingId, reason: rejectModal.reason }));
         setRejectModal({ open: false, bookingId: null, reason: '' });
-        dispatch(fetchBookingsAsync(statusFilter ? { status: statusFilter } : {}));
+        const params = {};
+        if (statusFilter) params.status = statusFilter;
+        if (accommodationFilter !== 'all') params.accommodationId = accommodationFilter;
+        dispatch(fetchBookingsAsync(params));
     };
 
     return (
@@ -82,12 +112,12 @@ const BookingRequestsPage = () => {
             <div className="mt-6 space-y-4">
                 {loading ? (
                     <p className="text-gray-600">Loading requests...</p>
-                ) : filteredRequests.length === 0 ? (
+                ) : requests.length === 0 ? (
                     <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
                         No requests for this filter.
                     </div>
                 ) : (
-                    filteredRequests.map((booking) => (
+                    requests.map((booking) => (
                         <div key={booking._id} className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>

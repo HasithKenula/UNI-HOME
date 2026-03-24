@@ -5,6 +5,17 @@ import { Heart } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { fetchFavoritesAsync, removeFavoriteAsync } from '../../features/favorites/favoriteSlice';
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const getMediaUrlWithFallback = (url = '') => {
+    const primary = `${API_ORIGIN}${url}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
+
 const FavoritesPage = () => {
     const dispatch = useDispatch();
     const { list, loading } = useSelector((state) => state.favorites);
@@ -32,11 +43,19 @@ const FavoritesPage = () => {
                             <img
                                 src={
                                     listing.media?.photos?.[0]?.url
-                                        ? `http://localhost:5000${listing.media.photos[0].url}`
+                                        ? getMediaUrlWithFallback(listing.media.photos[0].url).primary
                                         : 'https://placehold.co/640x360?text=No+Image'
                                 }
                                 alt={listing.title}
                                 className="h-40 w-full rounded-lg object-cover"
+                                onError={(event) => {
+                                    const mediaUrl = listing.media?.photos?.[0]?.url;
+                                    if (!mediaUrl) return;
+                                    const { fallback } = getMediaUrlWithFallback(mediaUrl);
+                                    if (event.currentTarget.src !== fallback) {
+                                        event.currentTarget.src = fallback;
+                                    }
+                                }}
                             />
                             <h3 className="mt-3 text-lg font-bold text-gray-900">{listing.title}</h3>
                             <p className="text-sm text-gray-600">

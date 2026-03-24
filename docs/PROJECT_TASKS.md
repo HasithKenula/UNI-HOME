@@ -576,6 +576,7 @@
 - [x] Listing cards with status badges, view count, booking count
 - [x] Actions: Edit, Publish/Unpublish, Delete
 - [x] Stats summary header (total, active, draft, pending)
+- [x] Keep listing availability fresh with periodic background refresh + window-focus refresh (reflect booking-driven room count updates)
 
 ### Room Management (within listing)
 
@@ -649,6 +650,7 @@
 - [x] Route (protected: student)
 - [x] Validator: accommodationId, roomType, checkInDate, contractPeriod
 - [x] Controller: verify accommodation available, generate bookingNumber, calculate costSummary, create booking, send email to owner + student, create notifications
+- [x] Controller: reserve an accommodation slot on booking creation and maintain slot release on reject/cancel/complete transitions
 - [ ] Test → 201
 
 ### `GET /api/bookings`
@@ -656,6 +658,7 @@
 - [x] Route (protected: student/owner)
 - [x] Controller: if student → find by student, if owner → find by owner, with status filter + pagination
 - [x] Populate accommodation (title, location, photo), student/owner info
+- [x] Owner filter by `accommodationId` query (view student bookings per specific listing)
 - [ ] Test → 200
 
 ### `GET /api/bookings/:id`
@@ -772,6 +775,9 @@
 - [x] Request cards: student info, accommodation, room type, dates, cost
 - [x] Accept / Reject buttons (reject → reason modal)
 - [x] Auto-generate invoice on accept
+- [x] Fetch bookings using backend accommodation-level query filter (not only client-side filtering)
+- [x] Query-param deep links (`accommodationId`, `status`) for listing-specific booking views
+- [x] Owner dashboard integration with quick access to booking requests
 
 ### Favorites Page
 

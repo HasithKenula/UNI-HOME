@@ -33,22 +33,29 @@ connectDB();
 app.use(helmet());
 
 // CORS configuration
+const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');
+
 const configuredClientUrls = (process.env.CLIENT_URL || '')
   .split(',')
-  .map((url) => url.trim())
+  .map((url) => normalizeOrigin(url))
   .filter(Boolean);
 
 const allowedOrigins = new Set([
   ...configuredClientUrls,
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
 ]);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow non-browser requests (no Origin header) and configured browser origins.
-    if (!origin || allowedOrigins.has(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin || '');
+
+    if (!origin || allowedOrigins.has(normalizedOrigin)) {
       callback(null, true);
       return;
     }

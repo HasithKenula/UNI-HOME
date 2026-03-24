@@ -4,10 +4,30 @@ import { toast } from 'react-toastify';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
+import LocationMapPicker from '../../components/accommodation/LocationMapPicker';
 import {
     getAccommodationById,
     updateAccommodation,
 } from '../../features/accommodations/accommodationAPI';
+
+const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+
+const formatFileSize = (bytes = 0) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const getMediaUrlWithFallback = (url = '') => {
+    const primary = `${API_ORIGIN}${url}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
 
 const EditListingPage = () => {
     const { id } = useParams();
@@ -15,7 +35,9 @@ const EditListingPage = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [existingPhotos, setExistingPhotos] = useState([]);
+    const [existingVideos, setExistingVideos] = useState([]);
     const [removePhotos, setRemovePhotos] = useState([]);
+    const [removeVideos, setRemoveVideos] = useState([]);
     const [newPhotos, setNewPhotos] = useState([]);
     const [newVideos, setNewVideos] = useState([]);
 
@@ -23,11 +45,22 @@ const EditListingPage = () => {
         title: '',
         description: '',
         accommodationType: '',
-        location: { district: '', city: '', address: '' },
+        location: {
+            district: '',
+            city: '',
+            address: '',
+            distanceToSLIIT: '',
+            coordinates: {
+                type: 'Point',
+                coordinates: ['', ''],
+            },
+        },
         pricing: { monthlyRent: '', keyMoney: 0, deposit: 0, billsIncluded: false },
+        bookingRules: { minimumPeriod: '6_months' },
     });
 
     const selectedToRemove = useMemo(() => new Set(removePhotos), [removePhotos]);
+    const selectedVideosToRemove = useMemo(() => new Set(removeVideos), [removeVideos]);
 
     useEffect(() => {
         const fetchListing = async () => {
@@ -43,6 +76,14 @@ const EditListingPage = () => {
                         district: data.location?.district || '',
                         city: data.location?.city || '',
                         address: data.location?.address || '',
+                        distanceToSLIIT: data.location?.distanceToSLIIT || '',
+                        coordinates: {
+                            type: 'Point',
+                            coordinates: [
+                                data.location?.coordinates?.coordinates?.[0] ?? '',
+                                data.location?.coordinates?.coordinates?.[1] ?? '',
+                            ],
+                        },
                     },
                     pricing: {
                         monthlyRent: data.pricing?.monthlyRent || '',
@@ -50,9 +91,13 @@ const EditListingPage = () => {
                         deposit: data.pricing?.deposit || 0,
                         billsIncluded: !!data.pricing?.billsIncluded,
                     },
+                    bookingRules: {
+                        minimumPeriod: data.bookingRules?.minimumPeriod || '6_months',
+                    },
                 });
 
                 setExistingPhotos(data.media?.photos || []);
+                setExistingVideos(data.media?.videos || []);
             } catch (error) {
                 toast.error(error.response?.data?.message || 'Failed to load listing');
             } finally {
@@ -77,6 +122,40 @@ const EditListingPage = () => {
         setRemovePhotos((prev) => (prev.includes(url) ? prev.filter((item) => item !== url) : [...prev, url]));
     };
 
+    const toggleRemoveVideo = (url) => {
+        setRemoveVideos((prev) => (prev.includes(url) ? prev.filter((item) => item !== url) : [...prev, url]));
+    };
+
+    const addPhotos = (event) => {
+        const files = Array.from(event.target.files || []);
+        if (files.length === 0) return;
+        setNewPhotos((prev) => [...prev, ...files]);
+        event.target.value = '';
+    };
+
+    const addVideos = (event) => {
+        const files = Array.from(event.target.files || []);
+        if (files.length === 0) return;
+
+        const oversize = files.find((file) => file.size > MAX_VIDEO_SIZE_BYTES);
+        if (oversize) {
+            toast.error(`Video ${oversize.name} is larger than 50MB`);
+            event.target.value = '';
+            return;
+        }
+
+        setNewVideos((prev) => [...prev, ...files]);
+        event.target.value = '';
+    };
+
+    const removeNewPhoto = (indexToRemove) => {
+        setNewPhotos((prev) => prev.filter((_, index) => index !== indexToRemove));
+    };
+
+    const removeNewVideo = (indexToRemove) => {
+        setNewVideos((prev) => prev.filter((_, index) => index !== indexToRemove));
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         setSaving(true);
@@ -85,11 +164,25 @@ const EditListingPage = () => {
             const payload = {
                 ...formData,
                 removePhotos,
+                removeVideos,
                 pricing: {
                     ...formData.pricing,
                     monthlyRent: Number(formData.pricing.monthlyRent),
                     keyMoney: Number(formData.pricing.keyMoney || 0),
                     deposit: Number(formData.pricing.deposit || 0),
+                },
+                location: {
+                    ...formData.location,
+                    distanceToSLIIT: formData.location.distanceToSLIIT
+                        ? Number(formData.location.distanceToSLIIT)
+                        : undefined,
+                    coordinates: {
+                        type: 'Point',
+                        coordinates: [
+                            Number(formData.location.coordinates.coordinates[0] || 0),
+                            Number(formData.location.coordinates.coordinates[1] || 0),
+                        ],
+                    },
                 },
             };
 
@@ -136,23 +229,10 @@ const EditListingPage = () => {
                     ]}
                 />
 
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Input
-                        label="District"
-                        value={formData.location.district}
-                        onChange={(e) => updatePath(['location', 'district'], e.target.value)}
-                    />
-                    <Input
-                        label="City"
-                        value={formData.location.city}
-                        onChange={(e) => updatePath(['location', 'city'], e.target.value)}
-                    />
-                    <Input
-                        label="Address"
-                        value={formData.location.address}
-                        onChange={(e) => updatePath(['location', 'address'], e.target.value)}
-                    />
-                </div>
+                <LocationMapPicker
+                    value={formData.location}
+                    onChange={(location) => updatePath(['location'], location)}
+                />
 
                 <div className="grid gap-4 md:grid-cols-3">
                     <Input
@@ -184,6 +264,18 @@ const EditListingPage = () => {
                     Bills Included
                 </label>
 
+                <Select
+                    label="Minimum Booking Period"
+                    value={formData.bookingRules.minimumPeriod}
+                    onChange={(e) => updatePath(['bookingRules', 'minimumPeriod'], e.target.value)}
+                    options={[
+                        { value: '1_month', label: '1 Month' },
+                        { value: '3_months', label: '3 Months' },
+                        { value: '6_months', label: '6 Months' },
+                        { value: '1_year', label: '1 Year' },
+                    ]}
+                />
+
                 <div className="space-y-2">
                     <p className="text-sm font-semibold text-gray-700">Existing Photos</p>
                     <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -193,7 +285,17 @@ const EditListingPage = () => {
                                 className={`cursor-pointer rounded-lg border p-2 ${selectedToRemove.has(photo.url) ? 'border-red-400 bg-red-50' : 'border-gray-200'
                                     }`}
                             >
-                                <img src={`http://localhost:5000${photo.url}`} alt="Listing" className="h-28 w-full rounded object-cover" />
+                                <img
+                                    src={getMediaUrlWithFallback(photo.url).primary}
+                                    alt="Listing"
+                                    className="h-28 w-full rounded object-cover"
+                                    onError={(event) => {
+                                        const { fallback } = getMediaUrlWithFallback(photo.url);
+                                        if (event.currentTarget.src !== fallback) {
+                                            event.currentTarget.src = fallback;
+                                        }
+                                    }}
+                                />
                                 <div className="mt-2 flex items-center gap-2 text-xs text-gray-700">
                                     <input
                                         type="checkbox"
@@ -207,14 +309,69 @@ const EditListingPage = () => {
                     </div>
                 </div>
 
+                <div className="space-y-2">
+                    <p className="text-sm font-semibold text-gray-700">Existing Videos</p>
+                    <div className="space-y-3">
+                        {existingVideos.map((video) => (
+                            <label
+                                key={video.url}
+                                className={`block cursor-pointer rounded-lg border p-3 ${selectedVideosToRemove.has(video.url) ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                                    }`}
+                            >
+                                <video
+                                    controls
+                                    className="h-40 w-full rounded bg-black"
+                                    src={getMediaUrlWithFallback(video.url).primary}
+                                    onError={(event) => {
+                                        const { fallback } = getMediaUrlWithFallback(video.url);
+                                        if (event.currentTarget.src !== fallback) {
+                                            event.currentTarget.src = fallback;
+                                        }
+                                    }}
+                                />
+                                <div className="mt-2 flex items-center gap-2 text-xs text-gray-700">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedVideosToRemove.has(video.url)}
+                                        onChange={() => toggleRemoveVideo(video.url)}
+                                    />
+                                    Remove
+                                </div>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                     <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">Add New Photos</label>
-                        <input type="file" multiple accept="image/*" onChange={(e) => setNewPhotos(Array.from(e.target.files || []))} />
+                        <input type="file" multiple accept="image/*" onChange={addPhotos} />
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            {newPhotos.map((file, index) => (
+                                <div key={`${file.name}-${index}`} className="rounded border border-gray-200 p-2 text-xs">
+                                    <img src={URL.createObjectURL(file)} alt={file.name} className="h-24 w-full rounded object-cover" />
+                                    <div className="mt-1 flex items-center justify-between gap-2">
+                                        <span className="truncate pr-2">{file.name}</span>
+                                        <button type="button" className="text-red-600" onClick={() => removeNewPhoto(index)}>Remove</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                     <div>
-                        <label className="mb-2 block text-sm font-semibold text-gray-700">Add New Videos</label>
-                        <input type="file" multiple accept="video/*" onChange={(e) => setNewVideos(Array.from(e.target.files || []))} />
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">Add New Videos (up to 50MB each)</label>
+                        <input type="file" multiple accept="video/*" onChange={addVideos} />
+                        <div className="mt-2 space-y-2">
+                            {newVideos.map((file, index) => (
+                                <div key={`${file.name}-${index}`} className="rounded border border-gray-200 p-2 text-xs">
+                                    <video controls className="h-28 w-full rounded bg-black" src={URL.createObjectURL(file)} />
+                                    <div className="mt-1 flex items-center justify-between gap-2">
+                                        <span className="truncate pr-2">{file.name} ({formatFileSize(file.size)})</span>
+                                        <button type="button" className="text-red-600" onClick={() => removeNewVideo(index)}>Remove</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
