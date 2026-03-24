@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -61,7 +61,7 @@ const MyListingsPage = () => {
 
     const currentTab = useMemo(() => statusTabs.find((item) => item.key === status), [status]);
 
-    const fetchListings = async () => {
+    const fetchListings = useCallback(async () => {
         setLoading(true);
         try {
             const response = await getMyListings(status);
@@ -72,11 +72,38 @@ const MyListingsPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [status]);
+
+    const refreshListingsSilently = useCallback(async () => {
+        try {
+            const response = await getMyListings(status);
+            setListings(response.data || []);
+            setStats(response.stats || { total: 0, active: 0, draft: 0, pending: 0 });
+        } catch (error) {
+            // Ignore background refresh errors to avoid noisy toasts.
+        }
+    }, [status]);
 
     useEffect(() => {
         fetchListings();
-    }, [status]);
+    }, [fetchListings]);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            refreshListingsSilently();
+        }, 15000);
+
+        const handleWindowFocus = () => {
+            refreshListingsSilently();
+        };
+
+        window.addEventListener('focus', handleWindowFocus);
+
+        return () => {
+            clearInterval(intervalId);
+            window.removeEventListener('focus', handleWindowFocus);
+        };
+    }, [refreshListingsSilently]);
 
     const handleTogglePublish = async (listing) => {
         try {
@@ -286,6 +313,12 @@ const MyListingsPage = () => {
                                         <Bed className="w-4 h-4 mr-2" />
                                         {expandedRoomManager === listing._id ? 'Hide Rooms' : 'Manage Rooms'}
                                     </Button>
+                                    <Link to={`/owner/booking-requests?accommodationId=${listing._id}&status=pending`}>
+                                        <Button size="sm" variant="secondary">
+                                            <Home className="w-4 h-4 mr-2" />
+                                            View Bookings
+                                        </Button>
+                                    </Link>
                                     <Button size="sm" variant="danger" onClick={() => handleDelete(listing._id)}>
                                         <Trash2 className="w-4 h-4 mr-2" />
                                         Delete

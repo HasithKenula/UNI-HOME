@@ -26,7 +26,7 @@ export const fetchBookingsAsync = createAsyncThunk(
     'bookings/fetchAll',
     async (params, { rejectWithValue }) => {
         try {
-            return await bookingAPI.getMyBookings(params);
+            return await bookingAPI.getBookings(params);
         } catch (error) {
             return rejectWithValue(error.response?.data || { message: 'Failed to fetch bookings' });
         }
@@ -51,6 +51,17 @@ export const cancelBookingAsync = createAsyncThunk(
             return await bookingAPI.cancelBooking(id, reason);
         } catch (error) {
             return rejectWithValue(error.response?.data || { message: 'Failed to cancel booking' });
+        }
+    }
+);
+
+export const updateBookingAsync = createAsyncThunk(
+    'bookings/update',
+    async ({ id, payload }, { rejectWithValue }) => {
+        try {
+            return await bookingAPI.updateBooking(id, payload);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to update booking' });
         }
     }
 );
@@ -143,6 +154,26 @@ const bookingSlice = createSlice({
             .addCase(cancelBookingAsync.rejected, (state, action) => {
                 state.actionLoading = false;
                 state.error = action.payload?.message || 'Failed to cancel booking';
+                toast.error(state.error);
+            })
+            .addCase(updateBookingAsync.pending, (state) => {
+                state.actionLoading = true;
+                state.error = null;
+            })
+            .addCase(updateBookingAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                const updated = action.payload.data;
+                if (updated) {
+                    state.list = state.list.map((item) => (item._id === updated._id ? updated : item));
+                    if (state.selectedBooking?._id === updated._id) {
+                        state.selectedBooking = { ...state.selectedBooking, ...updated };
+                    }
+                }
+                toast.success(action.payload?.message || 'Booking updated');
+            })
+            .addCase(updateBookingAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                state.error = action.payload?.message || 'Failed to update booking';
                 toast.error(state.error);
             })
             .addCase(acceptBookingAsync.fulfilled, (state, action) => {

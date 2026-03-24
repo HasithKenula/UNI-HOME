@@ -315,9 +315,11 @@
 
 ### `POST /api/auth/register/service-provider`
 
-- [ ] Route definition
-- [ ] Validator: validate NIC, serviceCategories enum, required fields
-- [ ] Controller: create ServiceProvider with status "pending", notify admin
+- [x] Route definition
+- [x] Validator: validate NIC, serviceCategories enum, required fields
+- [x] Controller: create ServiceProvider with status "pending"
+- [x] Fix: normalize `serviceCategories`, `areasOfOperation`, and `certifications` payloads to schema shape
+- [ ] Controller: notify admin
 - [ ] Test → 201 Created
 
 ### `POST /api/auth/login`
@@ -391,6 +393,7 @@
 - [ ] `components/auth/StudentRegisterForm.jsx` — SLIIT email field, student ID, batch, faculty
 - [ ] `components/auth/OwnerRegisterForm.jsx` — NIC, bank details, document upload
 - [ ] `components/auth/ProviderRegisterForm.jsx` — service categories, area of operation
+- [x] `components/auth/ServiceProviderRegisterForm.jsx` — service categories, area of operation, payload mapping fix
 - [ ] `pages/public/RegisterPage.jsx` — tab/step switcher for 3 registration types
 - [ ] Form validation (react-hook-form)
 - [ ] API integration (authAPI.js → register endpoints)
@@ -576,6 +579,7 @@
 - [x] Listing cards with status badges, view count, booking count
 - [x] Actions: Edit, Publish/Unpublish, Delete
 - [x] Stats summary header (total, active, draft, pending)
+- [x] Keep listing availability fresh with periodic background refresh + window-focus refresh (reflect booking-driven room count updates)
 
 ### Room Management (within listing)
 
@@ -649,6 +653,7 @@
 - [x] Route (protected: student)
 - [x] Validator: accommodationId, roomType, checkInDate, contractPeriod
 - [x] Controller: verify accommodation available, generate bookingNumber, calculate costSummary, create booking, send email to owner + student, create notifications
+- [x] Controller: reserve an accommodation slot on booking creation and maintain slot release on reject/cancel/complete transitions
 - [ ] Test → 201
 
 ### `GET /api/bookings`
@@ -656,12 +661,20 @@
 - [x] Route (protected: student/owner)
 - [x] Controller: if student → find by student, if owner → find by owner, with status filter + pagination
 - [x] Populate accommodation (title, location, photo), student/owner info
+- [x] Owner filter by `accommodationId` query (view student bookings per specific listing)
 - [ ] Test → 200
 
 ### `GET /api/bookings/:id`
 
 - [x] Route (protected: own booking or own property)
 - [x] Controller: findById, populate all refs, fetch payments + invoices for this booking
+- [ ] Test → 200
+
+### `PATCH /api/bookings/:id`
+
+- [x] Route (protected: student)
+- [x] Validator: optional editable fields (roomType, checkInDate, contractPeriod, specialRequests, emergencyContact)
+- [x] Controller: verify student owns booking, allow update only in pending status, recalculate checkOutDate
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/accept`
@@ -679,7 +692,7 @@
 ### `PATCH /api/bookings/:id/cancel`
 
 - [x] Route (protected: student/owner)
-- [x] Controller: set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
+- [x] Controller: pending-only cancel; set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/complete`
@@ -755,6 +768,8 @@
 - [x] Status filter tabs (All, Pending, Confirmed, Cancelled, Completed)
 - [x] Booking cards: accommodation thumbnail, booking number, status badge, dates, cost
 - [x] Click → booking detail page
+- [x] Update booking button next to View Booking (pending bookings only)
+- [x] Update modal with room type, check-in date, contract period, special requests, and emergency contact
 - [x] Cancel booking button (with reason modal)
 
 ### Booking Detail Page
@@ -772,6 +787,9 @@
 - [x] Request cards: student info, accommodation, room type, dates, cost
 - [x] Accept / Reject buttons (reject → reason modal)
 - [x] Auto-generate invoice on accept
+- [x] Fetch bookings using backend accommodation-level query filter (not only client-side filtering)
+- [x] Query-param deep links (`accommodationId`, `status`) for listing-specific booking views
+- [x] Owner dashboard integration with quick access to booking requests
 
 ### Favorites Page
 
@@ -975,148 +993,156 @@
 
 ## 6.1 Backend — Models
 
-- [ ] `models/MaintenanceTicket.js` — Full schema with statusHistory, SLA, completion, ratings
+- [x] `models/MaintenanceTicket.js` — Full schema with statusHistory, SLA, completion, ratings
 
 ## 6.2 Backend — Ticket APIs
 
 ### `POST /api/tickets`
 
-- [ ] Route (protected: student — active booking required)
-- [ ] Validator: accommodationId, category, title, description
-- [ ] Controller: generate ticketNumber, create with status=open, calculate SLA deadlines, send notification to owner
+- [x] Route (protected: student — confirmed booking required)
+- [x] Validator: accommodationId, category, title, description
+- [x] Controller: generate ticketNumber, create with status=open, calculate SLA deadlines, send notification to owner
 - [ ] Test → 201
 
 ### `GET /api/tickets`
 
-- [ ] Route (protected: student/owner/provider)
-- [ ] Controller: role-based query (student=createdBy, owner=owner, provider=assignedProvider), with status/priority/category filters + pagination
-- [ ] Return stats (open, inProgress, completed counts)
+- [x] Route (protected: student/owner/provider)
+- [x] Controller: role-based query (student=createdBy, owner=owner, provider=assignedProvider), with status/priority/category filters + pagination
+- [x] Return stats (open, inProgress, completed counts)
 - [ ] Test → 200
 
 ### `GET /api/tickets/:id`
 
-- [ ] Route (protected: participants)
-- [ ] Controller: findById, populate all refs, include statusHistory
+- [x] Route (protected: participants)
+- [x] Controller: findById, populate all refs, include statusHistory
 - [ ] Test → 200
 
 ### `PATCH /api/tickets/:id/approve`
 
-- [ ] Route (protected: owner)
-- [ ] Controller: set status=approved, push to statusHistory
+- [x] Route (protected: owner)
+- [x] Controller: set status=approved, push to statusHistory
+- [ ] Test → 200
+
+### `PATCH /api/tickets/:id/reject`
+
+- [x] Route (protected: owner)
+- [x] Controller: reject ticket request by owner with reason + status history
 - [ ] Test → 200
 
 ### `PATCH /api/tickets/:id/assign`
 
-- [ ] Route (protected: owner)
-- [ ] Controller: set assignedProvider + scheduledVisit, status=assigned, notify provider + student
+- [x] Route (protected: owner)
+- [x] Controller: set assignedProvider + scheduledVisit, status=assigned, notify provider + student
 - [ ] Test → 200
 
 ### `PATCH /api/tickets/:id/accept-task`
 
-- [ ] Route (protected: provider)
-- [ ] Controller: set status=in_progress, push to statusHistory
+- [x] Route (protected: provider)
+- [x] Controller: set status=in_progress, push to statusHistory
 - [ ] Test → 200
 
 ### `PATCH /api/tickets/:id/decline-task`
 
-- [ ] Route (protected: provider)
-- [ ] Controller: clear assignedProvider, set status=approved, notify owner to reassign
+- [x] Route (protected: provider)
+- [x] Controller: clear assignedProvider, set status=approved, notify owner to reassign
 - [ ] Test → 200
 
 ### `PATCH /api/tickets/:id/complete`
 
-- [ ] Route (protected: provider)
-- [ ] Controller: set completionDetails (notes, cost, proof photos), status=completed, notify student + owner
+- [x] Route (protected: provider)
+- [x] Controller: set completionDetails (notes, cost, proof photos), status=completed, notify student + owner
 - [ ] Test → 200
 
 ### `PATCH /api/tickets/:id/confirm`
 
-- [ ] Route (protected: student)
-- [ ] Controller: if isResolved=true → status=closed, else → status=re_opened + notify owner
+- [x] Route (protected: student)
+- [x] Controller: if isResolved=true → status=closed, else → status=re_opened + notify owner
 - [ ] Test → 200
 
 ### `POST /api/tickets/:id/rate`
 
-- [ ] Route (protected: student)
-- [ ] Controller: set providerRating + ownerRating, update provider.averageRating
+- [x] Route (protected: student)
+- [x] Controller: set providerRating + ownerRating, update provider.averageRating
 - [ ] Test → 200
 
 ### `GET /api/service-providers`
 
-- [ ] Route (protected: owner)
-- [ ] Controller: find approved + available providers, filter by category/district/city
+- [x] Route (protected: owner)
+- [x] Controller: find approved + available providers, filter by category/district/city
 - [ ] Test → 200
 
 ## 6.3 Frontend — Student Ticket Pages
 
 ### Create Ticket
 
-- [ ] `components/ticket/CreateTicketForm.jsx`
-  - [ ] Category dropdown (plumbing, electrical, cleaning, etc.)
-  - [ ] Title + description fields
-  - [ ] Priority selector (Low/Medium/High/Urgent)
-  - [ ] Photo/video upload (max 5)
-  - [ ] Accommodation + room auto-populated from active booking
-  - [ ] Submit button
-- [ ] API integration → POST /api/tickets
+- [x] `components/ticket/CreateTicketForm.jsx`
+  - [x] Category dropdown (plumbing, electrical, cleaning, etc.)
+  - [x] Title + description fields
+  - [x] Priority selector (Low/Medium/High/Urgent)
+  - [x] Photo/video upload (max 5)
+  - [x] Accommodation + room auto-populated from completed booking
+  - [x] Submit button
+- [x] API integration → POST /api/tickets
 
 ### My Tickets Page
 
-- [ ] `pages/student/MyTicketsPage.jsx`
-- [ ] Status filter tabs
-- [ ] Ticket cards: number, category icon, title, priority badge, status, date
-- [ ] Click → ticket detail
+- [x] `pages/student/MyTicketsPage.jsx`
+- [x] Status filter tabs
+- [x] Ticket cards: number, category icon, title, priority badge, status, date
+- [x] Click → ticket detail
 
 ### Ticket Detail Page
 
-- [ ] `components/ticket/TicketDetail.jsx`
-- [ ] Status timeline (Open → Approved → Assigned → In Progress → Completed → Closed)
-- [ ] Issue details + attachments (photo viewer)
-- [ ] Assigned provider info + scheduled visit
-- [ ] Completion proof photos
-- [ ] Confirm resolution button (Yes resolved / Not resolved)
-- [ ] Rate provider + owner form (after closure)
+- [x] `components/ticket/TicketDetail.jsx`
+- [x] Status timeline (Open → Approved → Assigned → In Progress → Completed → Closed)
+- [x] Issue details + attachments (photo viewer)
+- [x] Assigned provider info + scheduled visit
+- [x] Completion proof photos
+- [x] Confirm resolution button (Yes resolved / Not resolved)
+- [x] Rate provider + owner form (after closure)
 
 ## 6.4 Frontend — Owner Ticket Pages
 
 ### Owner Tickets Page
 
-- [ ] `pages/owner/OwnerTicketsPage.jsx`
-- [ ] Filter by accommodation + status + priority
-- [ ] Ticket list with actions:
-  - [ ] Approve button (for open tickets)
-  - [ ] Assign provider button → provider selection modal
-- [ ] Provider selection modal:
-  - [ ] Filter by category + area
-  - [ ] Provider cards (name, rating, completed tasks, availability)
-  - [ ] Date picker + time slot selector
-  - [ ] Assign button
+- [x] `pages/owner/OwnerTicketsPage.jsx`
+- [x] Owner dashboard ticket request visibility (`pages/owner/OwnerDashboard.jsx`)
+- [x] Filter by accommodation + status + priority
+- [x] Ticket list with actions:
+  - [x] Approve button (for open tickets)
+  - [x] Reject button (for open/approved tickets)
+  - [x] Assign provider button → provider selection modal
+- [x] Provider selection modal:
+  - [x] Filter by category + area
+  - [x] Provider cards (name, rating, completed tasks, availability)
+  - [x] Date picker + time slot selector
+  - [x] Assign button
 
 ## 6.5 Frontend — Provider Pages
 
 ### Provider Dashboard
 
-- [ ] `pages/provider/ProviderDashboard.jsx`
-- [ ] Stats: assigned, in progress, completed counts
-- [ ] Upcoming scheduled visits
-- [ ] Recent task notifications
+- [x] `pages/provider/ProviderDashboard.jsx`
+- [x] Stats: assigned, in progress, completed counts
+- [x] Upcoming scheduled visits
+- [x] Recent task notifications
 
 ### My Tasks Page
 
-- [ ] `pages/provider/MyTasksPage.jsx`
-- [ ] Status filter tabs (Assigned, In Progress, Completed)
-- [ ] Task cards with: category, title, location, scheduled date, priority
-- [ ] Accept/Decline buttons (for assigned tasks)
-- [ ] Mark complete form:
-  - [ ] Completion notes textarea
-  - [ ] Cost input (optional)
-  - [ ] Upload completion proof photos
-  - [ ] Submit button
+- [x] `pages/provider/MyTasksPage.jsx`
+- [x] Status filter tabs (Incomplete, Finished)
+- [x] Task cards with: category, title, location, scheduled date, priority
+- [x] Accept/Decline buttons (for assigned tasks)
+- [x] Mark complete form:
+  - [x] Completion notes textarea
+  - [x] Cost input (optional)
+  - [x] Upload completion proof photos
+  - [x] Submit button
 
 ## 6.6 Frontend — State
 
-- [ ] `features/tickets/ticketSlice.js` + `ticketAPI.js`
-- [ ] `features/providers/providerSlice.js` + `providerAPI.js`
+- [x] `features/tickets/ticketSlice.js` + `ticketAPI.js`
+- [x] `features/providers/providerSlice.js` + `providerAPI.js`
 
 ---
 

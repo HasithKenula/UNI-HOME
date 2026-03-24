@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { CalendarClock, Clock3, CheckCircle2, XCircle, Heart, MessageCircle } from 'lucide-react';
+import { CalendarClock, Clock3, Heart, Wrench } from 'lucide-react';
 import { fetchBookingsAsync } from '../../features/bookings/bookingSlice';
 import Button from '../../components/common/Button';
 
@@ -93,10 +93,10 @@ const StudentDashboard = () => {
                 )}
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Link to="/search"><Button fullWidth variant="primary"><Clock3 className="h-4 w-4 mr-2" />Find Accommodation</Button></Link>
                 <Link to="/student/favorites"><Button fullWidth variant="secondary"><Heart className="h-4 w-4 mr-2" />My Favorites</Button></Link>
-                <Link to="/student/inquiries"><Button fullWidth variant="outline"><MessageCircle className="h-4 w-4 mr-2" />My Inquiries</Button></Link>
+                <Link to="/student/tickets"><Button fullWidth variant="success"><Wrench className="h-4 w-4 mr-2" />Create Ticket</Button></Link>
             </div>
         </div>
     );

@@ -4,6 +4,7 @@ import {
     createBooking,
     getBookings,
     getBookingById,
+    updateBooking,
     acceptBooking,
     rejectBooking,
     cancelBooking,
@@ -16,6 +17,7 @@ import { assignRoomValidator } from '../validators/accommodation.validator.js';
 import {
     createBookingValidator,
     bookingIdValidator,
+    updateBookingValidator,
     rejectBookingValidator,
     cancelBookingValidator,
 } from '../validators/booking.validator.js';
@@ -36,6 +38,8 @@ router.patch(
 );
 
 router.get('/:id', protect, authorize('student', 'owner', 'admin'), bookingIdValidator, validate, getBookingById);
+
+router.patch('/:id', protect, authorize('student'), updateBookingValidator, validate, updateBooking);
 
 router.patch('/:id/accept', protect, authorize('owner'), bookingIdValidator, validate, acceptBooking);
 

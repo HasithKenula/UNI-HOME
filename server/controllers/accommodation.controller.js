@@ -1,10 +1,16 @@
 import mongoose from 'mongoose';
+import path from 'path';
 import Accommodation from '../models/Accommodation.js';
 import Room from '../models/Room.js';
 import Booking from '../models/Booking.js';
 import Review from '../models/Review.js';
 import AIReviewSummary from '../models/AIReviewSummary.js';
 import Notification from '../models/Notification.js';
+
+const SLIIT_COORDINATES = {
+    longitude: 79.9729,
+    latitude: 6.9069,
+};
 
 const parseBoolean = (value) => {
     if (value === undefined) return undefined;
@@ -16,21 +22,188 @@ const parseBoolean = (value) => {
     return undefined;
 };
 
+const parsePrimitiveValue = (value) => {
+    if (typeof value !== 'string') return value;
+
+    const trimmed = value.trim();
+    if (trimmed === '') return value;
+    if (trimmed === 'true') return true;
+    if (trimmed === 'false') return false;
+    if (trimmed === 'null') return null;
+
+    if (!Number.isNaN(Number(trimmed)) && /^-?\d+(\.\d+)?$/.test(trimmed)) {
+        return Number(trimmed);
+    }
+
+    return value;
+};
+
+const isNumericKeyObject = (value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const keys = Object.keys(value);
+    return keys.length > 0 && keys.every((key) => /^\d+$/.test(key));
+};
+
+const normalizeBodyValue = (value) => {
+    if (Array.isArray(value)) {
+        return value.map((item) => normalizeBodyValue(item));
+    }
+
+    if (value && typeof value === 'object') {
+        if (isNumericKeyObject(value)) {
+            return Object.keys(value)
+                .sort((a, b) => Number(a) - Number(b))
+                .map((key) => normalizeBodyValue(value[key]));
+        }
+
+        return Object.entries(value).reduce((acc, [key, nestedValue]) => {
+            acc[key] = normalizeBodyValue(nestedValue);
+            return acc;
+        }, {});
+    }
+
+    return parsePrimitiveValue(value);
+};
+
+const parsePathSegments = (key) => {
+    const segments = [];
+    const matcher = /[^.[\]]+/g;
+    let match = matcher.exec(key);
+
+    while (match) {
+        segments.push(match[0]);
+        match = matcher.exec(key);
+    }
+
+    return segments;
+};
+
+const setDeepValue = (target, path, value) => {
+    let cursor = target;
+
+    for (let i = 0; i < path.length; i += 1) {
+        const key = path[i];
+        const isLast = i === path.length - 1;
+
+        if (isLast) {
+            cursor[key] = value;
+            return;
+        }
+
+        if (cursor[key] === undefined || cursor[key] === null || typeof cursor[key] !== 'object') {
+            cursor[key] = {};
+        }
+
+        cursor = cursor[key];
+    }
+};
+
+const expandBracketNotationBody = (body = {}) => {
+    const expanded = {};
+
+    Object.entries(body).forEach(([rawKey, rawValue]) => {
+        if (!rawKey.includes('[')) {
+            expanded[rawKey] = rawValue;
+            return;
+        }
+
+        const path = parsePathSegments(rawKey);
+        if (path.length === 0) return;
+        setDeepValue(expanded, path, rawValue);
+    });
+
+    return expanded;
+};
+
+const ensureValidCoordinatesInLocation = (location = {}) => {
+    const coordinates = location?.coordinates?.coordinates;
+
+    if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+        return {
+            ...location,
+            coordinates: {
+                type: 'Point',
+                coordinates: [SLIIT_COORDINATES.longitude, SLIIT_COORDINATES.latitude],
+            },
+        };
+    }
+
+    const [longitudeRaw, latitudeRaw] = coordinates;
+    const longitude = Number(longitudeRaw);
+    const latitude = Number(latitudeRaw);
+
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        return {
+            ...location,
+            coordinates: {
+                type: 'Point',
+                coordinates: [SLIIT_COORDINATES.longitude, SLIIT_COORDINATES.latitude],
+            },
+        };
+    }
+
+    return {
+        ...location,
+        coordinates: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
+        },
+    };
+};
+
+const normalizeAccommodationBody = (body = {}) => {
+    const expanded = expandBracketNotationBody(body);
+    const normalized = normalizeBodyValue(expanded);
+
+    if (!Array.isArray(normalized.roomTypes) && normalized.roomTypes) {
+        normalized.roomTypes = [normalized.roomTypes];
+    }
+
+    if (!Array.isArray(normalized.removePhotos) && normalized.removePhotos) {
+        normalized.removePhotos = [normalized.removePhotos];
+    }
+
+    if (!Array.isArray(normalized.removeVideos) && normalized.removeVideos) {
+        normalized.removeVideos = [normalized.removeVideos];
+    }
+
+    if (normalized.location) {
+        normalized.location = ensureValidCoordinatesInLocation(normalized.location);
+    }
+
+    return normalized;
+};
+
 const hasValidPointCoordinates = (coordinates) => {
     if (!coordinates || !Array.isArray(coordinates.coordinates)) return false;
     if (coordinates.coordinates.length !== 2) return false;
     return coordinates.coordinates.every((value) => Number.isFinite(Number(value)));
 };
 
+const getUploadRelativeUrl = (file) => {
+    const filePath = String(file?.path || '');
+    if (!filePath) return '';
+
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    const uploadIndex = normalizedPath.lastIndexOf('/uploads/');
+
+    if (uploadIndex >= 0) {
+        return normalizedPath.slice(uploadIndex);
+    }
+
+    const fileName = path.basename(normalizedPath);
+    return `/uploads/${fileName}`;
+};
+
 const buildMediaPayload = (req) => {
     const photos = (req.files?.photos || []).map((file, index) => ({
-        url: `/uploads/accommodations/${file.filename}`,
+        url: getUploadRelativeUrl(file),
         caption: '',
         isPrimary: index === 0,
     }));
 
     const videos = (req.files?.videos || []).map((file) => ({
-        url: `/uploads/videos/${file.filename}`,
+        url: getUploadRelativeUrl(file),
         caption: '',
     }));
 
@@ -88,11 +261,13 @@ const ensureOwnerListing = async (accommodationId, reqUser) => {
 // @access  Private (owner)
 const createAccommodation = async (req, res) => {
     try {
-        const payload = sanitizeAccommodationPayload(req.body);
+        const normalizedBody = normalizeAccommodationBody(req.body);
+        const payload = sanitizeAccommodationPayload(normalizedBody);
         const media = buildMediaPayload(req);
 
         const accommodation = await Accommodation.create({
             ...payload,
+            location: ensureValidCoordinatesInLocation(payload.location || {}),
             owner: req.user._id,
             media,
             status: 'draft',
@@ -306,12 +481,20 @@ const updateAccommodation = async (req, res) => {
         }
 
         const accommodation = ownedResult.accommodation;
-        const updates = sanitizeAccommodationPayload(req.body);
+        const normalizedBody = normalizeAccommodationBody(req.body);
+        const updates = sanitizeAccommodationPayload(normalizedBody);
 
-        if (req.body.removePhotos && Array.isArray(req.body.removePhotos)) {
-            const removeSet = new Set(req.body.removePhotos);
+        if (normalizedBody.removePhotos && Array.isArray(normalizedBody.removePhotos)) {
+            const removeSet = new Set(normalizedBody.removePhotos);
             accommodation.media.photos = (accommodation.media.photos || []).filter(
                 (photo) => !removeSet.has(photo.url)
+            );
+        }
+
+        if (normalizedBody.removeVideos && Array.isArray(normalizedBody.removeVideos)) {
+            const removeSet = new Set(normalizedBody.removeVideos);
+            accommodation.media.videos = (accommodation.media.videos || []).filter(
+                (video) => !removeSet.has(video.url)
             );
         }
 
@@ -776,9 +959,8 @@ const assignRoomToBooking = async (req, res) => {
 
         await room.save();
 
-        await Accommodation.findByIdAndUpdate(booking.accommodation, {
-            $inc: { availableRooms: room.status === 'occupied' ? -1 : 0 },
-        });
+        // Listing availability is managed by booking lifecycle (create/reject/cancel/complete).
+        // Room assignment only links a confirmed booking to a specific room.
 
         res.status(200).json({
             success: true,

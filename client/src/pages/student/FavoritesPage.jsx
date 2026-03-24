@@ -1,9 +1,20 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Heart } from 'lucide-react';
+import { ArrowLeft, Heart } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { fetchFavoritesAsync, removeFavoriteAsync } from '../../features/favorites/favoriteSlice';
+
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const getMediaUrlWithFallback = (url = '') => {
+    const primary = `${API_ORIGIN}${url}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
 
 const FavoritesPage = () => {
     const dispatch = useDispatch();
@@ -15,9 +26,16 @@ const FavoritesPage = () => {
 
     return (
         <div className="mx-auto max-w-6xl px-4 py-10">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                <Heart className="w-7 h-7 text-red-500" /> My Favorites
-            </h1>
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                    <Heart className="w-7 h-7 text-red-500" /> My Favorites
+                </h1>
+                <Link to="/student/dashboard">
+                    <Button variant="outline" size="sm">
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+                    </Button>
+                </Link>
+            </div>
 
             {loading ? (
                 <p className="mt-6 text-gray-600">Loading favorites...</p>
@@ -32,11 +50,19 @@ const FavoritesPage = () => {
                             <img
                                 src={
                                     listing.media?.photos?.[0]?.url
-                                        ? `http://localhost:5000${listing.media.photos[0].url}`
+                                        ? getMediaUrlWithFallback(listing.media.photos[0].url).primary
                                         : 'https://placehold.co/640x360?text=No+Image'
                                 }
                                 alt={listing.title}
                                 className="h-40 w-full rounded-lg object-cover"
+                                onError={(event) => {
+                                    const mediaUrl = listing.media?.photos?.[0]?.url;
+                                    if (!mediaUrl) return;
+                                    const { fallback } = getMediaUrlWithFallback(mediaUrl);
+                                    if (event.currentTarget.src !== fallback) {
+                                        event.currentTarget.src = fallback;
+                                    }
+                                }}
                             />
                             <h3 className="mt-3 text-lg font-bold text-gray-900">{listing.title}</h3>
                             <p className="text-sm text-gray-600">

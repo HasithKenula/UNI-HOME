@@ -5,13 +5,18 @@ export const createBooking = async (payload) => {
     return response.data;
 };
 
-export const getMyBookings = async (params = {}) => {
+export const getBookings = async (params = {}) => {
     const response = await axios.get('/bookings', { params });
     return response.data;
 };
 
 export const getBookingById = async (id) => {
     const response = await axios.get(`/bookings/${id}`);
+    return response.data;
+};
+
+export const updateBooking = async (id, payload) => {
+    const response = await axios.patch(`/bookings/${id}`, payload);
     return response.data;
 };
 

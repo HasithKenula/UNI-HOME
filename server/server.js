@@ -33,22 +33,29 @@ connectDB();
 app.use(helmet());
 
 // CORS configuration
+const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');
+
 const configuredClientUrls = (process.env.CLIENT_URL || '')
   .split(',')
-  .map((url) => url.trim())
+  .map((url) => normalizeOrigin(url))
   .filter(Boolean);
 
 const allowedOrigins = new Set([
   ...configuredClientUrls,
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
 ]);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow non-browser requests (no Origin header) and configured browser origins.
-    if (!origin || allowedOrigins.has(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin || '');
+
+    if (!origin || allowedOrigins.has(normalizedOrigin)) {
       callback(null, true);
       return;
     }
@@ -102,6 +109,8 @@ import accommodationRoutes from './routes/accommodation.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import favoriteRoutes from './routes/favorite.routes.js';
 import inquiryRoutes from './routes/inquiry.routes.js';
+import ticketRoutes from './routes/ticket.routes.js';
+import serviceProviderRoutes from './routes/serviceProvider.routes.js';
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -110,6 +119,8 @@ app.use('/api/accommodations', accommodationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/inquiries', inquiryRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/service-providers', serviceProviderRoutes);
 
 // Additional routes (to be added in future phases)
 // app.use('/api/rooms', require('./routes/room.routes'));
