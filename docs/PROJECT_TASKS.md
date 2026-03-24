@@ -670,6 +670,13 @@
 - [x] Controller: findById, populate all refs, fetch payments + invoices for this booking
 - [ ] Test → 200
 
+### `PATCH /api/bookings/:id`
+
+- [x] Route (protected: student)
+- [x] Validator: optional editable fields (roomType, checkInDate, contractPeriod, specialRequests, emergencyContact)
+- [x] Controller: verify student owns booking, allow update only in pending status, recalculate checkOutDate
+- [ ] Test → 200
+
 ### `PATCH /api/bookings/:id/accept`
 
 - [x] Route (protected: owner)
@@ -685,7 +692,7 @@
 ### `PATCH /api/bookings/:id/cancel`
 
 - [x] Route (protected: student/owner)
-- [x] Controller: set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
+- [x] Controller: pending-only cancel; set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/complete`
@@ -761,6 +768,8 @@
 - [x] Status filter tabs (All, Pending, Confirmed, Cancelled, Completed)
 - [x] Booking cards: accommodation thumbnail, booking number, status badge, dates, cost
 - [x] Click → booking detail page
+- [x] Update booking button next to View Booking (pending bookings only)
+- [x] Update modal with room type, check-in date, contract period, special requests, and emergency contact
 - [x] Cancel booking button (with reason modal)
 
 ### Booking Detail Page

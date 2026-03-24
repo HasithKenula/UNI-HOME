@@ -28,6 +28,36 @@ const cancelBookingValidator = [
     body('reason').trim().notEmpty().withMessage('Cancellation reason is required'),
 ];
 
+const updateBookingValidator = [
+    ...bookingIdValidator,
+    body('roomType')
+        .optional()
+        .isIn(['single', 'double', 'shared', 'studio'])
+        .withMessage('Invalid room type'),
+    body('checkInDate').optional().isISO8601().withMessage('Valid check-in date is required'),
+    body('contractPeriod')
+        .optional()
+        .isIn(['1_month', '3_months', '6_months', '1_year'])
+        .withMessage('Invalid contract period'),
+    body('specialRequests').optional().isString().withMessage('specialRequests must be text'),
+    body('emergencyContact').optional().isObject().withMessage('emergencyContact must be an object'),
+    body('emergencyContact.name').optional().isString().withMessage('Emergency contact name must be text'),
+    body('emergencyContact.phone').optional().isString().withMessage('Emergency contact phone must be text'),
+    body('emergencyContact.relationship').optional().isString().withMessage('Emergency contact relationship must be text'),
+    body().custom((value) => {
+        if (
+            value.roomType === undefined &&
+            value.checkInDate === undefined &&
+            value.contractPeriod === undefined &&
+            value.specialRequests === undefined &&
+            value.emergencyContact === undefined
+        ) {
+            throw new Error('At least one field is required to update booking');
+        }
+        return true;
+    }),
+];
+
 const favoriteAccommodationValidator = [
     param('accommodationId').isMongoId().withMessage('Invalid accommodation id'),
 ];
@@ -58,6 +88,7 @@ export {
     bookingIdValidator,
     rejectBookingValidator,
     cancelBookingValidator,
+    updateBookingValidator,
     favoriteAccommodationValidator,
     createInquiryValidator,
     inquiryMessageValidator,
