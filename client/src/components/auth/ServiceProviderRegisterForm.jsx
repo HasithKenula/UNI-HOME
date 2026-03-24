@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { registerServiceProviderAsync } from '../../features/auth/authSlice';
 import Input from '../common/Input';
-import Select from '../common/Select';
 import Button from '../common/Button';
 
 const ServiceProviderRegisterForm = ({ onSuccess }) => {
@@ -27,15 +26,13 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
   const [errors, setErrors] = useState({});
 
   const serviceCategoryOptions = [
+    { value: 'general', label: 'General Maintenance' },
     { value: 'electrical', label: 'Electrical Services' },
     { value: 'plumbing', label: 'Plumbing Services' },
     { value: 'carpentry', label: 'Carpentry' },
     { value: 'painting', label: 'Painting' },
     { value: 'cleaning', label: 'Cleaning Services' },
-    { value: 'security', label: 'Security Services' },
-    { value: 'gardening', label: 'Gardening' },
-    { value: 'hvac', label: 'HVAC Services' },
-    { value: 'pest_control', label: 'Pest Control' },
+    { value: 'other', label: 'Other' },
   ];
 
   const areaOptions = [
@@ -141,7 +138,19 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
       return;
     }
 
-    const { confirmPassword, ...registrationData } = formData;
+    const { confirmPassword, certifications, areasOfOperation, ...rest } = formData;
+
+    const registrationData = {
+      ...rest,
+      areasOfOperation: areasOfOperation.map((district) => ({ district, cities: [district] })),
+      certifications: certifications
+        ? certifications
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .map((name) => ({ name }))
+        : [],
+    };
 
     const result = await dispatch(registerServiceProviderAsync(registrationData));
     if (result.type === 'auth/registerServiceProvider/fulfilled') {

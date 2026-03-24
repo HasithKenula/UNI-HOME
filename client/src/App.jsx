@@ -12,11 +12,17 @@ import EditListingPage from './pages/owner/EditListingPage';
 import MyListingsPage from './pages/owner/MyListingsPage';
 import TenantManagementPage from './pages/owner/TenantManagementPage';
 import BookingRequestsPage from './pages/owner/BookingRequestsPage';
+import OwnerDashboard from './pages/owner/OwnerDashboard';
 import MyBookingsPage from './pages/student/MyBookingsPage';
 import FavoritesPage from './pages/student/FavoritesPage';
 import BookingDetailPage from './pages/student/BookingDetailPage';
 import InquiriesPage from './pages/student/InquiriesPage';
 import StudentDashboard from './pages/student/StudentDashboard';
+import MyTicketsPage from './pages/student/MyTicketsPage';
+import TicketDetailPage from './pages/student/TicketDetailPage';
+import OwnerTicketsPage from './pages/owner/OwnerTicketsPage';
+import ProviderDashboard from './pages/provider/ProviderDashboard';
+import MyTasksPage from './pages/provider/MyTasksPage';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
 
@@ -49,17 +55,7 @@ function App() {
             element={
               <PrivateRoute>
                 <RoleRoute allowedRoles={['owner', 'admin']}>
-                  <div className="container mx-auto px-4 py-8">
-                    <h1 className="text-3xl font-bold">Owner Dashboard</h1>
-                    <p className="text-gray-600 mt-4">
-                      Use the pages below to manage your listings.
-                    </p>
-                    <div className="mt-6 flex flex-wrap gap-3">
-                      <a className="text-blue-600 font-semibold" href="/owner/my-listings">My Listings</a>
-                      <a className="text-blue-600 font-semibold" href="/owner/listings/create">Create Listing</a>
-                      <a className="text-blue-600 font-semibold" href="/owner/tenants">Tenant Management</a>
-                    </div>
-                  </div>
+                  <OwnerDashboard />
                 </RoleRoute>
               </PrivateRoute>
             }
@@ -155,15 +151,52 @@ function App() {
             }
           />
           <Route
+            path="/student/tickets"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student']}>
+                  <MyTicketsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student/tickets/:id"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student', 'owner', 'service_provider', 'admin']}>
+                  <TicketDetailPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/tickets"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <OwnerTicketsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/provider/dashboard"
             element={
               <PrivateRoute>
-                <div className="container mx-auto px-4 py-8">
-                  <h1 className="text-3xl font-bold">Service Provider Dashboard</h1>
-                  <p className="text-gray-600 mt-4">
-                    This page will be implemented in the next phase.
-                  </p>
-                </div>
+                <RoleRoute allowedRoles={['service_provider', 'admin']}>
+                  <ProviderDashboard />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/provider/tasks"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['service_provider', 'admin']}>
+                  <MyTasksPage />
+                </RoleRoute>
               </PrivateRoute>
             }
           />
