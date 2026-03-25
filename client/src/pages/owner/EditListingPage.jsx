@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
+import RoomManager from '../../components/accommodation/RoomManager';
 import LocationMapPicker from '../../components/accommodation/LocationMapPicker';
 import {
     getAccommodationById,
@@ -384,6 +385,10 @@ const EditListingPage = () => {
                     </Button>
                 </div>
             </form>
+
+            <div className="mt-8">
+                <RoomManager accommodationId={id} />
+            </div>
         </div>
     );
 };

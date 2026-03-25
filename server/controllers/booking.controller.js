@@ -132,6 +132,15 @@ const createBooking = async (req, res) => {
         let selectedRoom = null;
         let finalRoomType = roomType;
 
+        if (
+            scope === 'accommodation' &&
+            !finalRoomType &&
+            Array.isArray(accommodation.roomTypes) &&
+            accommodation.roomTypes.length > 0
+        ) {
+            finalRoomType = accommodation.roomTypes[0];
+        }
+
         if (scope === 'room') {
             selectedRoom = await Room.findOne({
                 _id: roomId,
@@ -168,7 +177,7 @@ const createBooking = async (req, res) => {
             finalRoomType = selectedRoom.roomType;
         }
 
-        if (Array.isArray(accommodation.roomTypes) && accommodation.roomTypes.length > 0) {
+        if (scope !== 'room' && Array.isArray(accommodation.roomTypes) && accommodation.roomTypes.length > 0) {
             const supportsType = accommodation.roomTypes.includes(finalRoomType);
             if (!supportsType) {
                 return res.status(400).json({
@@ -300,7 +309,7 @@ const getBookings = async (req, res) => {
         const [data, total] = await Promise.all([
             Booking.find(query)
                 .populate('accommodation', 'title location media.photos')
-                .populate('room', 'roomNumber roomType maxOccupants currentOccupants status monthlyRent')
+                .populate('room', 'roomNumber roomType maxOccupants currentOccupants status monthlyRent media.photos media.videos')
                 .populate('student', 'firstName lastName email phone')
                 .populate('owner', 'firstName lastName email phone')
                 .sort({ createdAt: -1 })

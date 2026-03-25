@@ -4,6 +4,14 @@
 > **Total Tasks:** 400+ | **Modules:** 7 | **Phases:** 6
 > **Status Legend:** ⬜ Not Started · 🔲 In Progress · ✅ Done
 
+## Recent Updates (2026-03-25)
+
+- [x] Fixed booking submit failure for room-scope bookings when owner room types differ from accommodation-level room types.
+- [x] Synced accommodation room snapshot from room records (total rooms, available rooms, room types) after room create/update/delete.
+- [x] Added student-facing room media viewer in listing details to browse room photos and videos similarly to accommodation media.
+- [x] Added room media fallback in student bookings list to show room image when available.
+- [x] Added room management panel to edit listing page so owners can add and review multiple rooms in one flow.
+
 ---
 
 ## 📌 Table of Contents
