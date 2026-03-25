@@ -6,6 +6,7 @@ import {
     MapPin,
     DollarSign,
     Star,
+    BedDouble,
     Heart,
     Share2,
     AlertCircle,
@@ -22,6 +23,7 @@ import {
     Tv,
     BookOpen,
     Camera,
+    Video,
     ThumbsUp,
     ThumbsDown,
     Expand,
@@ -78,6 +80,7 @@ const ListingDetailPage = () => {
     const [showGallery, setShowGallery] = useState(false);
     const [showContactModal, setShowContactModal] = useState(false);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [selectedBookingRoomId, setSelectedBookingRoomId] = useState('');
     const [latestBookingNumber, setLatestBookingNumber] = useState('');
     const [showBookingSuccessModal, setShowBookingSuccessModal] = useState(false);
 
@@ -117,6 +120,17 @@ const ListingDetailPage = () => {
             totalPages: Math.max(1, Math.ceil(allReviews.length / REVIEWS_PER_PAGE)),
         };
     }, [listing, reviewPage]);
+
+    const availableRoomCount = useMemo(() => {
+        return (listing?.rooms || []).filter((room) => {
+            const maxOccupants = Number(room?.maxOccupants || 1);
+            const currentOccupants = Number(room?.currentOccupants || 0);
+            return room?.status === 'available' && currentOccupants < maxOccupants;
+        }).length;
+    }, [listing]);
+
+    const hasAccommodationSlots = Number(listing?.availableRooms || 0) > 0;
+    const canBookNow = hasAccommodationSlots || availableRoomCount > 0;
 
     const handleAction = (message) => toast.info(message);
 
@@ -193,9 +207,11 @@ const ListingDetailPage = () => {
                         <div className="mt-4">
                             <BookingForm
                                 listing={listing}
+                                initialRoomId={selectedBookingRoomId}
                                 onSuccess={(booking) => {
                                     setLatestBookingNumber(booking?.bookingNumber || '');
                                     setShowBookingModal(false);
+                                    setSelectedBookingRoomId('');
                                     setShowBookingSuccessModal(true);
                                 }}
                             />
@@ -449,6 +465,85 @@ const ListingDetailPage = () => {
                         )}
                     </section>
 
+                    <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                <BedDouble className="w-6 h-6 text-blue-600" /> Rooms in This Accommodation
+                            </h2>
+                            <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700">
+                                {availableRoomCount} available
+                            </span>
+                        </div>
+
+                        {(listing.rooms || []).length === 0 ? (
+                            <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center text-gray-500">
+                                Owner has not added room details yet.
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {(listing.rooms || []).map((room) => {
+                                    const maxOccupants = Number(room.maxOccupants || 1);
+                                    const currentOccupants = Number(room.currentOccupants || 0);
+                                    const availableSlots = Math.max(0, maxOccupants - currentOccupants);
+                                    const isRoomBookable = room.status === 'available' && availableSlots > 0;
+                                    const roomPhoto = room.media?.photos?.[0]?.url;
+
+                                    return (
+                                        <article key={room._id} className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4">
+                                            <div className="mb-3 flex gap-3">
+                                                <img
+                                                    src={roomPhoto ? withFallbackMedia(roomPhoto).primary : 'https://placehold.co/240x160?text=Room'}
+                                                    alt={`Room ${room.roomNumber || ''}`}
+                                                    className="h-20 w-28 rounded-lg object-cover"
+                                                    onError={(event) => {
+                                                        if (!roomPhoto) return;
+                                                        const { fallback } = withFallbackMedia(roomPhoto);
+                                                        if (event.currentTarget.src !== fallback) {
+                                                            event.currentTarget.src = fallback;
+                                                        }
+                                                    }}
+                                                />
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-gray-900">Room {room.roomNumber || '-'}</h3>
+                                                    <p className="text-sm capitalize text-gray-600">{room.roomType} room</p>
+                                                    <p className="text-sm font-semibold text-blue-700">
+                                                        LKR {(room.monthlyRent ?? listing.pricing?.monthlyRent ?? 0).toLocaleString()} / month
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+                                                <span className="rounded-full bg-gray-200 px-2 py-1 text-gray-700">Status: {room.status}</span>
+                                                <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">Slots: {availableSlots}</span>
+                                                {(room.media?.videos || []).length > 0 && (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-purple-700">
+                                                        <Video className="w-3.5 h-3.5" /> {(room.media?.videos || []).length} video(s)
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <Button
+                                                fullWidth
+                                                disabled={!isRoomBookable}
+                                                onClick={() => {
+                                                    if (!isRoomBookable) return;
+                                                    if (!isAuthenticated || !isStudent) {
+                                                        toast.info('Login as a student to place a booking');
+                                                        return;
+                                                    }
+                                                    setSelectedBookingRoomId(room._id);
+                                                    setShowBookingModal(true);
+                                                }}
+                                            >
+                                                Book This Room
+                                            </Button>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+
                     {/* House & Booking Rules */}
                     <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
                         <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -652,11 +747,17 @@ const ListingDetailPage = () => {
                         <div className="space-y-3">
                             <Button
                                 fullWidth
+                                disabled={!canBookNow}
                                 onClick={() => {
+                                    if (!canBookNow) {
+                                        toast.error('No available rooms or accommodation slots at the moment');
+                                        return;
+                                    }
                                     if (!isAuthenticated || !isStudent) {
                                         toast.info('Login as a student to place a booking');
                                         return;
                                     }
+                                    setSelectedBookingRoomId('');
                                     setShowBookingModal(true);
                                 }}
                             >
@@ -751,6 +852,10 @@ const ListingDetailPage = () => {
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">Available Rooms</span>
                                 <span className="font-bold text-green-600">{listing.availableRooms || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Bookable Room Units</span>
+                                <span className="font-bold text-blue-600">{availableRoomCount}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">Views</span>

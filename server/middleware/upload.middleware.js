@@ -61,7 +61,7 @@ const fileFilter = (req, file, cb) => {
   const mimetype = file.mimetype;
 
   // Check file type based on fieldname
-  if (file.fieldname === 'profileImage' || file.fieldname === 'images' || file.fieldname === 'coverImage' || file.fieldname === 'photos') {
+  if (file.fieldname === 'profileImage' || file.fieldname === 'images' || file.fieldname === 'coverImage' || file.fieldname === 'photos' || file.fieldname === 'roomPhotos') {
     if (allowedImageTypes.test(ext) && mimetype.startsWith('image/')) {
       return cb(null, true);
     } else {
@@ -69,7 +69,7 @@ const fileFilter = (req, file, cb) => {
     }
   }
 
-  if (file.fieldname === 'video' || file.fieldname === 'videos') {
+  if (file.fieldname === 'video' || file.fieldname === 'videos' || file.fieldname === 'roomVideos') {
     if (allowedVideoTypes.test(ext) && mimetype.startsWith('video/')) {
       return cb(null, true);
     } else {

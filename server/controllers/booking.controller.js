@@ -1,5 +1,6 @@
 import Booking from '../models/Booking.js';
 import Accommodation from '../models/Accommodation.js';
+import Room from '../models/Room.js';
 import Payment from '../models/Payment.js';
 import Invoice from '../models/Invoice.js';
 import Notification from '../models/Notification.js';
@@ -44,6 +45,20 @@ const addMonths = (dateValue, months) => {
     return date;
 };
 
+const normalizeEmergencyContact = (contact) => {
+    if (!contact || typeof contact !== 'object') return undefined;
+
+    const name = typeof contact.name === 'string' ? contact.name.trim() : '';
+    const phone = typeof contact.phone === 'string' ? contact.phone.trim() : '';
+
+    if (!name && !phone) return undefined;
+
+    return {
+        ...(name ? { name } : {}),
+        ...(phone ? { phone } : {}),
+    };
+};
+
 const sendSafeEmail = async (options) => {
     try {
         await sendEmail(options);
@@ -84,6 +99,8 @@ const createBooking = async (req, res) => {
     try {
         const {
             accommodationId,
+            bookingScope = 'accommodation',
+            roomId,
             roomType,
             checkInDate,
             contractPeriod,
@@ -107,12 +124,52 @@ const createBooking = async (req, res) => {
         if (accommodation.availableRooms <= 0) {
             return res.status(409).json({
                 success: false,
-                message: 'No rooms available for this accommodation',
+                message: 'No booking slots available for this accommodation',
             });
         }
 
+        const scope = bookingScope === 'room' ? 'room' : 'accommodation';
+        let selectedRoom = null;
+        let finalRoomType = roomType;
+
+        if (scope === 'room') {
+            selectedRoom = await Room.findOne({
+                _id: roomId,
+                accommodation: accommodation._id,
+            });
+
+            if (!selectedRoom) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Selected room not found for this accommodation',
+                });
+            }
+
+            if (selectedRoom.status !== 'available') {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Selected room is not available',
+                });
+            }
+
+            const activeRoomBookings = await Booking.countDocuments({
+                room: selectedRoom._id,
+                status: { $in: ['pending', 'confirmed'] },
+            });
+
+            const maxOccupants = Math.max(1, Number(selectedRoom.maxOccupants || 1));
+            if (activeRoomBookings >= maxOccupants) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Selected room has reached its booking capacity',
+                });
+            }
+
+            finalRoomType = selectedRoom.roomType;
+        }
+
         if (Array.isArray(accommodation.roomTypes) && accommodation.roomTypes.length > 0) {
-            const supportsType = accommodation.roomTypes.includes(roomType);
+            const supportsType = accommodation.roomTypes.includes(finalRoomType);
             if (!supportsType) {
                 return res.status(400).json({
                     success: false,
@@ -125,16 +182,20 @@ const createBooking = async (req, res) => {
         if (!reservedAccommodation) {
             return res.status(409).json({
                 success: false,
-                message: 'No rooms available for this accommodation',
+                message: 'No booking slots available for this accommodation',
             });
         }
 
         const bookingNumber = await generateBookingNumber();
-        const monthlyRent = Number(accommodation.pricing?.monthlyRent || 0);
+        const monthlyRent =
+            scope === 'room' && selectedRoom?.monthlyRent !== undefined
+                ? Number(selectedRoom.monthlyRent || 0)
+                : Number(accommodation.pricing?.monthlyRent || 0);
         const keyMoney = Number(accommodation.pricing?.keyMoney || 0);
         const deposit = Number(accommodation.pricing?.deposit || 0);
         const totalInitialPayment = monthlyRent + keyMoney + deposit;
         const checkOutDate = addMonths(checkInDate, CONTRACT_MONTHS[contractPeriod]);
+        const safeEmergencyContact = normalizeEmergencyContact(emergencyContact);
 
         let booking;
         try {
@@ -142,8 +203,10 @@ const createBooking = async (req, res) => {
                 bookingNumber,
                 student: req.user._id,
                 accommodation: accommodation._id,
+                room: selectedRoom?._id,
                 owner: accommodation.owner?._id,
-                roomType,
+                bookingScope: scope,
+                roomType: finalRoomType,
                 checkInDate,
                 checkOutDate,
                 contractPeriod,
@@ -156,7 +219,7 @@ const createBooking = async (req, res) => {
                 },
                 studentDetails: {
                     specialRequests,
-                    emergencyContact,
+                    emergencyContact: safeEmergencyContact,
                 },
                 paymentStatus: {
                     outstandingAmount: totalInitialPayment,
@@ -179,7 +242,7 @@ const createBooking = async (req, res) => {
                 ? sendSafeEmail({
                       to: accommodation.owner.email,
                       subject: `New booking request (${booking.bookingNumber})`,
-                      html: `<p>${studentName || 'A student'} requested booking for <strong>${accommodation.title}</strong>.</p>`,
+                                            html: `<p>${studentName || 'A student'} requested ${scope === 'room' ? 'a room booking' : 'an accommodation booking'} for <strong>${accommodation.title}</strong>.</p>`,
                   })
                 : Promise.resolve(),
             Notification.create({
@@ -194,7 +257,7 @@ const createBooking = async (req, res) => {
             Notification.create({
                 recipient: accommodation.owner?._id,
                 title: 'New booking request',
-                message: `${studentName || 'A student'} requested ${accommodation.title}.`,
+                message: `${studentName || 'A student'} requested ${scope === 'room' ? 'a room in' : ''} ${accommodation.title}.`,
                 type: 'booking_request',
                 category: 'booking',
                 channel: 'in_app',
@@ -237,6 +300,7 @@ const getBookings = async (req, res) => {
         const [data, total] = await Promise.all([
             Booking.find(query)
                 .populate('accommodation', 'title location media.photos')
+                .populate('room', 'roomNumber roomType maxOccupants currentOccupants status monthlyRent')
                 .populate('student', 'firstName lastName email phone')
                 .populate('owner', 'firstName lastName email phone')
                 .sort({ createdAt: -1 })
@@ -370,9 +434,10 @@ const updateBooking = async (req, res) => {
             ...(specialRequests !== undefined ? { specialRequests } : {}),
             ...(emergencyContact !== undefined
                 ? {
+                      // Restrict emergency contact to name and phone.
                       emergencyContact: {
                           ...(booking.studentDetails?.emergencyContact || {}),
-                          ...emergencyContact,
+                          ...(normalizeEmergencyContact(emergencyContact) || {}),
                       },
                   }
                 : {}),

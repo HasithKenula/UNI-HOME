@@ -87,7 +87,15 @@ export const getMyListings = async (status = '') => {
 };
 
 export const createRoom = async (accommodationId, payload) => {
-    const response = await axios.post(`/accommodations/${accommodationId}/rooms`, payload);
+    const { roomPhotos = [], roomVideos = [], ...roomData } = payload || {};
+    const formData = toFormData(roomData);
+
+    roomPhotos.forEach((file) => formData.append('roomPhotos', file));
+    roomVideos.forEach((file) => formData.append('roomVideos', file));
+
+    const response = await axios.post(`/accommodations/${accommodationId}/rooms`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
 };
 
@@ -97,7 +105,15 @@ export const getRooms = async (accommodationId) => {
 };
 
 export const updateRoom = async (roomId, payload) => {
-    const response = await axios.put(`/accommodations/rooms/${roomId}`, payload);
+    const { roomPhotos = [], roomVideos = [], ...roomData } = payload || {};
+    const formData = toFormData(roomData);
+
+    roomPhotos.forEach((file) => formData.append('roomPhotos', file));
+    roomVideos.forEach((file) => formData.append('roomVideos', file));
+
+    const response = await axios.put(`/accommodations/rooms/${roomId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
 };
 

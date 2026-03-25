@@ -587,6 +587,8 @@
 - [x] Add room form (roomNumber, type, floor, rent, facilities)
 - [x] Room list with status badges
 - [x] Edit/Delete room actions
+- [x] Room media upload support (owner can upload room photos/videos)
+- [x] Room media preview shown on room cards in manage rooms
 
 ### Tenant Management Page
 
@@ -654,6 +656,8 @@
 - [x] Validator: accommodationId, roomType, checkInDate, contractPeriod
 - [x] Controller: verify accommodation available, generate bookingNumber, calculate costSummary, create booking, send email to owner + student, create notifications
 - [x] Controller: reserve an accommodation slot on booking creation and maintain slot release on reject/cancel/complete transitions
+- [x] Support dual booking scope (`accommodation` or specific `room`) with `roomId`
+- [x] Validate room-level availability (room status + active booking capacity) before creating room bookings
 - [ ] Test → 201
 
 ### `GET /api/bookings`
@@ -752,15 +756,21 @@
 ### Booking Flow (on Listing Detail Page)
 
 - [x] `components/booking/BookingForm.jsx`
+  - [x] Booking type selector (book entire accommodation vs specific room)
+  - [x] Available room selector with slot counts for room-based bookings
   - [x] Room type selector
   - [x] Check-in date picker
   - [x] Contract period dropdown
   - [x] Cost summary display (auto-calculated: rent + keyMoney + deposit)
   - [x] Special requests textarea
   - [x] Emergency contact fields
+  - [x] Frontend validations: required fields, date checks, 10-digit emergency contact, and room availability checks
   - [x] Submit booking button
 - [x] API integration → POST /api/bookings
 - [x] Success modal with booking number
+- [x] Listing detail gate: disable booking action when neither accommodation slots nor room slots are available
+- [x] Listing detail room cards show room-level image/video availability
+- [x] Student can directly click a specific room card and prefill room booking
 
 ### My Bookings Page
 
