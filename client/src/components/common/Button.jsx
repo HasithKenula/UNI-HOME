@@ -12,14 +12,14 @@ const Button = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'font-semibold rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95 relative overflow-hidden';
+  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]';
 
   const variants = {
-    primary: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white focus:ring-blue-500 shadow-lg hover:shadow-xl hover:shadow-blue-500/50',
-    secondary: 'bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-800 focus:ring-gray-500 shadow-md hover:shadow-lg',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500 shadow-md hover:shadow-lg',
-    danger: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white focus:ring-red-500 shadow-lg hover:shadow-xl hover:shadow-red-500/50',
-    success: 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white focus:ring-green-500 shadow-lg hover:shadow-xl hover:shadow-green-500/50',
+    primary: 'bg-primary-500 hover:bg-primary-600 text-white focus:ring-primary-300 shadow-sm hover:shadow-md',
+    secondary: 'bg-secondary border border-gray-200 text-bodytext hover:bg-primary-50 focus:ring-primary-200',
+    outline: 'border-2 border-accent-500 text-accent-700 hover:bg-accent-500 hover:text-white focus:ring-accent-200',
+    danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-200 shadow-sm hover:shadow-md',
+    success: 'bg-accent-500 hover:bg-accent-600 text-white focus:ring-accent-200 shadow-sm hover:shadow-md',
   };
 
   const sizes = {
@@ -35,23 +35,17 @@ const Button = ({
       type={type}
       disabled={disabled || loading}
       onClick={onClick}
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${widthClass} ${className} group`}
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${widthClass} ${className}`}
       {...props}
     >
-      {/* Shimmer Effect on Hover */}
-      <span className="absolute inset-0 bg-shimmer-gradient animate-shimmer opacity-0 group-hover:opacity-100"></span>
-
-      {/* Button Content */}
-      <span className="relative flex items-center justify-center">
-        {loading ? (
-          <div className="flex items-center justify-center space-x-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-            <span>Loading...</span>
-          </div>
-        ) : (
-          children
-        )}
-      </span>
+      {loading ? (
+        <div className="flex items-center justify-center space-x-2">
+          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/40 border-t-white"></div>
+          <span>Loading...</span>
+        </div>
+      ) : (
+        children
+      )}
     </button>
   );
 };

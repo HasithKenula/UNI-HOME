@@ -300,7 +300,7 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
                 value={option.value}
                 checked={formData.serviceCategories.includes(option.value)}
                 onChange={(e) => handleMultiSelectChange(e, 'serviceCategories')}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-gray-300 text-primary-600 focus:ring-accent-500"
               />
               <span className="text-sm text-gray-700">{option.label}</span>
             </label>
@@ -324,7 +324,7 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
                 value={option.value}
                 checked={formData.areasOfOperation.includes(option.value)}
                 onChange={(e) => handleMultiSelectChange(e, 'areasOfOperation')}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-gray-300 text-primary-600 focus:ring-accent-500"
               />
               <span className="text-sm text-gray-700">{option.label}</span>
             </label>
@@ -375,7 +375,7 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-white file:mr-4 file:rounded-lg file:border-0 file:bg-sky-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-sky-700 hover:border-gray-400"
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-white file:mr-4 file:rounded-lg file:border-0 file:bg-primary-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:border-primary-300"
         />
         {formData.profileImage && (
           <p className="mt-2 text-sm text-gray-600">Selected: {formData.profileImage.name}</p>

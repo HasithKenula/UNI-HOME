@@ -26,19 +26,19 @@ const formatActionText = (value = '') => value.replaceAll('_', ' ');
 
 const trendPalette = {
   bookings: {
-    track: 'bg-blue-100',
-    fill: 'from-blue-500 to-indigo-600',
-    chip: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    track: 'bg-primary-100',
+    fill: 'from-primary-500 to-accent-600',
+    chip: { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' },
   },
   revenue: {
     track: 'bg-emerald-100',
-    fill: 'from-emerald-500 to-teal-600',
+    fill: 'from-emerald-500 to-accent-600',
     chip: { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' },
   },
   users: {
-    track: 'bg-violet-100',
-    fill: 'from-violet-500 to-fuchsia-600',
-    chip: { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
+    track: 'bg-accent-100',
+    fill: 'from-accent-500 to-primary-600',
+    chip: { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4' },
   },
 };
 
@@ -90,9 +90,9 @@ const SeriesBars = ({ title, series = [], valueKey, tone = 'bookings' }) => {
 const StatCard = ({ label, value, tone = 'blue', icon }) => {
   const palette = {
     blue: {
-      wrapper: 'border-blue-200 bg-blue-50/80 text-blue-700',
-      avatar: '#2563eb',
-      progress: '#3b82f6',
+      wrapper: 'border-primary-200 bg-primary-50/80 text-primary-700',
+      avatar: '#10b981',
+      progress: '#10b981',
     },
     green: {
       wrapper: 'border-emerald-200 bg-emerald-50/80 text-emerald-700',
@@ -110,9 +110,9 @@ const StatCard = ({ label, value, tone = 'blue', icon }) => {
       progress: '#f43f5e',
     },
     indigo: {
-      wrapper: 'border-indigo-200 bg-indigo-50/80 text-indigo-700',
-      avatar: '#4f46e5',
-      progress: '#6366f1',
+      wrapper: 'border-accent-200 bg-accent-50/80 text-accent-700',
+      avatar: '#14b8a6',
+      progress: '#14b8a6',
     },
     gray: {
       wrapper: 'border-slate-200 bg-slate-50 text-slate-700',
@@ -165,12 +165,12 @@ const AdminDashboard = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-10">
-      <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 px-6 py-7 text-white shadow-xl">
+      <div className="rounded-3xl border border-primary-200 bg-gradient-to-r from-primary-700 via-primary-600 to-accent-700 px-6 py-7 text-white shadow-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200">Administration</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100">Administration</p>
             <h1 className="mt-2 text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-slate-200">Operational overview across users, listings, payments, and support.</p>
+            <p className="text-emerald-50">Operational overview across users, listings, payments, and support.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -182,8 +182,8 @@ const AdminDashboard = () => {
                 textTransform: 'none',
                 fontWeight: 700,
                 borderRadius: '10px',
-                bgcolor: '#0f172a',
-                '&:hover': { bgcolor: '#020617' },
+                bgcolor: '#064e3b',
+                '&:hover': { bgcolor: '#065f46' },
               }}
             >
               Manage Users
@@ -198,6 +198,8 @@ const AdminDashboard = () => {
                 textTransform: 'none',
                 fontWeight: 700,
                 borderRadius: '10px',
+                bgcolor: '#10b981',
+                '&:hover': { bgcolor: '#059669' },
               }}
             >
               Review Reports
@@ -206,15 +208,15 @@ const AdminDashboard = () => {
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-            <p className="text-xs uppercase tracking-wide text-blue-100">Total Users</p>
+            <p className="text-xs uppercase tracking-wide text-emerald-100">Total Users</p>
             <p className="mt-1 text-2xl font-bold">{stats.totalUsers || 0}</p>
           </div>
           <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-            <p className="text-xs uppercase tracking-wide text-blue-100">Open Tickets</p>
+            <p className="text-xs uppercase tracking-wide text-emerald-100">Open Tickets</p>
             <p className="mt-1 text-2xl font-bold">{stats.openTickets || 0}</p>
           </div>
           <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-            <p className="text-xs uppercase tracking-wide text-blue-100">Monthly Revenue</p>
+            <p className="text-xs uppercase tracking-wide text-emerald-100">Monthly Revenue</p>
             <p className="mt-1 text-2xl font-bold">LKR {(stats.revenueThisMonth || 0).toLocaleString()}</p>
           </div>
         </div>
@@ -259,7 +261,7 @@ const AdminDashboard = () => {
               <div key={item._id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
-                    <Avatar sx={{ width: 28, height: 28, bgcolor: '#1e3a8a', fontSize: 12 }}>
+                    <Avatar sx={{ width: 28, height: 28, bgcolor: '#10b981', fontSize: 12 }}>
                       {formatActionText(item.action).slice(0, 1).toUpperCase()}
                     </Avatar>
                     <Tooltip title={item.action}>

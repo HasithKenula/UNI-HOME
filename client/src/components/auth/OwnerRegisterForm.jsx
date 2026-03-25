@@ -400,7 +400,7 @@ const OwnerRegisterForm = ({ onSuccess }) => {
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-white file:mr-4 file:rounded-lg file:border-0 file:bg-sky-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-sky-700 hover:border-gray-400"
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-white file:mr-4 file:rounded-lg file:border-0 file:bg-primary-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:border-primary-300"
         />
         {formData.profileImage && (
           <p className="mt-2 text-sm text-gray-600">Selected: {formData.profileImage.name}</p>

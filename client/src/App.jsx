@@ -7,6 +7,8 @@ import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import SearchPage from './pages/public/SearchPage';
 import ListingDetailPage from './pages/public/ListingDetailPage';
+import AboutPage from './pages/public/AboutPage';
+import ContactPage from './pages/public/ContactPage';
 import CreateListingPage from './pages/owner/CreateListingPage';
 import EditListingPage from './pages/owner/EditListingPage';
 import MyListingsPage from './pages/owner/MyListingsPage';
@@ -46,6 +48,8 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/listings/:id" element={<ListingDetailPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
 
           {/* Protected Routes - To be implemented in future phases */}
           <Route
@@ -286,19 +290,6 @@ function App() {
                   <AuditLogPage />
                 </RoleRoute>
               </PrivateRoute>
-            }
-          />
-
-          {/* Placeholder Routes */}
-          <Route
-            path="/about"
-            element={
-              <div className="container mx-auto px-4 py-8">
-                <h1 className="text-3xl font-bold">About Us</h1>
-                <p className="text-gray-600 mt-4">
-                  Learn more about SLIIT Accommodation System.
-                </p>
-              </div>
             }
           />
 
