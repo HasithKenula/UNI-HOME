@@ -37,6 +37,11 @@ export const getAccommodationById = async (id) => {
     return response.data;
 };
 
+export const recordAccommodationView = async (id) => {
+    const response = await axios.post(`/accommodations/${id}/view`);
+    return response.data;
+};
+
 export const createAccommodation = async ({ payload, photos = [], videos = [] }) => {
     const formData = toFormData(payload);
     photos.forEach((photo) => formData.append('photos', photo));

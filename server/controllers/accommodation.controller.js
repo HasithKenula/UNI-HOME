@@ -7,9 +7,21 @@ import Review from '../models/Review.js';
 import AIReviewSummary from '../models/AIReviewSummary.js';
 import Notification from '../models/Notification.js';
 
+// Map to track IP and last view time to debounce view counts
+const viewCache = new Map();
+// Cleanup cache every day to prevent memory leak
+setInterval(() => {
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+    for (const [key, value] of viewCache.entries()) {
+        if (value < twentyFourHoursAgo) {
+            viewCache.delete(key);
+        }
+    }
+}, 24 * 60 * 60 * 1000);
+
 const SLIIT_COORDINATES = {
     longitude: 79.9729,
-    latitude: 6.9069,
+    latitude: 6.9147,
 };
 
 const parseBoolean = (value) => {
@@ -184,14 +196,7 @@ const getUploadRelativeUrl = (file) => {
     const filePath = String(file?.path || '');
     if (!filePath) return '';
 
-    const normalizedPath = filePath.replace(/\\/g, '/');
-    const uploadIndex = normalizedPath.lastIndexOf('/uploads/');
-
-    if (uploadIndex >= 0) {
-        return normalizedPath.slice(uploadIndex);
-    }
-
-    const fileName = path.basename(normalizedPath);
+    const fileName = path.basename(filePath.replace(/\\/g, '/'));
     return `/uploads/${fileName}`;
 };
 
@@ -450,8 +455,6 @@ const getAccommodationById = async (req, res) => {
             AIReviewSummary.findOne({ accommodation: accommodation._id }),
         ]);
 
-        await Accommodation.findByIdAndUpdate(accommodation._id, { $inc: { viewCount: 1 } });
-
         res.status(200).json({
             success: true,
             data: {
@@ -465,6 +468,73 @@ const getAccommodationById = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch accommodation',
+            error: error.message,
+        });
+    }
+};
+
+// @desc    Record a view for an accommodation
+// @route   POST /api/accommodations/:id/view
+// @access  Public
+const recordView = async (req, res) => {
+    try {
+        const accommodationId = req.params.id;
+
+        // If user is authenticated and is a student, track view reliably using their ID
+        if (req.user && req.user.role === 'student') {
+            const accommodation = await Accommodation.findById(accommodationId);
+            if (!accommodation) {
+                return res.status(404).json({ success: false, message: 'Accommodation not found' });
+            }
+
+            // Check if student has already viewed
+            if (!accommodation.viewedBy.includes(req.user._id)) {
+                accommodation.viewedBy.push(req.user._id);
+                accommodation.viewCount += 1;
+                await accommodation.save();
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'View recorded successfully for student',
+                });
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: 'View already recorded for this student',
+                });
+            }
+        }
+
+        // Fallback for unauthenticated users or other roles
+        const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const cacheKey = `${accommodationId}-${ip}`;
+        
+        // Check if this IP recently viewed this accommodation (within 1 hour)
+        const lastViewTime = viewCache.get(cacheKey);
+        const oneHourAgo = Date.now() - 60 * 60 * 1000;
+        
+        if (!lastViewTime || lastViewTime < oneHourAgo) {
+            // Update cache
+            viewCache.set(cacheKey, Date.now());
+            
+            // Increment in the database
+            await Accommodation.findByIdAndUpdate(accommodationId, { $inc: { viewCount: 1 } });
+            
+            return res.status(200).json({
+                success: true,
+                message: 'View recorded successfully (anonymous)',
+            });
+        }
+        
+        // Already recently viewed
+        res.status(200).json({
+            success: true,
+            message: 'View already recorded recently',
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to record view',
             error: error.message,
         });
     }
@@ -1034,6 +1104,7 @@ export {
     createAccommodation,
     getAccommodations,
     getAccommodationById,
+    recordView,
     updateAccommodation,
     publishAccommodation,
     unpublishAccommodation,

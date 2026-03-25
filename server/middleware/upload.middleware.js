@@ -26,15 +26,12 @@ const storage = multer.diskStorage({
 
     if (file.fieldname === 'profileImage') {
       folder = path.join(uploadDir, 'profiles');
-    } else if (file.fieldname === 'images' || file.fieldname === 'coverImage' || file.fieldname === 'photos') {
-      folder = path.join(uploadDir, 'accommodations');
-    } else if (file.fieldname === 'video' || file.fieldname === 'videos') {
-      folder = path.join(uploadDir, 'videos');
     } else if (file.fieldname.includes('document') || file.fieldname.includes('Document')) {
       folder = path.join(uploadDir, 'documents');
     } else if (file.fieldname === 'certifications') {
       folder = path.join(uploadDir, 'certifications');
     }
+    // photos and videos go directly to the uploads root
 
     // Create folder if it doesn't exist
     if (!fs.existsSync(folder)) {
