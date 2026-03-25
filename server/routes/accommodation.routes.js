@@ -3,6 +3,7 @@ import {
     createAccommodation,
     getAccommodations,
     getAccommodationById,
+    recordView,
     updateAccommodation,
     publishAccommodation,
     unpublishAccommodation,
@@ -15,7 +16,7 @@ import {
     getAccommodationTenants,
     sendTenantNotice,
 } from '../controllers/accommodation.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect, optionalAuth } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/role.middleware.js';
 import validate from '../middleware/validate.middleware.js';
 import { uploadFields } from '../middleware/upload.middleware.js';
@@ -36,6 +37,7 @@ const router = express.Router();
 router.get('/', getAccommodations);
 router.get('/owner/my-listings', protect, authorize('owner'), getOwnerListings);
 router.get('/:id', accommodationIdValidator, validate, getAccommodationById);
+router.post('/:id/view', optionalAuth, accommodationIdValidator, validate, recordView);
 
 router.post(
     '/',
@@ -96,6 +98,11 @@ router.post(
     '/:accommodationId/rooms',
     protect,
     authorize('owner', 'admin'),
+    uploadFields([
+        { name: 'roomPhotos', maxCount: 8 },
+        { name: 'roomVideos', maxCount: 2 },
+    ]),
+    normalizeMultipartBody,
     createRoomValidator,
     validate,
     createRoom
@@ -114,6 +121,11 @@ router.put(
     '/rooms/:roomId',
     protect,
     authorize('owner', 'admin'),
+    uploadFields([
+        { name: 'roomPhotos', maxCount: 8 },
+        { name: 'roomVideos', maxCount: 2 },
+    ]),
+    normalizeMultipartBody,
     updateRoomValidator,
     validate,
     updateRoom

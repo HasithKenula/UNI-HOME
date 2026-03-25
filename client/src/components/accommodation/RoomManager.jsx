@@ -37,12 +37,22 @@ const defaultForm = {
     isFurnished: false,
 };
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const getMediaUrl = (url = '') => {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
+};
+
 const RoomManager = ({ accommodationId }) => {
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [editingRoomId, setEditingRoomId] = useState('');
     const [formData, setFormData] = useState(defaultForm);
+    const [roomPhotos, setRoomPhotos] = useState([]);
+    const [roomVideos, setRoomVideos] = useState([]);
 
     const statusClass = useMemo(
         () => ({
@@ -80,6 +90,8 @@ const RoomManager = ({ accommodationId }) => {
 
     const handleEdit = (room) => {
         setEditingRoomId(room._id);
+        setRoomPhotos([]);
+        setRoomVideos([]);
         setFormData({
             roomNumber: room.roomNumber || '',
             roomType: room.roomType || '',
@@ -95,6 +107,8 @@ const RoomManager = ({ accommodationId }) => {
 
     const resetForm = () => {
         setFormData(defaultForm);
+        setRoomPhotos([]);
+        setRoomVideos([]);
         setEditingRoomId('');
     };
 
@@ -108,6 +122,8 @@ const RoomManager = ({ accommodationId }) => {
                 floor: Number(formData.floor || 0),
                 maxOccupants: Number(formData.maxOccupants || 1),
                 monthlyRent: formData.monthlyRent ? Number(formData.monthlyRent) : undefined,
+                roomPhotos,
+                roomVideos,
             };
 
             if (editingRoomId) {
@@ -125,6 +141,16 @@ const RoomManager = ({ accommodationId }) => {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleRoomPhotoChange = (event) => {
+        const files = Array.from(event.target.files || []);
+        setRoomPhotos(files);
+    };
+
+    const handleRoomVideoChange = (event) => {
+        const files = Array.from(event.target.files || []);
+        setRoomVideos(files);
     };
 
     const handleDelete = async (roomId) => {
@@ -218,6 +244,35 @@ const RoomManager = ({ accommodationId }) => {
                     </label>
                 </div>
 
+                <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">Room Photos</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleRoomPhotoChange}
+                            className="w-full rounded-xl border-2 border-gray-300 px-3 py-2 text-sm"
+                        />
+                        {roomPhotos.length > 0 && (
+                            <p className="mt-1 text-xs text-gray-500">{roomPhotos.length} photo(s) selected</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">Room Videos</label>
+                        <input
+                            type="file"
+                            accept="video/*"
+                            multiple
+                            onChange={handleRoomVideoChange}
+                            className="w-full rounded-xl border-2 border-gray-300 px-3 py-2 text-sm"
+                        />
+                        {roomVideos.length > 0 && (
+                            <p className="mt-1 text-xs text-gray-500">{roomVideos.length} video(s) selected</p>
+                        )}
+                    </div>
+                </div>
+
                 <div className="md:col-span-2 flex gap-3">
                     <Button type="submit" loading={saving}>
                         {editingRoomId ? (
@@ -292,6 +347,31 @@ const RoomManager = ({ accommodationId }) => {
                                     Delete
                                 </Button>
                             </div>
+
+                            {((room.media?.photos || []).length > 0 || (room.media?.videos || []).length > 0) && (
+                                <div className="mt-3 border-t border-gray-100 pt-3">
+                                    {(room.media?.photos || []).length > 0 && (
+                                        <div className="mb-2">
+                                            <p className="mb-2 text-xs font-semibold text-gray-500">Photos</p>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {room.media.photos.slice(0, 4).map((photo) => (
+                                                    <img
+                                                        key={photo.url}
+                                                        src={getMediaUrl(photo.url)}
+                                                        alt={`Room ${room.roomNumber}`}
+                                                        className="h-16 w-full rounded-lg object-cover"
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(room.media?.videos || []).length > 0 && (
+                                        <p className="text-xs font-semibold text-gray-500">
+                                            Videos: {room.media.videos.length}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))
                 )}

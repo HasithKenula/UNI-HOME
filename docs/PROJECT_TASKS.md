@@ -394,6 +394,8 @@
 - [ ] `components/auth/OwnerRegisterForm.jsx` — NIC, bank details, document upload
 - [ ] `components/auth/ProviderRegisterForm.jsx` — service categories, area of operation
 - [x] `components/auth/ServiceProviderRegisterForm.jsx` — service categories, area of operation, payload mapping fix
+- [x] `components/auth/ServiceProviderRegisterForm.jsx` — remove business/certification fields; add main category + district + area + profile note
+- [x] `components/auth/ServiceProviderRegisterForm.jsx` — add provider photo input + preview on registration
 - [ ] `pages/public/RegisterPage.jsx` — tab/step switcher for 3 registration types
 - [ ] Form validation (react-hook-form)
 - [ ] API integration (authAPI.js → register endpoints)
@@ -587,6 +589,8 @@
 - [x] Add room form (roomNumber, type, floor, rent, facilities)
 - [x] Room list with status badges
 - [x] Edit/Delete room actions
+- [x] Room media upload support (owner can upload room photos/videos)
+- [x] Room media preview shown on room cards in manage rooms
 
 ### Tenant Management Page
 
@@ -622,7 +626,7 @@
 
 - [x] `pages/public/ListingDetailPage.jsx`
 - [x] Photo gallery (carousel/lightbox)
-- [ ] Info sections: Type, Location (with map), Pricing breakdown, Facilities, House Rules, Booking Rules
+- [x] Info sections: Type, Location (with map), Pricing breakdown, Facilities, House Rules, Booking Rules
 - [x] Availability status badge
 - [x] Owner info card (name, phone — conditional on auth)
 - [x] Action buttons: Book Now, Contact Owner, Save/Favorite, Report
@@ -654,6 +658,8 @@
 - [x] Validator: accommodationId, roomType, checkInDate, contractPeriod
 - [x] Controller: verify accommodation available, generate bookingNumber, calculate costSummary, create booking, send email to owner + student, create notifications
 - [x] Controller: reserve an accommodation slot on booking creation and maintain slot release on reject/cancel/complete transitions
+- [x] Support dual booking scope (`accommodation` or specific `room`) with `roomId`
+- [x] Validate room-level availability (room status + active booking capacity) before creating room bookings
 - [ ] Test → 201
 
 ### `GET /api/bookings`
@@ -668,6 +674,13 @@
 
 - [x] Route (protected: own booking or own property)
 - [x] Controller: findById, populate all refs, fetch payments + invoices for this booking
+- [ ] Test → 200
+
+### `PATCH /api/bookings/:id`
+
+- [x] Route (protected: student)
+- [x] Validator: optional editable fields (roomType, checkInDate, contractPeriod, specialRequests, emergencyContact)
+- [x] Controller: verify student owns booking, allow update only in pending status, recalculate checkOutDate
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/accept`
@@ -685,7 +698,7 @@
 ### `PATCH /api/bookings/:id/cancel`
 
 - [x] Route (protected: student/owner)
-- [x] Controller: set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
+- [x] Controller: pending-only cancel; set cancelled + reason + cancelledBy, calculate refund eligibility, send notifications
 - [ ] Test → 200
 
 ### `PATCH /api/bookings/:id/complete`
@@ -745,15 +758,21 @@
 ### Booking Flow (on Listing Detail Page)
 
 - [x] `components/booking/BookingForm.jsx`
+  - [x] Booking type selector (book entire accommodation vs specific room)
+  - [x] Available room selector with slot counts for room-based bookings
   - [x] Room type selector
   - [x] Check-in date picker
   - [x] Contract period dropdown
   - [x] Cost summary display (auto-calculated: rent + keyMoney + deposit)
   - [x] Special requests textarea
   - [x] Emergency contact fields
+  - [x] Frontend validations: required fields, date checks, 10-digit emergency contact, and room availability checks
   - [x] Submit booking button
 - [x] API integration → POST /api/bookings
 - [x] Success modal with booking number
+- [x] Listing detail gate: disable booking action when neither accommodation slots nor room slots are available
+- [x] Listing detail room cards show room-level image/video availability
+- [x] Student can directly click a specific room card and prefill room booking
 
 ### My Bookings Page
 
@@ -761,6 +780,8 @@
 - [x] Status filter tabs (All, Pending, Confirmed, Cancelled, Completed)
 - [x] Booking cards: accommodation thumbnail, booking number, status badge, dates, cost
 - [x] Click → booking detail page
+- [x] Update booking button next to View Booking (pending bookings only)
+- [x] Update modal with room type, check-in date, contract period, special requests, and emergency contact
 - [x] Cancel booking button (with reason modal)
 
 ### Booking Detail Page
@@ -1059,8 +1080,45 @@
 ### `GET /api/service-providers`
 
 - [x] Route (protected: owner)
-- [x] Controller: find approved + available providers, filter by category/district/city
+- [x] Controller: find approved + available providers, filter by category/district/city/area
+- [x] Include provider profile note + contact details in provider list response
+- [x] Support expanded maintenance categories (plumbing, electrical, cleaning, painting, carpentry, masons, welding, cctv, other)
 - [ ] Test → 200
+
+### `GET /api/service-providers/categories`
+
+- [x] Route (protected: owner)
+- [x] Controller: return service-provider maintenance categories for category-page navigation
+
+### `GET /api/service-providers/me`
+
+- [x] Route (protected: provider)
+- [x] Controller: return service provider profile for dashboard management
+
+### `PUT /api/service-providers/me`
+
+- [x] Route (protected: provider)
+- [x] Controller: update provider profile (category, district, area, note, availability)
+
+### `DELETE /api/service-providers/me`
+
+- [x] Route (protected: provider)
+- [x] Controller: remove provider profile (mark account deleted / unavailable)
+
+### `POST /api/service-providers/bookings`
+
+- [x] Route (protected: owner)
+- [x] Controller: owner books provider by category + district + area + note
+
+### `GET /api/service-providers/bookings/mine`
+
+- [x] Route (protected: owner/provider)
+- [x] Controller: list owner/provider service bookings
+
+### `PATCH /api/service-providers/bookings/:id/status`
+
+- [x] Route (protected: owner)
+- [x] Controller: owner updates booking status to accepted/completed
 
 ## 6.3 Frontend — Student Ticket Pages
 
@@ -1098,6 +1156,7 @@
 
 - [x] `pages/owner/OwnerTicketsPage.jsx`
 - [x] Owner dashboard ticket request visibility (`pages/owner/OwnerDashboard.jsx`)
+- [x] Owner dashboard quick action: search service providers (`pages/owner/ServiceProvidersPage.jsx`)
 - [x] Filter by accommodation + status + priority
 - [x] Ticket list with actions:
   - [x] Approve button (for open tickets)
@@ -1106,8 +1165,26 @@
 - [x] Provider selection modal:
   - [x] Filter by category + area
   - [x] Provider cards (name, rating, completed tasks, availability)
+  - [x] Provider profile note + contact details
   - [x] Date picker + time slot selector
   - [x] Assign button
+
+### Owner Service Provider Booking Page
+
+- [x] `pages/owner/ServiceProvidersPage.jsx`
+- [x] Show maintenance categories first, then load providers under selected category
+- [x] Sidebar with all maintenance categories (as category menu)
+- [x] Filter providers by selected category + district + city
+- [x] View provider profile note and contact actions (phone/email)
+- [x] Show provider photo in provider listing cards
+- [x] Book provider under selected category
+- [x] Owner booking status update actions (accepted/completed)
+
+### Owner Service Category Page
+
+- [x] `pages/owner/ServiceProviderCategoriesPage.jsx`
+- [x] Category selection opens separate provider page route (`/owner/service-providers/:category`)
+- [x] Provider page reads selected category from route and shows providers under that category
 
 ## 6.5 Frontend — Provider Pages
 
@@ -1117,6 +1194,9 @@
 - [x] Stats: assigned, in progress, completed counts
 - [x] Upcoming scheduled visits
 - [x] Recent task notifications
+- [x] Remove embedded profile edit section from dashboard
+- [x] Add quick action link to dedicated provider profile page
+- [x] Show owner service bookings + owner contact details
 
 ### My Tasks Page
 
@@ -1129,6 +1209,35 @@
   - [x] Cost input (optional)
   - [x] Upload completion proof photos
   - [x] Submit button
+
+### Provider Profile Page
+
+- [x] `pages/provider/ProviderProfilePage.jsx`
+- [x] Display all registration details: firstName, lastName, email, phone, nic, serviceCategories, areasOfOperation, yearsOfExperience, profileNote, profileImage, isAvailable
+- [x] View mode: show all profile information in formatted display
+- [x] Edit mode: inline form to update all editable fields
+- [x] Save/Cancel buttons for profile updates
+- [x] Profile image display with avatar fallback
+- [x] Profile photo upload with preview in edit mode
+- [x] Availability toggle
+- [x] Profile removal option
+
+### Navbar Update
+
+- [x] `components/common/Navbar.jsx`
+- [x] Restore original top-nav user display (no profile dropdown link)
+- [x] Keep desktop and mobile navigation support
+- [x] Access provider profile via dashboard `Manage Profile` button only
+
+### Provider Profile Route
+
+- [x] Add `/provider/profile` route to `App.jsx`
+- [x] Route protected with `PrivateRoute` and `RoleRoute` (service_provider only)
+
+### Backend Profile Endpoint Update
+
+- [x] Update `GET /api/service-providers/me` to include `profileImage` field
+- [x] Update `PUT /api/service-providers/me` to support `profileImage` updates
 
 ## 6.6 Frontend — State
 
