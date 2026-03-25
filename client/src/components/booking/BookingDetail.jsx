@@ -87,7 +87,7 @@ const BookingDetail = ({ booking, onCancel, onPayNow, onWriteReview }) => {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-                {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                {booking.status === 'pending' && (
                     <Button variant="danger" onClick={onCancel}>Cancel Booking</Button>
                 )}
                 {booking.status === 'confirmed' && <Button onClick={onPayNow}>Pay Now</Button>}

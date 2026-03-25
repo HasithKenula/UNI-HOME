@@ -65,7 +65,7 @@ const BookingForm = ({ listing, onSuccess }) => {
     };
 
     return (
-        <form className="space-y-3" onSubmit={handleSubmit}>
+        <form className="space-y-3 pb-2 sm:space-y-4" onSubmit={handleSubmit}>
             <Select
                 label="Room Type"
                 value={form.roomType}
@@ -118,17 +118,17 @@ const BookingForm = ({ listing, onSuccess }) => {
                 />
             </div>
 
-            <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
+            <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-3 sm:p-4">
                 <h4 className="mb-3 font-semibold text-gray-900 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-blue-600" /> Cost Summary
                 </h4>
                 <div className="space-y-1 text-sm">
-                    <p className="flex justify-between"><span>Monthly Rent</span><span>LKR {costs.monthlyRent.toLocaleString()}</span></p>
-                    <p className="flex justify-between"><span>Key Money</span><span>LKR {costs.keyMoney.toLocaleString()}</span></p>
-                    <p className="flex justify-between"><span>Deposit</span><span>LKR {costs.deposit.toLocaleString()}</span></p>
-                    <p className="mt-2 flex justify-between border-t border-blue-200 pt-2 font-bold text-blue-700">
+                    <p className="flex items-start justify-between gap-2"><span>Monthly Rent</span><span className="text-right">LKR {costs.monthlyRent.toLocaleString()}</span></p>
+                    <p className="flex items-start justify-between gap-2"><span>Key Money</span><span className="text-right">LKR {costs.keyMoney.toLocaleString()}</span></p>
+                    <p className="flex items-start justify-between gap-2"><span>Deposit</span><span className="text-right">LKR {costs.deposit.toLocaleString()}</span></p>
+                    <p className="mt-2 flex items-start justify-between gap-2 border-t border-blue-200 pt-2 font-bold text-blue-700">
                         <span>Total Initial Payment</span>
-                        <span>LKR {costs.totalInitial.toLocaleString()}</span>
+                        <span className="text-right">LKR {costs.totalInitial.toLocaleString()}</span>
                     </p>
                 </div>
             </div>

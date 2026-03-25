@@ -169,9 +169,9 @@ const ListingDetailPage = () => {
             )}
 
             {showBookingModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
-                        <h3 className="text-2xl font-bold text-gray-900">Book This Property</h3>
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-2 sm:items-center sm:p-4">
+                    <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
+                        <h3 className="text-xl font-bold text-gray-900 sm:text-2xl">Book This Property</h3>
                         <p className="mt-1 text-sm text-gray-600">Fill in your details to request this booking.</p>
 
                         <div className="mt-4">

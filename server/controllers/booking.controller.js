@@ -298,6 +298,112 @@ const getBookingById = async (req, res) => {
     }
 };
 
+const updateBooking = async (req, res) => {
+    try {
+        const { roomType, checkInDate, contractPeriod, specialRequests, emergencyContact } = req.body;
+
+        const booking = await Booking.findById(req.params.id).populate(
+            'accommodation',
+            'title roomTypes isDeleted status'
+        );
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const isStudentOwner = booking.student?.toString() === req.user._id.toString();
+        if (!isStudentOwner) {
+            return res.status(403).json({ success: false, message: 'Not authorized to update this booking' });
+        }
+
+        if (booking.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'Only pending bookings can be updated',
+            });
+        }
+
+        if (!booking.accommodation || booking.accommodation.isDeleted || booking.accommodation.status !== 'active') {
+            return res.status(400).json({
+                success: false,
+                message: 'Accommodation is not available for booking updates',
+            });
+        }
+
+        if (roomType !== undefined) {
+            if (
+                Array.isArray(booking.accommodation.roomTypes) &&
+                booking.accommodation.roomTypes.length > 0 &&
+                !booking.accommodation.roomTypes.includes(roomType)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Requested room type is not available for this accommodation',
+                });
+            }
+            booking.roomType = roomType;
+        }
+
+        if (checkInDate !== undefined) {
+            const proposedCheckInDate = new Date(checkInDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (proposedCheckInDate < today) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Check-in date must be today or a future date',
+                });
+            }
+            booking.checkInDate = proposedCheckInDate;
+        }
+
+        if (contractPeriod !== undefined) {
+            booking.contractPeriod = contractPeriod;
+        }
+
+        const finalCheckIn = booking.checkInDate;
+        const finalContractPeriod = booking.contractPeriod;
+        booking.checkOutDate = addMonths(finalCheckIn, CONTRACT_MONTHS[finalContractPeriod]);
+
+        booking.studentDetails = {
+            ...(booking.studentDetails || {}),
+            ...(specialRequests !== undefined ? { specialRequests } : {}),
+            ...(emergencyContact !== undefined
+                ? {
+                      emergencyContact: {
+                          ...(booking.studentDetails?.emergencyContact || {}),
+                          ...emergencyContact,
+                      },
+                  }
+                : {}),
+        };
+
+        await booking.save();
+
+        await Notification.create({
+            recipient: booking.owner,
+            title: 'Booking updated by student',
+            message: `Booking (${booking.bookingNumber}) has been updated by the student.`,
+            type: 'booking_request',
+            category: 'booking',
+            channel: 'in_app',
+            relatedEntity: { entityType: 'booking', entityId: booking._id },
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Booking updated successfully',
+            data: booking,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update booking',
+            error: error.message,
+        });
+    }
+};
+
 const acceptBooking = async (req, res) => {
     try {
         const booking = await Booking.findById(req.params.id).populate('accommodation', 'title');
@@ -424,8 +530,8 @@ const cancelBooking = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Not authorized to cancel this booking' });
         }
 
-        if (!['pending', 'confirmed'].includes(booking.status)) {
-            return res.status(400).json({ success: false, message: 'Only pending or confirmed bookings can be cancelled' });
+        if (booking.status !== 'pending') {
+            return res.status(400).json({ success: false, message: 'Only pending bookings can be cancelled' });
         }
 
         booking.status = 'cancelled';
@@ -511,6 +617,7 @@ export {
     createBooking,
     getBookings,
     getBookingById,
+    updateBooking,
     acceptBooking,
     rejectBooking,
     cancelBooking,
