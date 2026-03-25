@@ -582,6 +582,7 @@
 - [x] Actions: Edit, Publish/Unpublish, Delete
 - [x] Stats summary header (total, active, draft, pending)
 - [x] Keep listing availability fresh with periodic background refresh + window-focus refresh (reflect booking-driven room count updates)
+- [x] Normalize legacy upload URL formats so previously uploaded media from different developer machines renders on listing cards
 
 ### Room Management (within listing)
 
@@ -773,6 +774,9 @@
 - [x] Listing detail gate: disable booking action when neither accommodation slots nor room slots are available
 - [x] Listing detail room cards show room-level image/video availability
 - [x] Student can directly click a specific room card and prefill room booking
+- [x] Shared frontend media URL resolver used across search/favorites/listings/detail/bookings cards for legacy `/uploads` path compatibility
+- [x] Backend compatibility route added to resolve legacy `/uploads/:fileName` requests from nested upload folders (`uploads/accommodations`, `uploads/videos`)
+- [ ] Sync legacy media files absent from current `server/uploads` (for IDs with no compatible local file) via shared storage/backup
 
 ### My Bookings Page
 

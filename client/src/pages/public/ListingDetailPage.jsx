@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
@@ -37,6 +37,7 @@ import BookingForm from '../../components/booking/BookingForm';
 import ContactOwnerModal from '../../components/inquiry/ContactOwnerModal';
 import useAuth from '../../hooks/useAuth';
 import { getAccommodationById, recordAccommodationView } from '../../features/accommodations/accommodationAPI';
+import { getMediaUrlWithFallback } from '../../utils/mediaUrl';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -57,16 +58,6 @@ import {
 } from '../../features/favorites/favoriteSlice';
 
 const REVIEWS_PER_PAGE = 4;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
-
-const withFallbackMedia = (url = '') => {
-    const primary = `${API_ORIGIN}${url}`;
-    const fallback = url.includes('/uploads/accommodations/')
-        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
-        : primary;
-
-    return { primary, fallback };
-};
 
 const ListingDetailPage = () => {
     const dispatch = useDispatch();
@@ -162,7 +153,7 @@ const ListingDetailPage = () => {
     const imageUrls = useMemo(() => {
         return photos.map((photo) => {
             if (!photo.url) return 'https://placehold.co/900x500?text=No+Image';
-            return withFallbackMedia(photo.url).primary;
+            return getMediaUrlWithFallback(photo.url).primary;
         });
     }, [photos]);
 
@@ -301,7 +292,7 @@ const ListingDetailPage = () => {
                                     <img
                                         src={
                                             photo.url
-                                                ? withFallbackMedia(photo.url).primary
+                                                ? getMediaUrlWithFallback(photo.url).primary
                                                 : 'https://placehold.co/140x90?text=Image'
                                         }
                                         alt={`Preview ${index + 1}`}
@@ -309,7 +300,7 @@ const ListingDetailPage = () => {
                                         onError={(event) => {
                                             const target = event.currentTarget;
                                             if (!photo.url) return;
-                                            const { fallback } = withFallbackMedia(photo.url);
+                                            const { fallback } = getMediaUrlWithFallback(photo.url);
                                             if (target.src !== fallback) {
                                                 target.src = fallback;
                                             }
@@ -329,10 +320,10 @@ const ListingDetailPage = () => {
                                         key={`${video.url}-${index}`}
                                         controls
                                         className="h-64 w-full rounded-xl bg-black object-cover"
-                                        src={withFallbackMedia(video.url).primary}
+                                        src={getMediaUrlWithFallback(video.url).primary}
                                         onError={(event) => {
                                             const target = event.currentTarget;
-                                            const { fallback } = withFallbackMedia(video.url);
+                                            const { fallback } = getMediaUrlWithFallback(video.url);
                                             if (target.src !== fallback) {
                                                 target.src = fallback;
                                             }
@@ -430,7 +421,7 @@ const ListingDetailPage = () => {
                                 <p className={`text-2xl font-bold ${
                                     listing.pricing?.billsIncluded ? 'text-green-600' : 'text-red-600'
                                 }`}>
-                                    {listing.pricing?.billsIncluded ? '✓ Included' : '✗ Not Included'}
+                                    {listing.pricing?.billsIncluded ? 'Included' : 'Not Included'}
                                 </p>
                             </div>
                         </div>
@@ -492,12 +483,12 @@ const ListingDetailPage = () => {
                                         <article key={room._id} className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4">
                                             <div className="mb-3 flex gap-3">
                                                 <img
-                                                    src={roomPhoto ? withFallbackMedia(roomPhoto).primary : 'https://placehold.co/240x160?text=Room'}
+                                                    src={roomPhoto ? getMediaUrlWithFallback(roomPhoto).primary : 'https://placehold.co/240x160?text=Room'}
                                                     alt={`Room ${room.roomNumber || ''}`}
                                                     className="h-20 w-28 rounded-lg object-cover"
                                                     onError={(event) => {
                                                         if (!roomPhoto) return;
-                                                        const { fallback } = withFallbackMedia(roomPhoto);
+                                                        const { fallback } = getMediaUrlWithFallback(roomPhoto);
                                                         if (event.currentTarget.src !== fallback) {
                                                             event.currentTarget.src = fallback;
                                                         }
@@ -579,7 +570,7 @@ const ListingDetailPage = () => {
                                     <p className={`font-bold ${
                                         listing.houseRules?.visitorsAllowed ? 'text-green-700' : 'text-red-700'
                                     }`}>
-                                        {listing.houseRules?.visitorsAllowed ? '✓ Allowed' : '✗ Not Allowed'}
+                                        {listing.houseRules?.visitorsAllowed ? 'Allowed' : 'Not Allowed'}
                                     </p>
                                 </div>
                             </div>
@@ -593,7 +584,7 @@ const ListingDetailPage = () => {
                                     <p className={`font-bold ${
                                         listing.houseRules?.smokingAllowed ? 'text-orange-700' : 'text-green-700'
                                     }`}>
-                                        {listing.houseRules?.smokingAllowed ? '✓ Allowed' : '✗ Not Allowed'}
+                                        {listing.houseRules?.smokingAllowed ? 'Allowed' : 'Not Allowed'}
                                     </p>
                                 </div>
                             </div>
@@ -870,3 +861,4 @@ const ListingDetailPage = () => {
 };
 
 export default ListingDetailPage;
+

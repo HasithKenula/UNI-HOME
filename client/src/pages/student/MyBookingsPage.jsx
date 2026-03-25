@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowLeft, CalendarClock, XCircle } from 'lucide-react';
@@ -6,31 +6,15 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import { cancelBookingAsync, fetchBookingsAsync, updateBookingAsync } from '../../features/bookings/bookingSlice';
+import { getMediaUrlWithFallback } from '../../utils/mediaUrl';
 
 const tabs = ['all', 'pending', 'confirmed', 'cancelled', 'completed'];
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
 const contractOptions = [
     { value: '1_month', label: '1 Month' },
     { value: '3_months', label: '3 Months' },
     { value: '6_months', label: '6 Months' },
     { value: '1_year', label: '1 Year' },
 ];
-
-const normalizeMediaPath = (url = '') => {
-    if (!url) return '';
-    if (/^https?:\/\//i.test(url)) return url;
-    return url.startsWith('/') ? url : `/${url}`;
-};
-
-const getMediaUrlWithFallback = (url = '') => {
-    const normalizedUrl = normalizeMediaPath(url);
-    const primary = `${API_ORIGIN}${normalizedUrl}`;
-    const fallback = url.includes('/uploads/accommodations/')
-        ? `${API_ORIGIN}${normalizedUrl.replace('/uploads/accommodations/', '/uploads/')}`
-        : primary;
-
-    return { primary, fallback };
-};
 
 const getBookingPhotoPath = (booking) => {
     const firstMediaPhoto = booking?.accommodation?.media?.photos?.[0];
@@ -371,3 +355,4 @@ const MyBookingsPage = () => {
 };
 
 export default MyBookingsPage;
+

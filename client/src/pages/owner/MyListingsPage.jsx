@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -21,23 +21,13 @@ import Button from '../../components/common/Button';
 import LoadingSkeleton from '../../components/common/LoadingSkeleton';
 import EmptyState from '../../components/common/EmptyState';
 import RoomManager from '../../components/accommodation/RoomManager';
+import { getMediaUrlWithFallback } from '../../utils/mediaUrl';
 import {
     deleteAccommodation,
     getMyListings,
     publishAccommodation,
     unpublishAccommodation,
 } from '../../features/accommodations/accommodationAPI';
-
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
-
-const withFallbackMedia = (url = '') => {
-    const primary = `${API_ORIGIN}${url}`;
-    const fallback = url.includes('/uploads/accommodations/')
-        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
-        : primary;
-
-    return { primary, fallback };
-};
 
 const statusTabs = [
     { key: '', label: 'All' },
@@ -235,7 +225,7 @@ const MyListingsPage = () => {
                                         <img 
                                             src={
                                                 listing.media?.photos?.[0]?.url 
-                                                    ? withFallbackMedia(listing.media.photos[0].url).primary 
+                                                    ? getMediaUrlWithFallback(listing.media.photos[0].url).primary 
                                                     : 'https://placehold.co/192x128?text=No+Image'
                                             }
                                             alt={listing.title}
@@ -243,7 +233,7 @@ const MyListingsPage = () => {
                                             onError={(event) => {
                                                 const target = event.currentTarget;
                                                 if (!listing.media?.photos?.[0]?.url) return;
-                                                const { fallback } = withFallbackMedia(listing.media.photos[0].url);
+                                                const { fallback } = getMediaUrlWithFallback(listing.media.photos[0].url);
                                                 if (target.src !== fallback) {
                                                     target.src = fallback;
                                                 }
@@ -364,3 +354,4 @@ const MyListingsPage = () => {
 };
 
 export default MyListingsPage;
+

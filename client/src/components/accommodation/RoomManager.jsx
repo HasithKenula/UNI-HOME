@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { Bed, Plus, Edit2, Trash2, Check, X, DollarSign } from 'lucide-react';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Select from '../common/Select';
 import LoadingSkeleton from '../common/LoadingSkeleton';
+import { getMediaUrlWithFallback } from '../../utils/mediaUrl';
 import {
     createRoom,
     deleteRoom,
@@ -37,13 +38,6 @@ const defaultForm = {
     isFurnished: false,
 };
 
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
-
-const getMediaUrl = (url = '') => {
-    if (!url) return '';
-    if (/^https?:\/\//i.test(url)) return url;
-    return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
-};
 
 const RoomManager = ({ accommodationId }) => {
     const [rooms, setRooms] = useState([]);
@@ -357,9 +351,15 @@ const RoomManager = ({ accommodationId }) => {
                                                 {room.media.photos.slice(0, 4).map((photo) => (
                                                     <img
                                                         key={photo.url}
-                                                        src={getMediaUrl(photo.url)}
+                                                        src={getMediaUrlWithFallback(photo.url).primary}
                                                         alt={`Room ${room.roomNumber}`}
                                                         className="h-16 w-full rounded-lg object-cover"
+                                                        onError={(event) => {
+                                                            const { fallback } = getMediaUrlWithFallback(photo.url);
+                                                            if (event.currentTarget.src !== fallback) {
+                                                                event.currentTarget.src = fallback;
+                                                            }
+                                                        }}
                                                     />
                                                 ))}
                                             </div>
@@ -381,3 +381,4 @@ const RoomManager = ({ accommodationId }) => {
 };
 
 export default RoomManager;
+

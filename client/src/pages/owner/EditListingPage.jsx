@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import LocationMapPicker from '../../components/accommodation/LocationMapPicker';
+import { getMediaUrlWithFallback } from '../../utils/mediaUrl';
 import {
     getAccommodationById,
     updateAccommodation,
@@ -16,17 +17,6 @@ const formatFileSize = (bytes = 0) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
-
-const getMediaUrlWithFallback = (url = '') => {
-    const primary = `${API_ORIGIN}${url}`;
-    const fallback = url.includes('/uploads/accommodations/')
-        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
-        : primary;
-
-    return { primary, fallback };
 };
 
 const EditListingPage = () => {
@@ -389,3 +379,4 @@ const EditListingPage = () => {
 };
 
 export default EditListingPage;
+

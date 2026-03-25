@@ -7,11 +7,15 @@ dotenv.config();
 
 import express from 'express';
 import mongoose from 'mongoose';
+import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 // Import database connection
 import connectDB from './config/db.js';
@@ -21,6 +25,90 @@ import errorHandler from './middleware/error.middleware.js';
 
 // Initialize Express app
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const uploadStaticPath = path.isAbsolute(process.env.UPLOAD_PATH || '')
+  ? process.env.UPLOAD_PATH
+  : path.resolve(__dirname, process.env.UPLOAD_PATH || 'uploads');
+const nestedUploadDirs = [
+  path.join(uploadStaticPath, 'accommodations'),
+  path.join(uploadStaticPath, 'videos'),
+];
+
+const findCompatibleUploadFile = (requestedFileName) => {
+  const safeName = path.basename(String(requestedFileName || ''));
+  if (!safeName) return '';
+
+  const pickBestMatch = (dir, entries, predicate) => {
+    const matched = entries
+      .filter(predicate)
+      .map((entry) => {
+        const fullPath = path.join(dir, entry);
+        const stats = fs.statSync(fullPath);
+        return { fullPath, mtimeMs: stats.mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    return matched[0]?.fullPath || '';
+  };
+
+  const directCandidates = [
+    path.join(uploadStaticPath, safeName),
+    ...nestedUploadDirs.map((dir) => path.join(dir, safeName)),
+  ];
+
+  for (const candidate of directCandidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+
+  const ext = path.extname(safeName);
+  const nameWithoutExt = path.basename(safeName, ext);
+  const stemCandidates = [nameWithoutExt];
+
+  const parts = safeName.split('-');
+  if (parts.length >= 3) {
+    stemCandidates.push(`${parts[0]}-${parts[1]}`);
+  }
+
+  for (const dir of [uploadStaticPath, ...nestedUploadDirs]) {
+    if (!fs.existsSync(dir)) continue;
+
+    const entries = fs.readdirSync(dir);
+    for (const stem of stemCandidates) {
+      const matchPath = pickBestMatch(dir, entries, (entry) => {
+        const entryBase = path.basename(entry, path.extname(entry));
+        return entryBase === stem || entry.startsWith(`${stem}-`);
+      });
+
+      if (matchPath && fs.existsSync(matchPath)) {
+        return matchPath;
+      }
+    }
+  }
+
+  // Final fallback: match by embedded entity id token (second segment in
+  // names like photos-<entityId>-<timestamp>-<rand>.<ext>) when old filenames
+  // changed but the same listing/user media still exists.
+  if (parts.length >= 2) {
+    const entityToken = parts[1];
+    for (const dir of [uploadStaticPath, ...nestedUploadDirs]) {
+      if (!fs.existsSync(dir)) continue;
+
+      const entries = fs.readdirSync(dir);
+      const matchPath = pickBestMatch(
+        dir,
+        entries,
+        (entry) => entry.includes(`-${entityToken}-`)
+      );
+
+      if (matchPath && fs.existsSync(matchPath)) {
+        return matchPath;
+      }
+    }
+  }
+
+  return '';
+};
 
 // Connect to MongoDB
 connectDB();
@@ -89,7 +177,19 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Static files (for uploaded files)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(uploadStaticPath));
+
+// Compatibility fallback for legacy media URLs that point to files now stored
+// in nested upload folders or with changed extensions/timestamps.
+app.get('/uploads/:fileName', (req, res, next) => {
+  const resolvedPath = findCompatibleUploadFile(req.params.fileName);
+  if (!resolvedPath) {
+    next();
+    return;
+  }
+
+  res.sendFile(resolvedPath);
+});
 
 // ============================================================================
 // ROUTES

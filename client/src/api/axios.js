@@ -1,7 +1,7 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +37,7 @@ axiosInstance.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         const response = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/refresh`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/refresh`,
           { refreshToken }
         );
 
@@ -60,3 +60,4 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
+

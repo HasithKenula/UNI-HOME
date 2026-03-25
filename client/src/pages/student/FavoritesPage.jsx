@@ -1,20 +1,10 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowLeft, Heart } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { fetchFavoritesAsync, removeFavoriteAsync } from '../../features/favorites/favoriteSlice';
-
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
-
-const getMediaUrlWithFallback = (url = '') => {
-    const primary = `${API_ORIGIN}${url}`;
-    const fallback = url.includes('/uploads/accommodations/')
-        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
-        : primary;
-
-    return { primary, fallback };
-};
+import { getMediaUrlWithFallback } from '../../utils/mediaUrl';
 
 const FavoritesPage = () => {
     const dispatch = useDispatch();
@@ -91,3 +81,4 @@ const FavoritesPage = () => {
 };
 
 export default FavoritesPage;
+

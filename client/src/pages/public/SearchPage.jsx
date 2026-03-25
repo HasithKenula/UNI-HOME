@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -24,6 +24,7 @@ import LoadingSkeleton from '../../components/common/LoadingSkeleton';
 import EmptyState from '../../components/common/EmptyState';
 import { getAccommodations } from '../../features/accommodations/accommodationAPI';
 import useAuth from '../../hooks/useAuth';
+import { getMediaUrlWithFallback } from '../../utils/mediaUrl';
 import {
     addFavoriteAsync,
     fetchFavoritesAsync,
@@ -46,16 +47,6 @@ const defaultFilters = {
 
 const roomTypes = ['single', 'double', 'shared', 'studio'];
 const facilities = ['wifi', 'furniture', 'airConditioning', 'attachedBathroom', 'kitchen'];
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
-
-const getMediaUrlWithFallback = (url = '') => {
-    const primary = `${API_ORIGIN}${url}`;
-    const fallback = url.includes('/uploads/accommodations/')
-        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
-        : primary;
-
-    return { primary, fallback };
-};
 
 const SearchPage = () => {
     const dispatch = useDispatch();
@@ -598,3 +589,4 @@ const SearchPage = () => {
 };
 
 export default SearchPage;
+

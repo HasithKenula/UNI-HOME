@@ -11,9 +11,17 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const DEFAULT_MAX_FILE_SIZE = 50 * 1024 * 1024;
+const SERVER_ROOT = path.resolve(__dirname, '..');
+
+const resolveUploadDir = (uploadPath = 'uploads') => {
+  if (path.isAbsolute(uploadPath)) {
+    return uploadPath;
+  }
+  return path.resolve(SERVER_ROOT, uploadPath);
+};
 
 // Create uploads directory if it doesn't exist
-const uploadDir = process.env.UPLOAD_PATH || './uploads';
+const uploadDir = resolveUploadDir(process.env.UPLOAD_PATH || 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
