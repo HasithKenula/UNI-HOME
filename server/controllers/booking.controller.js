@@ -1,5 +1,6 @@
 import Booking from '../models/Booking.js';
 import Accommodation from '../models/Accommodation.js';
+import Room from '../models/Room.js';
 import Payment from '../models/Payment.js';
 import Invoice from '../models/Invoice.js';
 import Notification from '../models/Notification.js';
@@ -44,6 +45,20 @@ const addMonths = (dateValue, months) => {
     return date;
 };
 
+const normalizeEmergencyContact = (contact) => {
+    if (!contact || typeof contact !== 'object') return undefined;
+
+    const name = typeof contact.name === 'string' ? contact.name.trim() : '';
+    const phone = typeof contact.phone === 'string' ? contact.phone.trim() : '';
+
+    if (!name && !phone) return undefined;
+
+    return {
+        ...(name ? { name } : {}),
+        ...(phone ? { phone } : {}),
+    };
+};
+
 const sendSafeEmail = async (options) => {
     try {
         await sendEmail(options);
@@ -84,6 +99,8 @@ const createBooking = async (req, res) => {
     try {
         const {
             accommodationId,
+            bookingScope = 'accommodation',
+            roomId,
             roomType,
             checkInDate,
             contractPeriod,
@@ -107,12 +124,52 @@ const createBooking = async (req, res) => {
         if (accommodation.availableRooms <= 0) {
             return res.status(409).json({
                 success: false,
-                message: 'No rooms available for this accommodation',
+                message: 'No booking slots available for this accommodation',
             });
         }
 
+        const scope = bookingScope === 'room' ? 'room' : 'accommodation';
+        let selectedRoom = null;
+        let finalRoomType = roomType;
+
+        if (scope === 'room') {
+            selectedRoom = await Room.findOne({
+                _id: roomId,
+                accommodation: accommodation._id,
+            });
+
+            if (!selectedRoom) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Selected room not found for this accommodation',
+                });
+            }
+
+            if (selectedRoom.status !== 'available') {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Selected room is not available',
+                });
+            }
+
+            const activeRoomBookings = await Booking.countDocuments({
+                room: selectedRoom._id,
+                status: { $in: ['pending', 'confirmed'] },
+            });
+
+            const maxOccupants = Math.max(1, Number(selectedRoom.maxOccupants || 1));
+            if (activeRoomBookings >= maxOccupants) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Selected room has reached its booking capacity',
+                });
+            }
+
+            finalRoomType = selectedRoom.roomType;
+        }
+
         if (Array.isArray(accommodation.roomTypes) && accommodation.roomTypes.length > 0) {
-            const supportsType = accommodation.roomTypes.includes(roomType);
+            const supportsType = accommodation.roomTypes.includes(finalRoomType);
             if (!supportsType) {
                 return res.status(400).json({
                     success: false,
@@ -125,16 +182,20 @@ const createBooking = async (req, res) => {
         if (!reservedAccommodation) {
             return res.status(409).json({
                 success: false,
-                message: 'No rooms available for this accommodation',
+                message: 'No booking slots available for this accommodation',
             });
         }
 
         const bookingNumber = await generateBookingNumber();
-        const monthlyRent = Number(accommodation.pricing?.monthlyRent || 0);
+        const monthlyRent =
+            scope === 'room' && selectedRoom?.monthlyRent !== undefined
+                ? Number(selectedRoom.monthlyRent || 0)
+                : Number(accommodation.pricing?.monthlyRent || 0);
         const keyMoney = Number(accommodation.pricing?.keyMoney || 0);
         const deposit = Number(accommodation.pricing?.deposit || 0);
         const totalInitialPayment = monthlyRent + keyMoney + deposit;
         const checkOutDate = addMonths(checkInDate, CONTRACT_MONTHS[contractPeriod]);
+        const safeEmergencyContact = normalizeEmergencyContact(emergencyContact);
 
         let booking;
         try {
@@ -142,8 +203,10 @@ const createBooking = async (req, res) => {
                 bookingNumber,
                 student: req.user._id,
                 accommodation: accommodation._id,
+                room: selectedRoom?._id,
                 owner: accommodation.owner?._id,
-                roomType,
+                bookingScope: scope,
+                roomType: finalRoomType,
                 checkInDate,
                 checkOutDate,
                 contractPeriod,
@@ -156,7 +219,7 @@ const createBooking = async (req, res) => {
                 },
                 studentDetails: {
                     specialRequests,
-                    emergencyContact,
+                    emergencyContact: safeEmergencyContact,
                 },
                 paymentStatus: {
                     outstandingAmount: totalInitialPayment,
@@ -179,7 +242,7 @@ const createBooking = async (req, res) => {
                 ? sendSafeEmail({
                       to: accommodation.owner.email,
                       subject: `New booking request (${booking.bookingNumber})`,
-                      html: `<p>${studentName || 'A student'} requested booking for <strong>${accommodation.title}</strong>.</p>`,
+                                            html: `<p>${studentName || 'A student'} requested ${scope === 'room' ? 'a room booking' : 'an accommodation booking'} for <strong>${accommodation.title}</strong>.</p>`,
                   })
                 : Promise.resolve(),
             Notification.create({
@@ -194,7 +257,7 @@ const createBooking = async (req, res) => {
             Notification.create({
                 recipient: accommodation.owner?._id,
                 title: 'New booking request',
-                message: `${studentName || 'A student'} requested ${accommodation.title}.`,
+                message: `${studentName || 'A student'} requested ${scope === 'room' ? 'a room in' : ''} ${accommodation.title}.`,
                 type: 'booking_request',
                 category: 'booking',
                 channel: 'in_app',
@@ -237,6 +300,7 @@ const getBookings = async (req, res) => {
         const [data, total] = await Promise.all([
             Booking.find(query)
                 .populate('accommodation', 'title location media.photos')
+                .populate('room', 'roomNumber roomType maxOccupants currentOccupants status monthlyRent')
                 .populate('student', 'firstName lastName email phone')
                 .populate('owner', 'firstName lastName email phone')
                 .sort({ createdAt: -1 })
@@ -295,6 +359,113 @@ const getBookingById = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch booking details', error: error.message });
+    }
+};
+
+const updateBooking = async (req, res) => {
+    try {
+        const { roomType, checkInDate, contractPeriod, specialRequests, emergencyContact } = req.body;
+
+        const booking = await Booking.findById(req.params.id).populate(
+            'accommodation',
+            'title roomTypes isDeleted status'
+        );
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const isStudentOwner = booking.student?.toString() === req.user._id.toString();
+        if (!isStudentOwner) {
+            return res.status(403).json({ success: false, message: 'Not authorized to update this booking' });
+        }
+
+        if (booking.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'Only pending bookings can be updated',
+            });
+        }
+
+        if (!booking.accommodation || booking.accommodation.isDeleted || booking.accommodation.status !== 'active') {
+            return res.status(400).json({
+                success: false,
+                message: 'Accommodation is not available for booking updates',
+            });
+        }
+
+        if (roomType !== undefined) {
+            if (
+                Array.isArray(booking.accommodation.roomTypes) &&
+                booking.accommodation.roomTypes.length > 0 &&
+                !booking.accommodation.roomTypes.includes(roomType)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Requested room type is not available for this accommodation',
+                });
+            }
+            booking.roomType = roomType;
+        }
+
+        if (checkInDate !== undefined) {
+            const proposedCheckInDate = new Date(checkInDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (proposedCheckInDate < today) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Check-in date must be today or a future date',
+                });
+            }
+            booking.checkInDate = proposedCheckInDate;
+        }
+
+        if (contractPeriod !== undefined) {
+            booking.contractPeriod = contractPeriod;
+        }
+
+        const finalCheckIn = booking.checkInDate;
+        const finalContractPeriod = booking.contractPeriod;
+        booking.checkOutDate = addMonths(finalCheckIn, CONTRACT_MONTHS[finalContractPeriod]);
+
+        booking.studentDetails = {
+            ...(booking.studentDetails || {}),
+            ...(specialRequests !== undefined ? { specialRequests } : {}),
+            ...(emergencyContact !== undefined
+                ? {
+                      // Restrict emergency contact to name and phone.
+                      emergencyContact: {
+                          ...(booking.studentDetails?.emergencyContact || {}),
+                          ...(normalizeEmergencyContact(emergencyContact) || {}),
+                      },
+                  }
+                : {}),
+        };
+
+        await booking.save();
+
+        await Notification.create({
+            recipient: booking.owner,
+            title: 'Booking updated by student',
+            message: `Booking (${booking.bookingNumber}) has been updated by the student.`,
+            type: 'booking_request',
+            category: 'booking',
+            channel: 'in_app',
+            relatedEntity: { entityType: 'booking', entityId: booking._id },
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Booking updated successfully',
+            data: booking,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update booking',
+            error: error.message,
+        });
     }
 };
 
@@ -424,8 +595,8 @@ const cancelBooking = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Not authorized to cancel this booking' });
         }
 
-        if (!['pending', 'confirmed'].includes(booking.status)) {
-            return res.status(400).json({ success: false, message: 'Only pending or confirmed bookings can be cancelled' });
+        if (booking.status !== 'pending') {
+            return res.status(400).json({ success: false, message: 'Only pending bookings can be cancelled' });
         }
 
         booking.status = 'cancelled';
@@ -511,6 +682,7 @@ export {
     createBooking,
     getBookings,
     getBookingById,
+    updateBooking,
     acceptBooking,
     rejectBooking,
     cancelBooking,

@@ -2,8 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginAsync } from '../../features/auth/authSlice';
-import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  InputAdornment,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
+
+const PASSWORD_REGEX = /^[A-Z].{8,}$/;
 
 const LoginPage = () => {
   const dispatch = useDispatch();
@@ -35,17 +51,18 @@ const LoginPage = () => {
 
   const validateForm = () => {
     const newErrors = {};
+    const trimmedEmail = formData.email.trim();
 
-    if (!formData.email) {
+    if (!trimmedEmail) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
       newErrors.email = 'Email is invalid';
     }
 
-    if (!formData.password) {
+    if (!formData.password.trim()) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (!PASSWORD_REGEX.test(formData.password)) {
+      newErrors.password = 'Password must start with a capital letter and be more than 8 characters';
     }
 
     setErrors(newErrors);
@@ -54,17 +71,39 @@ const LoginPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    const nextFormData = {
+      ...formData,
       [name]: value,
-    }));
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
+    };
+
+    setFormData(nextFormData);
+
+    setErrors((prev) => {
+      const updatedErrors = { ...prev };
+
+      if (name === 'email') {
+        const trimmedEmail = value.trim();
+        if (!trimmedEmail) {
+          updatedErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
+          updatedErrors.email = 'Email is invalid';
+        } else {
+          updatedErrors.email = '';
+        }
+      }
+
+      if (name === 'password') {
+        if (!value.trim()) {
+          updatedErrors.password = 'Password is required';
+        } else if (!PASSWORD_REGEX.test(value)) {
+          updatedErrors.password = 'Password must start with a capital letter and be more than 8 characters';
+        } else {
+          updatedErrors.password = '';
+        }
+      }
+
+      return updatedErrors;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -74,135 +113,123 @@ const LoginPage = () => {
       return;
     }
 
-    dispatch(loginAsync(formData));
+    dispatch(loginAsync({
+      ...formData,
+      email: formData.email.trim(),
+    }));
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center py-12 px-4">
-      {/* Animated Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800"></div>
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(14,165,233,0.2),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.3),transparent_45%),linear-gradient(120deg,#0f172a,#111827_45%,#1e293b)]" />
+      <div className="absolute -left-28 top-16 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+      <div className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
 
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/4 w-96 h-96 bg-blue-400/30 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute top-1/2 -right-1/4 w-96 h-96 bg-purple-400/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute -bottom-1/4 left-1/3 w-96 h-96 bg-indigo-400/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
-      </div>
+      <div className="relative z-10 mx-auto flex min-h-[88vh] w-full max-w-xl items-center">
+        <Paper
+          elevation={0}
+          className="w-full rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-xl md:p-8"
+        >
+          <Stack spacing={3}>
+            <Box className="text-center">
+              <Box className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg">
+                <HomeRoundedIcon />
+              </Box>
+              <Typography variant="h4" fontWeight={700} color="text.primary">
+                Welcome Back
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sign in to continue managing your UniHome experience
+              </Typography>
+            </Box>
 
-      {/* Login Card */}
-      <div className="w-full max-w-md relative z-10 animate-scale-in">
-        {/* Header */}
-        <div className="text-center mb-8 animate-fade-in-down">
-          <div className="inline-block p-4 bg-white/10 backdrop-blur-lg rounded-2xl mb-4">
-            <span className="text-6xl">🏠</span>
-          </div>
-          <h1 className="text-5xl font-bold text-white mb-3 drop-shadow-lg">Welcome Back</h1>
-          <p className="text-blue-100 text-lg">Sign in to your account to continue</p>
-        </div>
-
-        {/* Glass Morphism Card */}
-        <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl animate-fade-in-up">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              label="Email Address"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              placeholder="Enter your email"
-              required
-              className="bg-white/90 backdrop-blur-sm"
-            />
-
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-              placeholder="Enter your password"
-              required
-              className="bg-white/90 backdrop-blur-sm"
-            />
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center group cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="rounded border-white/30 bg-white/20 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 transition-all duration-200"
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={2.5}>
+                <TextField
+                  fullWidth
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={Boolean(errors.email)}
+                  helperText={errors.email || ' '}
+                  placeholder="name@example.com"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <EmailRoundedIcon fontSize="small" color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
-                <span className="ml-2 text-sm text-white group-hover:text-blue-100 transition-colors">Remember me</span>
-              </label>
-              <Link to="/forgot-password" className="text-sm text-blue-100 hover:text-white transition-colors font-medium">
-                Forgot Password?
+
+                <TextField
+                  fullWidth
+                  label="Password"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={Boolean(errors.password)}
+                  helperText={errors.password || ' '}
+                  placeholder="Enter your password"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockRoundedIcon fontSize="small" color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <Box className="flex items-center justify-between">
+                  <FormControlLabel
+                    control={<Checkbox size="small" />}
+                    label={<Typography variant="body2">Remember me</Typography>}
+                  />
+                  <Link to="/forgot-password" className="text-sm font-medium text-sky-700 hover:text-sky-800">
+                    Forgot password?
+                  </Link>
+                </Box>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={loading}
+                  endIcon={!loading ? <ArrowForwardRoundedIcon /> : null}
+                  sx={{
+                    borderRadius: '14px',
+                    py: 1.25,
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)',
+                  }}
+                >
+                  {loading ? 'Signing In...' : 'Sign In'}
+                </Button>
+              </Stack>
+            </form>
+
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              Don&apos;t have an account?{' '}
+              <Link to="/register" className="font-semibold text-sky-700 hover:text-sky-800">
+                Create one
               </Link>
-            </div>
+            </Typography>
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              fullWidth
-              loading={loading}
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-glow-md hover:shadow-glow-lg transform hover:scale-105 transition-all duration-300 font-semibold"
-            >
-              {loading ? 'Signing In...' : 'Sign In →'}
-            </Button>
-          </form>
+            <Alert severity="info" variant="outlined" className="rounded-2xl">
+              Demo password: <strong>Password123!</strong>
+            </Alert>
 
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/20"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/10 text-white rounded-full">or</span>
-            </div>
-          </div>
-
-          {/* Sign Up Link */}
-          <div className="text-center">
-            <p className="text-white">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-blue-200 hover:text-white font-semibold transition-colors underline decoration-2 underline-offset-4">
-                Sign Up
+            <Typography variant="body2" textAlign="center">
+              <Link to="/" className="font-medium text-slate-600 hover:text-slate-900">
+                Back to Home
               </Link>
-            </p>
-          </div>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
-            <p className="text-sm font-semibold text-white mb-3 flex items-center">
-              <span className="mr-2">🔑</span> Demo Credentials
-            </p>
-            <div className="text-xs text-blue-100 space-y-2 font-mono">
-              <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                <span>Student:</span>
-                <span className="text-white">john@my.sliit.lk</span>
-              </div>
-              <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                <span>Owner:</span>
-                <span className="text-white">michael@gmail.com</span>
-              </div>
-              <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-                <span>Provider:</span>
-                <span className="text-white">david@gmail.com</span>
-              </div>
-              <div className="p-2 bg-white/5 rounded-lg text-center text-blue-200">
-                Password: <span className="text-white font-semibold">Password123!</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Back to Home Link */}
-        <div className="text-center mt-6 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-          <Link to="/" className="inline-flex items-center text-white hover:text-blue-200 transition-colors font-medium">
-            <span className="mr-2">←</span> Back to Home
-          </Link>
-        </div>
+            </Typography>
+          </Stack>
+        </Paper>
       </div>
     </div>
   );

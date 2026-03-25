@@ -5,6 +5,12 @@ import Input from '../common/Input';
 import Select from '../common/Select';
 import Button from '../common/Button';
 
+const NAME_REGEX = /^[A-Za-z][A-Za-z\s'-]*$/;
+const PHONE_REGEX = /^\d{10}$/;
+const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
+const NIC_REGEX = /^(\d{9}[VX]|\d{12})$/;
+const PASSWORD_REGEX = /^[A-Z].{8,}$/;
+
 const OwnerRegisterForm = ({ onSuccess }) => {
   const dispatch = useDispatch();
   const { loading } = useSelector((state) => state.auth);
@@ -56,91 +62,127 @@ const OwnerRegisterForm = ({ onSuccess }) => {
   ];
 
   const validateForm = () => {
+    const fields = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      nic: formData.nic,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+      street: formData.address.street,
+      city: formData.address.city,
+      district: formData.address.district,
+      postalCode: formData.address.postalCode,
+      accountHolderName: formData.bankDetails.accountHolderName,
+      bankName: formData.bankDetails.bankName,
+      accountNumber: formData.bankDetails.accountNumber,
+      branchCode: formData.bankDetails.branchCode,
+    };
+
     const newErrors = {};
-
-    // Name validation
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    // Phone validation
-    if (!formData.phone) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\+94\d{9}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone must be in format +94XXXXXXXXX';
-    }
-
-    // NIC validation
-    if (!formData.nic) {
-      newErrors.nic = 'NIC is required';
-    } else if (!/^(\d{9}[VXvx]|\d{12})$/.test(formData.nic)) {
-      newErrors.nic = 'NIC must be 9 digits with V/X or 12 digits';
-    }
-
-    // Address validation
-    if (!formData.address.street) newErrors.street = 'Street address is required';
-    if (!formData.address.city) newErrors.city = 'City is required';
-    if (!formData.address.district) newErrors.district = 'District is required';
-    if (!formData.address.postalCode) newErrors.postalCode = 'Postal code is required';
-
-    // Bank details validation
-    if (!formData.bankDetails.accountHolderName) {
-      newErrors.accountHolderName = 'Account holder name is required';
-    }
-    if (!formData.bankDetails.bankName) newErrors.bankName = 'Bank name is required';
-    if (!formData.bankDetails.accountNumber) {
-      newErrors.accountNumber = 'Account number is required';
-    }
-    if (!formData.bankDetails.branchCode) newErrors.branchCode = 'Branch code is required';
+    Object.entries(fields).forEach(([field, value]) => {
+      const error = validateField(field, value, formData);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateField = (name, value, data = formData) => {
+    switch (name) {
+      case 'firstName':
+      case 'lastName':
+        if (!value.trim()) return `${name === 'firstName' ? 'First' : 'Last'} name is required`;
+        if (!NAME_REGEX.test(value.trim())) return 'Name cannot include numbers or special characters';
+        return '';
+      case 'email':
+        if (!value.trim()) return 'Email is required';
+        if (!EMAIL_REGEX.test(value.trim())) return 'Email is invalid';
+        return '';
+      case 'phone':
+        if (!value) return 'Phone number is required';
+        if (!PHONE_REGEX.test(value)) return 'Mobile number must contain exactly 10 digits';
+        return '';
+      case 'nic':
+        if (!value) return 'NIC is required';
+        if (!NIC_REGEX.test(value)) return 'NIC must be 9 digits with V/X or 12 digits';
+        return '';
+      case 'password':
+        if (!value) return 'Password is required';
+        if (!PASSWORD_REGEX.test(value)) return 'Password must start with a capital letter and be more than 8 characters';
+        return '';
+      case 'confirmPassword':
+        if (!value) return 'Confirm password is required';
+        if (data.password !== value) return 'Passwords do not match';
+        return '';
+      case 'street':
+        return value.trim() ? '' : 'Street address is required';
+      case 'city':
+        return value.trim() ? '' : 'City is required';
+      case 'district':
+        return value ? '' : 'District is required';
+      case 'postalCode':
+        if (!value) return 'Postal code is required';
+        if (!/^\d{5}$/.test(value)) return 'Postal code must contain 5 digits';
+        return '';
+      case 'accountHolderName':
+        return value.trim() ? '' : 'Account holder name is required';
+      case 'bankName':
+        return value ? '' : 'Bank name is required';
+      case 'accountNumber':
+        if (!value) return 'Account number is required';
+        if (!/^\d{8,20}$/.test(value)) return 'Account number must be 8 to 20 digits';
+        return '';
+      case 'branchCode':
+        if (!value) return 'Branch code is required';
+        if (!/^\d{2,10}$/.test(value)) return 'Branch code must be 2 to 10 digits';
+        return '';
+      default:
+        return '';
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    const fieldKey = name.includes('.') ? name.split('.')[1] : name;
 
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData((prev) => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    let nextValue = value;
+    if (fieldKey === 'phone') nextValue = value.replace(/\D/g, '').slice(0, 10);
+    if (fieldKey === 'postalCode') nextValue = value.replace(/\D/g, '').slice(0, 5);
+    if (fieldKey === 'accountNumber') nextValue = value.replace(/\D/g, '').slice(0, 20);
+    if (fieldKey === 'branchCode') nextValue = value.replace(/\D/g, '').slice(0, 10);
+    if (fieldKey === 'nic') nextValue = value.toUpperCase().replace(/[^0-9VX]/g, '').slice(0, 12);
 
-    // Clear error
-    const errorKey = name.includes('.') ? name.split('.')[1] : name;
-    if (errors[errorKey]) {
-      setErrors((prev) => ({
+    const nextFormData = name.includes('.')
+      ? {
+          ...formData,
+          [name.split('.')[0]]: {
+            ...formData[name.split('.')[0]],
+            [name.split('.')[1]]: nextValue,
+          },
+        }
+      : {
+          ...formData,
+          [name]: nextValue,
+        };
+
+    setFormData(nextFormData);
+    setErrors((prev) => {
+      const updatedErrors = {
         ...prev,
-        [errorKey]: '',
-      }));
-    }
+        [fieldKey]: validateField(fieldKey, nextValue, nextFormData),
+      };
+
+      if (fieldKey === 'password' || fieldKey === 'confirmPassword') {
+        updatedErrors.confirmPassword = validateField('confirmPassword', nextFormData.confirmPassword, nextFormData);
+      }
+
+      return updatedErrors;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -201,7 +243,9 @@ const OwnerRegisterForm = ({ onSuccess }) => {
           value={formData.phone}
           onChange={handleChange}
           error={errors.phone}
-          placeholder="+94771234567"
+          placeholder="0771234567"
+          inputMode="numeric"
+          maxLength={10}
           required
         />
 

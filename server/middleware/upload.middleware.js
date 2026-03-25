@@ -26,15 +26,12 @@ const storage = multer.diskStorage({
 
     if (file.fieldname === 'profileImage') {
       folder = path.join(uploadDir, 'profiles');
-    } else if (file.fieldname === 'images' || file.fieldname === 'coverImage' || file.fieldname === 'photos') {
-      folder = path.join(uploadDir, 'accommodations');
-    } else if (file.fieldname === 'video' || file.fieldname === 'videos') {
-      folder = path.join(uploadDir, 'videos');
     } else if (file.fieldname.includes('document') || file.fieldname.includes('Document')) {
       folder = path.join(uploadDir, 'documents');
     } else if (file.fieldname === 'certifications') {
       folder = path.join(uploadDir, 'certifications');
     }
+    // photos and videos go directly to the uploads root
 
     // Create folder if it doesn't exist
     if (!fs.existsSync(folder)) {
@@ -64,7 +61,7 @@ const fileFilter = (req, file, cb) => {
   const mimetype = file.mimetype;
 
   // Check file type based on fieldname
-  if (file.fieldname === 'profileImage' || file.fieldname === 'images' || file.fieldname === 'coverImage' || file.fieldname === 'photos') {
+  if (file.fieldname === 'profileImage' || file.fieldname === 'images' || file.fieldname === 'coverImage' || file.fieldname === 'photos' || file.fieldname === 'roomPhotos') {
     if (allowedImageTypes.test(ext) && mimetype.startsWith('image/')) {
       return cb(null, true);
     } else {
@@ -72,7 +69,7 @@ const fileFilter = (req, file, cb) => {
     }
   }
 
-  if (file.fieldname === 'video' || file.fieldname === 'videos') {
+  if (file.fieldname === 'video' || file.fieldname === 'videos' || file.fieldname === 'roomVideos') {
     if (allowedVideoTypes.test(ext) && mimetype.startsWith('video/')) {
       return cb(null, true);
     } else {

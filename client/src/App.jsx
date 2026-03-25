@@ -13,6 +13,8 @@ import MyListingsPage from './pages/owner/MyListingsPage';
 import TenantManagementPage from './pages/owner/TenantManagementPage';
 import BookingRequestsPage from './pages/owner/BookingRequestsPage';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
+import ServiceProviderCategoriesPage from './pages/owner/ServiceProviderCategoriesPage';
+import ServiceProvidersPage from './pages/owner/ServiceProvidersPage';
 import MyBookingsPage from './pages/student/MyBookingsPage';
 import FavoritesPage from './pages/student/FavoritesPage';
 import BookingDetailPage from './pages/student/BookingDetailPage';
@@ -22,7 +24,16 @@ import MyTicketsPage from './pages/student/MyTicketsPage';
 import TicketDetailPage from './pages/student/TicketDetailPage';
 import OwnerTicketsPage from './pages/owner/OwnerTicketsPage';
 import ProviderDashboard from './pages/provider/ProviderDashboard';
+import ProviderProfilePage from './pages/provider/ProviderProfilePage';
 import MyTasksPage from './pages/provider/MyTasksPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import ListingModerationPage from './pages/admin/ListingModerationPage';
+import ReportsPage from './pages/admin/ReportsPage';
+import TransactionsPage from './pages/admin/TransactionsPage';
+import TicketEscalationsPage from './pages/admin/TicketEscalationsPage';
+import NotificationConsolePage from './pages/admin/NotificationConsolePage';
+import AuditLogPage from './pages/admin/AuditLogPage';
 import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
 
@@ -111,6 +122,36 @@ function App() {
             }
           />
           <Route
+            path="/owner/service-categories"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <ServiceProviderCategoriesPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/service-providers"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <ServiceProvidersPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/service-providers/:category"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <ServiceProvidersPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/student/bookings"
             element={
               <PrivateRoute>
@@ -191,6 +232,16 @@ function App() {
             }
           />
           <Route
+            path="/provider/profile"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['service_provider', 'admin']}>
+                  <ProviderProfilePage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/provider/tasks"
             element={
               <PrivateRoute>
@@ -204,12 +255,79 @@ function App() {
             path="/admin/dashboard"
             element={
               <PrivateRoute>
-                <div className="container mx-auto px-4 py-8">
-                  <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                  <p className="text-gray-600 mt-4">
-                    This page will be implemented in the next phase.
-                  </p>
-                </div>
+                <RoleRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['admin']}>
+                  <UserManagementPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/listings"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['admin']}>
+                  <ListingModerationPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['admin']}>
+                  <ReportsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/transactions"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['admin']}>
+                  <TransactionsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/ticket-escalations"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['admin']}>
+                  <TicketEscalationsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/notifications"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['admin']}>
+                  <NotificationConsolePage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/audit-logs"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['admin']}>
+                  <AuditLogPage />
+                </RoleRoute>
               </PrivateRoute>
             }
           />

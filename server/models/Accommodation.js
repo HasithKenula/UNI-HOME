@@ -168,6 +168,7 @@ const accommodationSchema = new Schema(
 
     // Analytics
     viewCount: { type: Number, default: 0 },
+    viewedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
     inquiryCount: { type: Number, default: 0 },
   },
   {

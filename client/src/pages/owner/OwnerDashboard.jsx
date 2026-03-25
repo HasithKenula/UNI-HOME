@@ -112,6 +112,7 @@ const OwnerDashboard = () => {
             <Link to="/owner/listings/create"><Button fullWidth>Create Listing</Button></Link>
             <Link to="/owner/my-listings"><Button fullWidth variant="outline">Manage Listings</Button></Link>
             <Link to="/owner/booking-requests"><Button fullWidth variant="secondary">Review Booking Requests</Button></Link>
+            <Link to="/owner/service-categories"><Button fullWidth variant="secondary">Find Service Providers</Button></Link>
             <Link to="/owner/tenants"><Button fullWidth variant="secondary">Tenant Management</Button></Link>
           </div>
         </div>

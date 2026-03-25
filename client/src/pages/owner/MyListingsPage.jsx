@@ -28,12 +28,21 @@ import {
     unpublishAccommodation,
 } from '../../features/accommodations/accommodationAPI';
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const withFallbackMedia = (url = '') => {
+    const primary = `${API_ORIGIN}${url}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${url.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
+
 const statusTabs = [
     { key: '', label: 'All' },
     { key: 'active', label: 'Active' },
     { key: 'draft', label: 'Draft' },
-    { key: 'pending_review', label: 'Pending' },
-    { key: 'frozen', label: 'Frozen' },
 ];
 
 const badgeStyles = {
@@ -156,7 +165,7 @@ const MyListingsPage = () => {
             </div>
 
             {/* Stats Dashboard */}
-            <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-8 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border-2 border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 shadow-lg">
                     <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-semibold text-gray-600">Total Listings</p>
@@ -178,13 +187,7 @@ const MyListingsPage = () => {
                     </div>
                     <p className="text-4xl font-bold text-slate-700">{stats.draft}</p>
                 </div>
-                <div className="rounded-2xl border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 p-6 shadow-lg">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-gray-600">Pending Review</p>
-                        <Clock className="w-8 h-8 text-yellow-600 opacity-50" />
-                    </div>
-                    <p className="text-4xl font-bold text-yellow-700">{stats.pending}</p>
-                </div>
+
             </div>
 
             {/* Status Filter Tabs */}
@@ -227,6 +230,26 @@ const MyListingsPage = () => {
                                 className="rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg hover:shadow-xl transition-all"
                             >
                                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                    {/* Thumbnail Image */}
+                                    <div className="w-full lg:w-48 h-32 flex-shrink-0 relative overflow-hidden rounded-xl border-2 border-gray-200">
+                                        <img 
+                                            src={
+                                                listing.media?.photos?.[0]?.url 
+                                                    ? withFallbackMedia(listing.media.photos[0].url).primary 
+                                                    : 'https://placehold.co/192x128?text=No+Image'
+                                            }
+                                            alt={listing.title}
+                                            className="w-full h-full object-cover"
+                                            onError={(event) => {
+                                                const target = event.currentTarget;
+                                                if (!listing.media?.photos?.[0]?.url) return;
+                                                const { fallback } = withFallbackMedia(listing.media.photos[0].url);
+                                                if (target.src !== fallback) {
+                                                    target.src = fallback;
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                     {/* Listing Info */}
                                     <div className="flex-1">
                                         <div className="flex items-start gap-3 mb-3">

@@ -15,6 +15,11 @@ export const getBookingById = async (id) => {
     return response.data;
 };
 
+export const updateBooking = async (id, payload) => {
+    const response = await axios.patch(`/bookings/${id}`, payload);
+    return response.data;
+};
+
 export const cancelBooking = async (id, reason) => {
     const response = await axios.patch(`/bookings/${id}/cancel`, { reason });
     return response.data;
