@@ -2,6 +2,17 @@ import { body, param, query } from 'express-validator';
 
 const CATEGORY_ENUM = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
+const isUpcomingDay = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const bookingDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return bookingDate > today;
+};
+
 const serviceProvidersFilterValidator = [
   query('category')
     .optional()
@@ -34,7 +45,12 @@ const createServiceBookingValidator = [
   body('district').trim().notEmpty().withMessage('district is required'),
   body('area').trim().notEmpty().withMessage('area is required'),
   body('note').optional().isString().withMessage('note must be text'),
-  body('preferredDate').optional().isISO8601().withMessage('preferredDate must be a valid date'),
+  body('preferredDate')
+    .isISO8601()
+    .withMessage('preferredDate must be a valid date')
+    .bail()
+    .custom(isUpcomingDay)
+    .withMessage('preferredDate must be an upcoming day'),
 ];
 
 const updateServiceBookingStatusValidator = [
@@ -43,9 +59,31 @@ const updateServiceBookingStatusValidator = [
   body('note').optional().isString().withMessage('note must be text'),
 ];
 
+const updateOwnerServiceBookingValidator = [
+  param('id').isMongoId().withMessage('Invalid service booking id'),
+  body('category').optional().isIn(CATEGORY_ENUM).withMessage('Invalid category'),
+  body('district').optional().trim().notEmpty().withMessage('district cannot be empty'),
+  body('area').optional().trim().notEmpty().withMessage('area cannot be empty'),
+  body('note').optional().isString().withMessage('note must be text'),
+  body('preferredDate')
+    .optional()
+    .isISO8601()
+    .withMessage('preferredDate must be a valid date')
+    .bail()
+    .custom(isUpcomingDay)
+    .withMessage('preferredDate must be an upcoming day'),
+];
+
+const cancelOwnerServiceBookingValidator = [
+  param('id').isMongoId().withMessage('Invalid service booking id'),
+  body('note').optional().isString().withMessage('note must be text'),
+];
+
 export {
   serviceProvidersFilterValidator,
   updateServiceProviderProfileValidator,
   createServiceBookingValidator,
   updateServiceBookingStatusValidator,
+  updateOwnerServiceBookingValidator,
+  cancelOwnerServiceBookingValidator,
 };

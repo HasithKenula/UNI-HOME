@@ -18,6 +18,19 @@ const CATEGORY_LABELS = {
 
 const normalizeCategory = (category = '') => String(category || '').trim().toLowerCase();
 
+const ACTIVE_PROVIDER_BOOKING_STATUSES = ['pending', 'in_progress', 'accepted'];
+
+const isUpcomingDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const bookingDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return bookingDate > today;
+};
+
 const normalizeCategories = (categories = []) => {
   if (!Array.isArray(categories)) return [];
 
@@ -26,6 +39,19 @@ const normalizeCategories = (categories = []) => {
       .map((category) => normalizeCategory(category))
       .filter((category) => SERVICE_PROVIDER_CATEGORIES.includes(category))
   )];
+};
+
+const syncProviderAvailability = async (providerId) => {
+  const activeBookingsCount = await ServiceBooking.countDocuments({
+    provider: providerId,
+    status: { $in: ACTIVE_PROVIDER_BOOKING_STATUSES },
+  });
+
+  const shouldBeAvailable = activeBookingsCount === 0;
+
+  await ServiceProvider.findByIdAndUpdate(providerId, { isAvailable: shouldBeAvailable });
+
+  return shouldBeAvailable;
 };
 
 const mapProviderForList = (provider) => ({
@@ -57,10 +83,15 @@ const getServiceProviders = async (req, res) => {
   try {
     const { category, district, area, city } = req.query;
 
+    const busyProviderIds = await ServiceBooking.distinct('provider', {
+      status: { $in: ACTIVE_PROVIDER_BOOKING_STATUSES },
+    });
+
     const query = {
-      verificationStatus: 'approved',
+      verificationStatus: { $in: ['approved', 'pending'] },
       isAvailable: true,
       accountStatus: { $ne: 'deleted' },
+      _id: { $nin: busyProviderIds },
     };
 
     const normalizedCategory = normalizeCategory(category);
@@ -215,6 +246,10 @@ const createServiceProviderBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid service category' });
     }
 
+    if (!preferredDate || !isUpcomingDate(preferredDate)) {
+      return res.status(400).json({ success: false, message: 'Preferred date must be an upcoming day' });
+    }
+
     const provider = await ServiceProvider.findOne({
       _id: providerId,
       verificationStatus: 'approved',
@@ -230,6 +265,16 @@ const createServiceProviderBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Selected provider does not offer this category' });
     }
 
+    const hasActiveBooking = await ServiceBooking.exists({
+      provider: provider._id,
+      status: { $in: ACTIVE_PROVIDER_BOOKING_STATUSES },
+    });
+
+    if (hasActiveBooking) {
+      await syncProviderAvailability(provider._id);
+      return res.status(409).json({ success: false, message: 'Selected provider is currently unavailable' });
+    }
+
     const booking = await ServiceBooking.create({
       owner: req.user._id,
       provider: provider._id,
@@ -237,7 +282,7 @@ const createServiceProviderBooking = async (req, res) => {
       district: String(district || '').trim(),
       area: String(area || '').trim(),
       note: String(note || '').trim(),
-      preferredDate: preferredDate ? new Date(preferredDate) : undefined,
+      preferredDate: new Date(preferredDate),
       status: 'pending',
       statusHistory: [{
         status: 'pending',
@@ -250,6 +295,8 @@ const createServiceProviderBooking = async (req, res) => {
     const populated = await ServiceBooking.findById(booking._id)
       .populate('provider', 'firstName lastName email phone profileNote serviceCategories areasOfOperation')
       .populate('owner', 'firstName lastName email phone');
+
+    await syncProviderAvailability(provider._id);
 
     res.status(201).json({ success: true, message: 'Service provider booked successfully', data: populated });
   } catch (error) {
@@ -275,6 +322,112 @@ const getMyServiceProviderBookings = async (req, res) => {
     res.status(200).json({ success: true, data: bookings });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch service bookings', error: error.message });
+  }
+};
+
+const updateOwnerServiceBooking = async (req, res) => {
+  try {
+    const booking = await ServiceBooking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Service booking not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && booking.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to edit this booking' });
+    }
+
+    if (booking.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Only pending bookings can be edited' });
+    }
+
+    const {
+      category,
+      district,
+      area,
+      note,
+      preferredDate,
+    } = req.body;
+
+    if (category !== undefined) {
+      const normalizedCategory = normalizeCategory(category);
+      if (!SERVICE_PROVIDER_CATEGORIES.includes(normalizedCategory)) {
+        return res.status(400).json({ success: false, message: 'Invalid service category' });
+      }
+      booking.category = normalizedCategory;
+    }
+
+    if (district !== undefined) booking.district = String(district || '').trim();
+    if (area !== undefined) booking.area = String(area || '').trim();
+    if (note !== undefined) booking.note = String(note || '').trim();
+
+    if (preferredDate !== undefined) {
+      if (!isUpcomingDate(preferredDate)) {
+        return res.status(400).json({ success: false, message: 'Preferred date must be an upcoming day' });
+      }
+
+      booking.preferredDate = new Date(preferredDate);
+    }
+
+    booking.statusHistory.push({
+      status: booking.status,
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      note: 'Booking details edited by owner',
+    });
+
+    await booking.save();
+
+    const populated = await ServiceBooking.findById(booking._id)
+      .populate('provider', 'firstName lastName email phone profileNote serviceCategories areasOfOperation')
+      .populate('owner', 'firstName lastName email phone');
+
+    await syncProviderAvailability(booking.provider);
+
+    res.status(200).json({ success: true, message: 'Service booking updated', data: populated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update service booking', error: error.message });
+  }
+};
+
+const cancelOwnerServiceBooking = async (req, res) => {
+  try {
+    const booking = await ServiceBooking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Service booking not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && booking.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to cancel this booking' });
+    }
+
+    if (['completed', 'rejected', 'cancelled'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'This booking cannot be cancelled' });
+    }
+
+    booking.status = 'cancelled';
+
+    booking.statusHistory.push({
+      status: 'cancelled',
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      note: String(req.body.note || '').trim() || 'Cancelled by owner',
+    });
+
+    await booking.save();
+
+    const populated = await ServiceBooking.findById(booking._id)
+      .populate('provider', 'firstName lastName email phone profileNote serviceCategories areasOfOperation')
+      .populate('owner', 'firstName lastName email phone');
+
+    await syncProviderAvailability(booking.provider);
+
+    res.status(200).json({ success: true, message: 'Service booking cancelled', data: populated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to cancel service booking', error: error.message });
   }
 };
 
@@ -331,6 +484,8 @@ const updateServiceProviderBookingStatus = async (req, res) => {
       .populate('provider', 'firstName lastName email phone profileNote serviceCategories areasOfOperation')
       .populate('owner', 'firstName lastName email phone');
 
+    await syncProviderAvailability(booking.provider);
+
     res.status(200).json({ success: true, message: 'Service booking status updated', data: populated });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to update service booking status', error: error.message });
@@ -345,5 +500,7 @@ export {
   removeMyServiceProviderProfile,
   createServiceProviderBooking,
   getMyServiceProviderBookings,
+  updateOwnerServiceBooking,
+  cancelOwnerServiceBooking,
   updateServiceProviderBookingStatus,
 };
