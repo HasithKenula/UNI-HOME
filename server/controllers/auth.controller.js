@@ -5,6 +5,7 @@ import Student from '../models/Student.js';
 import Owner from '../models/Owner.js';
 import ServiceProvider from '../models/ServiceProvider.js';
 import crypto from 'crypto';
+import path from 'path';
 
 const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
@@ -92,6 +93,47 @@ const normalizeCertifications = (certifications) => {
   return [];
 };
 
+const parseJsonIfString = (value) => {
+  if (typeof value !== 'string') return value;
+
+  try {
+    return JSON.parse(value);
+  } catch (_error) {
+    return value;
+  }
+};
+
+const normalizeRegistrationBody = (body = {}) => {
+  const normalized = { ...body };
+
+  normalized.address = parseJsonIfString(normalized.address);
+  normalized.bankDetails = parseJsonIfString(normalized.bankDetails);
+  normalized.serviceCategories = parseJsonIfString(normalized.serviceCategories);
+  normalized.areasOfOperation = parseJsonIfString(normalized.areasOfOperation);
+  normalized.certifications = parseJsonIfString(normalized.certifications);
+
+  return normalized;
+};
+
+const getUploadRelativeUrl = (file) => {
+  const filePath = String(file?.path || '');
+  if (!filePath) return null;
+
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const uploadIndex = normalizedPath.lastIndexOf('/uploads/');
+  const uploadIndexWithoutLeadingSlash = normalizedPath.lastIndexOf('uploads/');
+
+  if (uploadIndex >= 0) {
+    return normalizedPath.slice(uploadIndex);
+  }
+
+  if (uploadIndexWithoutLeadingSlash >= 0) {
+    return `/${normalizedPath.slice(uploadIndexWithoutLeadingSlash)}`;
+  }
+
+  return `/uploads/${path.basename(normalizedPath)}`;
+};
+
 // Generate JWT Token
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -111,7 +153,9 @@ const generateRefreshToken = (userId) => {
 // @access  Public
 export const register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone, role, ...roleSpecificData } = req.body;
+    const normalizedBody = normalizeRegistrationBody(req.body);
+    const { firstName, lastName, email, password, phone, role, ...roleSpecificData } = normalizedBody;
+    const profileImage = getUploadRelativeUrl(req.file);
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -133,7 +177,7 @@ export const register = async (req, res) => {
       password: hashedPassword,
       phone,
       role,
-      profileImage: roleSpecificData.profileImage || null,
+      profileImage,
       accountStatus: role === 'service_provider' ? 'pending' : 'active',
     };
 
