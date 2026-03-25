@@ -13,6 +13,8 @@ import MyListingsPage from './pages/owner/MyListingsPage';
 import TenantManagementPage from './pages/owner/TenantManagementPage';
 import BookingRequestsPage from './pages/owner/BookingRequestsPage';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
+import ServiceProviderCategoriesPage from './pages/owner/ServiceProviderCategoriesPage';
+import ServiceProvidersPage from './pages/owner/ServiceProvidersPage';
 import MyBookingsPage from './pages/student/MyBookingsPage';
 import FavoritesPage from './pages/student/FavoritesPage';
 import BookingDetailPage from './pages/student/BookingDetailPage';
@@ -22,6 +24,7 @@ import MyTicketsPage from './pages/student/MyTicketsPage';
 import TicketDetailPage from './pages/student/TicketDetailPage';
 import OwnerTicketsPage from './pages/owner/OwnerTicketsPage';
 import ProviderDashboard from './pages/provider/ProviderDashboard';
+import ProviderProfilePage from './pages/provider/ProviderProfilePage';
 import MyTasksPage from './pages/provider/MyTasksPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagementPage from './pages/admin/UserManagementPage';
@@ -119,6 +122,36 @@ function App() {
             }
           />
           <Route
+            path="/owner/service-categories"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <ServiceProviderCategoriesPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/service-providers"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <ServiceProvidersPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/service-providers/:category"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <ServiceProvidersPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/student/bookings"
             element={
               <PrivateRoute>
@@ -194,6 +227,16 @@ function App() {
               <PrivateRoute>
                 <RoleRoute allowedRoles={['service_provider', 'admin']}>
                   <ProviderDashboard />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/provider/profile"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['service_provider', 'admin']}>
+                  <ProviderProfilePage />
                 </RoleRoute>
               </PrivateRoute>
             }

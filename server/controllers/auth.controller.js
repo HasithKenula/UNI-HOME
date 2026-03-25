@@ -6,7 +6,7 @@ import Owner from '../models/Owner.js';
 import ServiceProvider from '../models/ServiceProvider.js';
 import crypto from 'crypto';
 
-const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'general', 'other'];
+const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
 const normalizeServiceCategories = (categories = []) => {
   if (!Array.isArray(categories)) return [];
@@ -45,6 +45,18 @@ const normalizeAreasOfOperation = (areas = []) => {
       return null;
     })
     .filter(Boolean);
+};
+
+const normalizeAreasFromDistrictAndArea = (districtValue, areaValue) => {
+  const district = String(districtValue || '').trim();
+  const area = String(areaValue || '').trim();
+
+  if (!district && !area) return [];
+
+  const normalizedDistrict = district || area;
+  const normalizedArea = area || normalizedDistrict;
+
+  return [{ district: normalizedDistrict, cities: [normalizedArea] }];
 };
 
 const normalizeCertifications = (certifications) => {
@@ -121,6 +133,7 @@ export const register = async (req, res) => {
       password: hashedPassword,
       phone,
       role,
+      profileImage: roleSpecificData.profileImage || null,
       accountStatus: role === 'service_provider' ? 'pending' : 'active',
     };
 
@@ -161,8 +174,17 @@ export const register = async (req, res) => {
 
       case 'service_provider':
         {
-          const normalizedServiceCategories = normalizeServiceCategories(roleSpecificData.serviceCategories);
-          const normalizedAreasOfOperation = normalizeAreasOfOperation(roleSpecificData.areasOfOperation);
+          const rawServiceCategories = Array.isArray(roleSpecificData.serviceCategories)
+            ? roleSpecificData.serviceCategories
+            : [roleSpecificData.serviceCategory || roleSpecificData.mainCategory].filter(Boolean);
+
+          const normalizedServiceCategories = normalizeServiceCategories(rawServiceCategories);
+
+          const normalizedAreasOfOperation =
+            normalizeAreasOfOperation(roleSpecificData.areasOfOperation).length > 0
+              ? normalizeAreasOfOperation(roleSpecificData.areasOfOperation)
+              : normalizeAreasFromDistrictAndArea(roleSpecificData.district, roleSpecificData.area);
+
           const normalizedCertifications = normalizeCertifications(roleSpecificData.certifications);
 
           if (normalizedServiceCategories.length === 0) {
@@ -182,10 +204,10 @@ export const register = async (req, res) => {
         user = await ServiceProvider.create({
           ...userData,
           nic: roleSpecificData.nic,
-          businessName: roleSpecificData.businessName,
           serviceCategories: normalizedServiceCategories,
           areasOfOperation: normalizedAreasOfOperation,
-          experience: roleSpecificData.experience,
+          yearsOfExperience: Number(roleSpecificData.experience || roleSpecificData.yearsOfExperience || 0),
+          profileNote: String(roleSpecificData.profileNote || '').trim(),
           certifications: normalizedCertifications,
         });
         }
