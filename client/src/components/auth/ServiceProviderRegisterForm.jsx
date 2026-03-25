@@ -4,6 +4,12 @@ import { registerServiceProviderAsync } from '../../features/auth/authSlice';
 import Input from '../common/Input';
 import Button from '../common/Button';
 
+const NAME_REGEX = /^[A-Za-z][A-Za-z\s'-]*$/;
+const PHONE_REGEX = /^\d{10}$/;
+const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
+const NIC_REGEX = /^(\d{9}[VX]|\d{12})$/;
+const PASSWORD_REGEX = /^[A-Z].{8,}$/;
+
 const ServiceProviderRegisterForm = ({ onSuccess }) => {
   const dispatch = useDispatch();
   const { loading } = useSelector((state) => state.auth);
@@ -46,70 +52,101 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
   ];
 
   const validateForm = () => {
+    const fields = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      nic: formData.nic,
+      businessName: formData.businessName,
+      experience: formData.experience,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+    };
+
     const newErrors = {};
+    Object.entries(fields).forEach(([field, value]) => {
+      const error = validateField(field, value, formData);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
 
-    // Name validation
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    // Phone validation
-    if (!formData.phone) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\+94\d{9}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone must be in format +94XXXXXXXXX';
-    }
-
-    // NIC validation
-    if (!formData.nic) {
-      newErrors.nic = 'NIC is required';
-    } else if (!/^(\d{9}[VXvx]|\d{12})$/.test(formData.nic)) {
-      newErrors.nic = 'NIC must be 9 digits with V/X or 12 digits';
-    }
-
-    if (!formData.businessName) newErrors.businessName = 'Business name is required';
     if (formData.serviceCategories.length === 0) {
       newErrors.serviceCategories = 'Select at least one service category';
     }
     if (formData.areasOfOperation.length === 0) {
       newErrors.areasOfOperation = 'Select at least one area of operation';
     }
-    if (!formData.experience) newErrors.experience = 'Years of experience is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateField = (name, value, data = formData) => {
+    switch (name) {
+      case 'firstName':
+      case 'lastName':
+        if (!value.trim()) return `${name === 'firstName' ? 'First' : 'Last'} name is required`;
+        if (!NAME_REGEX.test(value.trim())) return 'Name cannot include numbers or special characters';
+        return '';
+      case 'email':
+        if (!value.trim()) return 'Email is required';
+        if (!EMAIL_REGEX.test(value.trim())) return 'Email is invalid';
+        return '';
+      case 'phone':
+        if (!value) return 'Phone number is required';
+        if (!PHONE_REGEX.test(value)) return 'Mobile number must contain exactly 10 digits';
+        return '';
+      case 'nic':
+        if (!value) return 'NIC is required';
+        if (!NIC_REGEX.test(value)) return 'NIC must be 9 digits with V/X or 12 digits';
+        return '';
+      case 'businessName':
+        return value.trim() ? '' : 'Business name is required';
+      case 'experience':
+        if (!value) return 'Years of experience is required';
+        if (!/^\d{1,2}$/.test(value) || Number(value) === 0) return 'Experience must be a positive number';
+        return '';
+      case 'password':
+        if (!value) return 'Password is required';
+        if (!PASSWORD_REGEX.test(value)) return 'Password must start with a capital letter and be more than 8 characters';
+        return '';
+      case 'confirmPassword':
+        if (!value) return 'Confirm password is required';
+        if (data.password !== value) return 'Passwords do not match';
+        return '';
+      default:
+        return '';
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    let nextValue = value;
+    if (name === 'phone') nextValue = value.replace(/\D/g, '').slice(0, 10);
+    if (name === 'nic') nextValue = value.toUpperCase().replace(/[^0-9VX]/g, '').slice(0, 12);
+    if (name === 'experience') nextValue = value.replace(/\D/g, '').slice(0, 2);
 
-    if (errors[name]) {
-      setErrors((prev) => ({
+    const nextFormData = {
+      ...formData,
+      [name]: nextValue,
+    };
+
+    setFormData(nextFormData);
+
+    setErrors((prev) => {
+      const updatedErrors = {
         ...prev,
-        [name]: '',
-      }));
-    }
+        [name]: validateField(name, nextValue, nextFormData),
+      };
+
+      if (name === 'password' || name === 'confirmPassword') {
+        updatedErrors.confirmPassword = validateField('confirmPassword', nextFormData.confirmPassword, nextFormData);
+      }
+
+      return updatedErrors;
+    });
   };
 
   const handleMultiSelectChange = (e, fieldName) => {
@@ -123,12 +160,10 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
         : prev[fieldName].filter((item) => item !== value),
     }));
 
-    if (errors[fieldName]) {
-      setErrors((prev) => ({
-        ...prev,
-        [fieldName]: '',
-      }));
-    }
+    setErrors((prev) => ({
+      ...prev,
+      [fieldName]: isChecked || formData[fieldName].length > 1 ? '' : `Select at least one ${fieldName === 'serviceCategories' ? 'service category' : 'area of operation'}`,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -201,7 +236,9 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
           value={formData.phone}
           onChange={handleChange}
           error={errors.phone}
-          placeholder="+94771234567"
+          placeholder="0771234567"
+          inputMode="numeric"
+          maxLength={10}
           required
         />
 
@@ -234,6 +271,9 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
         onChange={handleChange}
         error={errors.experience}
         placeholder="5"
+        inputMode="numeric"
+        min="1"
+        max="99"
         required
       />
 
