@@ -215,6 +215,21 @@ const buildMediaPayload = (req) => {
     return { photos, videos };
 };
 
+const buildRoomMediaPayload = (req) => {
+    const photos = (req.files?.roomPhotos || []).map((file, index) => ({
+        url: getUploadRelativeUrl(file),
+        caption: '',
+        isPrimary: index === 0,
+    }));
+
+    const videos = (req.files?.roomVideos || []).map((file) => ({
+        url: getUploadRelativeUrl(file),
+        caption: '',
+    }));
+
+    return { photos, videos };
+};
+
 const sanitizeAccommodationPayload = (payload) => {
     const allowedFields = [
         'title',
@@ -755,9 +770,12 @@ const createRoom = async (req, res) => {
 
         const accommodation = ownedResult.accommodation;
 
+        const roomMedia = buildRoomMediaPayload(req);
+
         const room = await Room.create({
             accommodation: accommodation._id,
             ...req.body,
+            media: roomMedia,
         });
 
         const counts = await Room.aggregate([
@@ -848,7 +866,22 @@ const updateRoom = async (req, res) => {
             });
         }
 
+        const roomMedia = buildRoomMediaPayload(req);
+
         Object.assign(room, req.body);
+
+        if (!room.media) {
+            room.media = { photos: [], videos: [] };
+        }
+
+        if (roomMedia.photos.length > 0) {
+            room.media.photos = [...(room.media.photos || []), ...roomMedia.photos];
+        }
+
+        if (roomMedia.videos.length > 0) {
+            room.media.videos = [...(room.media.videos || []), ...roomMedia.videos];
+        }
+
         await room.save();
 
         res.status(200).json({

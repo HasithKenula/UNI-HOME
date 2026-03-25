@@ -98,6 +98,11 @@ router.post(
     '/:accommodationId/rooms',
     protect,
     authorize('owner', 'admin'),
+    uploadFields([
+        { name: 'roomPhotos', maxCount: 8 },
+        { name: 'roomVideos', maxCount: 2 },
+    ]),
+    normalizeMultipartBody,
     createRoomValidator,
     validate,
     createRoom
@@ -116,6 +121,11 @@ router.put(
     '/rooms/:roomId',
     protect,
     authorize('owner', 'admin'),
+    uploadFields([
+        { name: 'roomPhotos', maxCount: 8 },
+        { name: 'roomVideos', maxCount: 2 },
+    ]),
+    normalizeMultipartBody,
     updateRoomValidator,
     validate,
     updateRoom

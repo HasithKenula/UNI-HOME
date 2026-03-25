@@ -31,6 +31,11 @@ const bookingSchema = new Schema(
     owner: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
 
     // Booking details
+    bookingScope: {
+      type: String,
+      enum: ["accommodation", "room"],
+      default: "accommodation",
+    },
     roomType: {
       type: String,
       required: true,
