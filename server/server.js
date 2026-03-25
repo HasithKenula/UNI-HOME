@@ -30,7 +30,9 @@ connectDB();
 // ============================================================================
 
 // Security headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 
 // CORS configuration
 const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');

@@ -622,7 +622,7 @@
 
 - [x] `pages/public/ListingDetailPage.jsx`
 - [x] Photo gallery (carousel/lightbox)
-- [ ] Info sections: Type, Location (with map), Pricing breakdown, Facilities, House Rules, Booking Rules
+- [x] Info sections: Type, Location (with map), Pricing breakdown, Facilities, House Rules, Booking Rules
 - [x] Availability status badge
 - [x] Owner info card (name, phone — conditional on auth)
 - [x] Action buttons: Book Now, Contact Owner, Save/Favorite, Report

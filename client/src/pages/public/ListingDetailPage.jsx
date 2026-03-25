@@ -34,7 +34,20 @@ import LoadingSkeleton from '../../components/common/LoadingSkeleton';
 import BookingForm from '../../components/booking/BookingForm';
 import ContactOwnerModal from '../../components/inquiry/ContactOwnerModal';
 import useAuth from '../../hooks/useAuth';
-import { getAccommodationById } from '../../features/accommodations/accommodationAPI';
+import { getAccommodationById, recordAccommodationView } from '../../features/accommodations/accommodationAPI';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 import {
     addFavoriteAsync,
     fetchFavoritesAsync,
@@ -82,6 +95,9 @@ const ListingDetailPage = () => {
         };
 
         fetchListing();
+        
+        // Record view count tracking IP (to avoid dev mode double-count or refresh spam)
+        recordAccommodationView(id).catch(err => console.error('Failed to record view', err));
     }, [id]);
 
     useEffect(() => {
@@ -488,13 +504,38 @@ const ListingDetailPage = () => {
                             </div>
                         </div>
                         <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                            <p className="text-sm text-gray-600 mb-1 flex items-center gap-2">
+                            <p className="text-sm text-gray-600 mb-2 flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-blue-600" />
-                                <span className="font-semibold">Location Coordinates:</span>
+                                <span className="font-semibold">Property Map Location</span>
                             </p>
-                            <p className="text-sm text-gray-700 font-mono">
-                                {listing.location?.coordinates?.coordinates?.join(', ') || 'Not specified'}
-                            </p>
+                            
+                            {listing.location?.coordinates?.coordinates && listing.location.coordinates.coordinates.length === 2 ? (
+                                <div className="h-64 mt-2 rounded-lg overflow-hidden border-2 border-blue-200">
+                                    <MapContainer 
+                                        center={[listing.location.coordinates.coordinates[1], listing.location.coordinates.coordinates[0]]} 
+                                        zoom={15} 
+                                        scrollWheelZoom={false}
+                                        style={{ height: '100%', width: '100%', zIndex: 10 }}
+                                    >
+                                        <TileLayer
+                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        />
+                                        <Marker position={[listing.location.coordinates.coordinates[1], listing.location.coordinates.coordinates[0]]}>
+                                            <Popup>
+                                                <div className="font-bold text-center">
+                                                    {listing.title} <br />
+                                                    <span className="text-xs text-gray-500">{listing.location.address}</span>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    </MapContainer>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-700 font-mono mt-1">
+                                    Location map not available
+                                </p>
+                            )}
                         </div>
                     </section>
 
