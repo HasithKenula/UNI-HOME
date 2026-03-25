@@ -394,6 +394,8 @@
 - [ ] `components/auth/OwnerRegisterForm.jsx` — NIC, bank details, document upload
 - [ ] `components/auth/ProviderRegisterForm.jsx` — service categories, area of operation
 - [x] `components/auth/ServiceProviderRegisterForm.jsx` — service categories, area of operation, payload mapping fix
+- [x] `components/auth/ServiceProviderRegisterForm.jsx` — remove business/certification fields; add main category + district + area + profile note
+- [x] `components/auth/ServiceProviderRegisterForm.jsx` — add provider photo input + preview on registration
 - [ ] `pages/public/RegisterPage.jsx` — tab/step switcher for 3 registration types
 - [ ] Form validation (react-hook-form)
 - [ ] API integration (authAPI.js → register endpoints)
@@ -1059,8 +1061,45 @@
 ### `GET /api/service-providers`
 
 - [x] Route (protected: owner)
-- [x] Controller: find approved + available providers, filter by category/district/city
+- [x] Controller: find approved + available providers, filter by category/district/city/area
+- [x] Include provider profile note + contact details in provider list response
+- [x] Support expanded maintenance categories (plumbing, electrical, cleaning, painting, carpentry, masons, welding, cctv, other)
 - [ ] Test → 200
+
+### `GET /api/service-providers/categories`
+
+- [x] Route (protected: owner)
+- [x] Controller: return service-provider maintenance categories for category-page navigation
+
+### `GET /api/service-providers/me`
+
+- [x] Route (protected: provider)
+- [x] Controller: return service provider profile for dashboard management
+
+### `PUT /api/service-providers/me`
+
+- [x] Route (protected: provider)
+- [x] Controller: update provider profile (category, district, area, note, availability)
+
+### `DELETE /api/service-providers/me`
+
+- [x] Route (protected: provider)
+- [x] Controller: remove provider profile (mark account deleted / unavailable)
+
+### `POST /api/service-providers/bookings`
+
+- [x] Route (protected: owner)
+- [x] Controller: owner books provider by category + district + area + note
+
+### `GET /api/service-providers/bookings/mine`
+
+- [x] Route (protected: owner/provider)
+- [x] Controller: list owner/provider service bookings
+
+### `PATCH /api/service-providers/bookings/:id/status`
+
+- [x] Route (protected: owner)
+- [x] Controller: owner updates booking status to accepted/completed
 
 ## 6.3 Frontend — Student Ticket Pages
 
@@ -1098,6 +1137,7 @@
 
 - [x] `pages/owner/OwnerTicketsPage.jsx`
 - [x] Owner dashboard ticket request visibility (`pages/owner/OwnerDashboard.jsx`)
+- [x] Owner dashboard quick action: search service providers (`pages/owner/ServiceProvidersPage.jsx`)
 - [x] Filter by accommodation + status + priority
 - [x] Ticket list with actions:
   - [x] Approve button (for open tickets)
@@ -1106,8 +1146,26 @@
 - [x] Provider selection modal:
   - [x] Filter by category + area
   - [x] Provider cards (name, rating, completed tasks, availability)
+  - [x] Provider profile note + contact details
   - [x] Date picker + time slot selector
   - [x] Assign button
+
+### Owner Service Provider Booking Page
+
+- [x] `pages/owner/ServiceProvidersPage.jsx`
+- [x] Show maintenance categories first, then load providers under selected category
+- [x] Sidebar with all maintenance categories (as category menu)
+- [x] Filter providers by selected category + district + city
+- [x] View provider profile note and contact actions (phone/email)
+- [x] Show provider photo in provider listing cards
+- [x] Book provider under selected category
+- [x] Owner booking status update actions (accepted/completed)
+
+### Owner Service Category Page
+
+- [x] `pages/owner/ServiceProviderCategoriesPage.jsx`
+- [x] Category selection opens separate provider page route (`/owner/service-providers/:category`)
+- [x] Provider page reads selected category from route and shows providers under that category
 
 ## 6.5 Frontend — Provider Pages
 
@@ -1117,6 +1175,9 @@
 - [x] Stats: assigned, in progress, completed counts
 - [x] Upcoming scheduled visits
 - [x] Recent task notifications
+- [x] Remove embedded profile edit section from dashboard
+- [x] Add quick action link to dedicated provider profile page
+- [x] Show owner service bookings + owner contact details
 
 ### My Tasks Page
 
@@ -1129,6 +1190,35 @@
   - [x] Cost input (optional)
   - [x] Upload completion proof photos
   - [x] Submit button
+
+### Provider Profile Page
+
+- [x] `pages/provider/ProviderProfilePage.jsx`
+- [x] Display all registration details: firstName, lastName, email, phone, nic, serviceCategories, areasOfOperation, yearsOfExperience, profileNote, profileImage, isAvailable
+- [x] View mode: show all profile information in formatted display
+- [x] Edit mode: inline form to update all editable fields
+- [x] Save/Cancel buttons for profile updates
+- [x] Profile image display with avatar fallback
+- [x] Profile photo upload with preview in edit mode
+- [x] Availability toggle
+- [x] Profile removal option
+
+### Navbar Update
+
+- [x] `components/common/Navbar.jsx`
+- [x] Restore original top-nav user display (no profile dropdown link)
+- [x] Keep desktop and mobile navigation support
+- [x] Access provider profile via dashboard `Manage Profile` button only
+
+### Provider Profile Route
+
+- [x] Add `/provider/profile` route to `App.jsx`
+- [x] Route protected with `PrivateRoute` and `RoleRoute` (service_provider only)
+
+### Backend Profile Endpoint Update
+
+- [x] Update `GET /api/service-providers/me` to include `profileImage` field
+- [x] Update `PUT /api/service-providers/me` to support `profileImage` updates
 
 ## 6.6 Frontend — State
 

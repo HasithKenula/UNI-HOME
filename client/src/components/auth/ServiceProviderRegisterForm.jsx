@@ -237,7 +237,6 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
         required
       />
 
-      {/* Service Categories */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Service Categories <span className="text-red-500">*</span>
@@ -261,7 +260,6 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
         )}
       </div>
 
-      {/* Areas of Operation */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Areas of Operation <span className="text-red-500">*</span>

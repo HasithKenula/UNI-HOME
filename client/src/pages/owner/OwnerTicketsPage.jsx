@@ -32,7 +32,9 @@ const categoryOptions = [
     { value: 'cleaning', label: 'Cleaning' },
     { value: 'painting', label: 'Painting' },
     { value: 'carpentry', label: 'Carpentry' },
-    { value: 'general', label: 'General' },
+    { value: 'masons', label: 'Masons' },
+    { value: 'welding', label: 'Welding' },
+    { value: 'cctv', label: 'CCTV' },
     { value: 'other', label: 'Other' },
 ];
 
@@ -264,7 +266,13 @@ const OwnerTicketsPage = () => {
                                             Rating: {provider.averageRating?.toFixed?.(1) || provider.averageRating || 0} • Completed: {provider.totalTasksCompleted || 0}
                                         </p>
                                         <p className="text-xs text-gray-500">
+                                            Contact: {provider.phone || '-'} • {provider.email || '-'}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
                                             Categories: {(provider.serviceCategories || []).join(', ') || '-'}
+                                        </p>
+                                        <p className="text-xs text-gray-600 mt-1">
+                                            Note: {provider.profileNote || 'No profile note provided.'}
                                         </p>
                                     </button>
                                 ))
