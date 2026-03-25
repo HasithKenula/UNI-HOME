@@ -32,8 +32,26 @@ const roleTabs = [
 
 const statusOptions = ['all', 'pending', 'active', 'suspended', 'deleted'];
 const editableStatusOptions = ['pending', 'active', 'suspended', 'deleted'];
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const backendBaseUrl = apiBaseUrl.replace(/\/api\/?$/, '');
 
 const formatRole = (role = '') => role.replace('_', ' ');
+
+const getProfileImageSrc = (profileImage) => {
+  if (!profileImage) return '';
+  if (/^https?:\/\//i.test(profileImage)) return profileImage;
+
+  const cleanedPath = String(profileImage).replace(/\\/g, '/');
+  let normalizedPath = cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
+
+  // Backward compatibility for older saved paths like /uploads/<file>.
+  if (/^\/uploads\/[^/]+$/i.test(normalizedPath)) {
+    const fileName = normalizedPath.split('/').pop();
+    normalizedPath = `/uploads/profiles/${fileName}`;
+  }
+
+  return `${backendBaseUrl}${normalizedPath}`;
+};
 
 const statusChipSxMap = {
   active: { bgcolor: '#ecfdf3', color: '#047857', borderColor: '#a7f3d0' },
@@ -84,27 +102,27 @@ const UserManagementPage = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-10">
-      <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-6 text-white shadow-xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200">Admin Workspace</p>
+      <div className="rounded-3xl border border-primary-200 bg-gradient-to-r from-primary-700 via-primary-600 to-accent-700 p-6 text-white shadow-xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100">Admin Workspace</p>
         <h1 className="mt-2 text-3xl font-bold">User Management</h1>
-        <p className="mt-1 text-sm text-slate-200">Manage user lifecycle, approvals, and account status updates with cleaner controls.</p>
+        <p className="mt-1 text-sm text-emerald-50">Manage user lifecycle, approvals, and account status updates with cleaner controls.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-            <p className="text-xs uppercase tracking-wide text-blue-100">Total Users</p>
+            <p className="text-xs uppercase tracking-wide text-emerald-100">Total Users</p>
             <p className="mt-1 text-2xl font-bold">{usersPagination.total || 0}</p>
           </div>
           <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-            <p className="text-xs uppercase tracking-wide text-blue-100">Selected Role</p>
+            <p className="text-xs uppercase tracking-wide text-emerald-100">Selected Role</p>
             <p className="mt-1 text-lg font-semibold capitalize">{formatRole(role)}</p>
           </div>
           <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-            <p className="text-xs uppercase tracking-wide text-blue-100">Selected Status</p>
+            <p className="text-xs uppercase tracking-wide text-emerald-100">Selected Status</p>
             <p className="mt-1 text-lg font-semibold capitalize">{status}</p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-primary-100 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
           {roleTabs.map((tab) => (
             <Chip
@@ -113,12 +131,23 @@ const UserManagementPage = () => {
               label={tab.label}
               onClick={() => setRole(tab.value)}
               variant={role === tab.value ? 'filled' : 'outlined'}
-              color={role === tab.value ? 'primary' : 'default'}
               sx={{
                 fontWeight: 700,
                 borderRadius: '999px',
                 px: 1,
                 py: 0.4,
+                ...(role === tab.value
+                  ? {
+                      bgcolor: '#10b981',
+                      color: '#ffffff',
+                      borderColor: '#10b981',
+                      '&:hover': { bgcolor: '#059669' },
+                    }
+                  : {
+                      color: '#374151',
+                      borderColor: '#d1d5db',
+                      '&:hover': { bgcolor: '#ecfdf5', borderColor: '#6ee7b7' },
+                    }),
               }}
             />
           ))}
@@ -133,9 +162,21 @@ const UserManagementPage = () => {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by name, email, phone"
             sx={{
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#10b981',
+              },
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
                 backgroundColor: '#ffffff',
+                '& fieldset': {
+                  borderColor: '#d1d5db',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#6ee7b7',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#10b981',
+                },
               },
             }}
           />
@@ -147,7 +188,19 @@ const UserManagementPage = () => {
               value={status}
               label="Status"
               onChange={(event) => setStatus(event.target.value)}
-              sx={{ borderRadius: '12px', textTransform: 'capitalize' }}
+              sx={{
+                borderRadius: '12px',
+                textTransform: 'capitalize',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#d1d5db',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#6ee7b7',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#10b981',
+                },
+              }}
             >
               {statusOptions.map((item) => (
                 <MenuItem key={item} value={item} sx={{ textTransform: 'capitalize' }}>
@@ -159,16 +212,16 @@ const UserManagementPage = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-primary-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-slate-50">
+            <thead className="bg-gradient-to-r from-primary-50 to-accent-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">User</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Registered</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">User</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Registered</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -182,10 +235,21 @@ const UserManagementPage = () => {
                 </tr>
               ) : (
                 rows.map((user) => (
-                  <tr key={user._id} className="align-top transition hover:bg-slate-50/70">
+                  <tr key={user._id} className="align-top transition hover:bg-primary-50/50">
                     <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={getProfileImageSrc(user.profileImage)}
+                          alt={`${user.firstName || ''} ${user.lastName || ''}`.trim()}
+                          sx={{ width: 40, height: 40, bgcolor: '#10b981', fontSize: 14, fontWeight: 700 }}
+                        >
+                          {(user.firstName?.[0] || 'U').toUpperCase()}
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm capitalize text-gray-700">{formatRole(user.role)}</td>
                     <td className="px-4 py-3">
@@ -203,7 +267,7 @@ const UserManagementPage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
-                      <div className="min-w-[280px] rounded-xl border border-slate-200 bg-slate-50/70 p-2">
+                      <div className="min-w-[280px] rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50/50 to-accent-50/40 p-2">
                         <div className="flex flex-wrap gap-2">
                           <MuiButton
                             size="small"
@@ -222,7 +286,17 @@ const UserManagementPage = () => {
                             startIcon={<EditRoundedIcon fontSize="small" />}
                             disabled={actionLoading || user.accountStatus === 'deleted'}
                             onClick={() => openEditModal(user)}
-                            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 }}
+                            sx={{
+                              borderRadius: '10px',
+                              textTransform: 'none',
+                              fontWeight: 700,
+                              color: '#0f766e',
+                              borderColor: '#5eead4',
+                              '&:hover': {
+                                borderColor: '#14b8a6',
+                                backgroundColor: '#f0fdfa',
+                              },
+                            }}
                           >
                             Edit
                           </MuiButton>
@@ -258,16 +332,20 @@ const UserManagementPage = () => {
         PaperProps={{
           sx: {
             borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 20px 50px rgba(15, 23, 42, 0.18)',
+            border: '1px solid #a7f3d0',
+            boxShadow: '0 20px 50px rgba(16, 185, 129, 0.18)',
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 800, pb: 0.5 }}>Update Account Status</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800, pb: 0.5, color: '#065f46' }}>Update Account Status</DialogTitle>
         <DialogContent>
           {editingUser && (
-            <div className="mt-1 mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <Avatar sx={{ bgcolor: '#1e40af' }}>
+            <div className="mt-1 mb-4 flex items-center gap-3 rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50 to-accent-50 p-3">
+              <Avatar
+                src={getProfileImageSrc(editingUser.profileImage)}
+                alt={`${editingUser.firstName || ''} ${editingUser.lastName || ''}`.trim()}
+                sx={{ bgcolor: '#10b981' }}
+              >
                 {(editingUser.firstName?.[0] || 'U').toUpperCase()}
               </Avatar>
               <div>
@@ -286,7 +364,19 @@ const UserManagementPage = () => {
               value={editingStatus}
               label="Account Status"
               onChange={(event) => setEditingStatus(event.target.value)}
-              sx={{ borderRadius: '12px', textTransform: 'capitalize' }}
+              sx={{
+                borderRadius: '12px',
+                textTransform: 'capitalize',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#d1d5db',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#6ee7b7',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#10b981',
+                },
+              }}
             >
               {editableStatusOptions.map((option) => (
                 <MenuItem key={option} value={option} sx={{ textTransform: 'capitalize' }}>
@@ -310,7 +400,13 @@ const UserManagementPage = () => {
             variant="contained"
             onClick={handleSaveUserStatus}
             disabled={actionLoading || !editingUser || editingStatus === editingUser.accountStatus}
-            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 }}
+            sx={{
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 700,
+              bgcolor: '#10b981',
+              '&:hover': { bgcolor: '#059669' },
+            }}
           >
             Save Status
           </MuiButton>

@@ -120,25 +120,25 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-10">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(14,165,233,0.2),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.3),transparent_45%),linear-gradient(120deg,#0f172a,#111827_45%,#1e293b)]" />
-      <div className="absolute -left-28 top-16 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
-      <div className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
+    <div className="relative min-h-screen overflow-hidden bg-secondary px-4 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.15),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(20,184,166,0.2),transparent_45%),linear-gradient(120deg,#ecfdf5,#fafafa_45%,#f0fdfa)]" />
+      <div className="absolute -left-28 top-16 h-72 w-72 rounded-full bg-primary-300/20 blur-3xl" />
+      <div className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-accent-400/20 blur-3xl" />
 
       <div className="relative z-10 mx-auto flex min-h-[88vh] w-full max-w-xl items-center">
         <Paper
           elevation={0}
-          className="w-full rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl backdrop-blur-xl md:p-8"
+          className="w-full rounded-3xl border border-primary-100 bg-white/95 p-6 shadow-xl backdrop-blur-xl md:p-8"
         >
           <Stack spacing={3}>
             <Box className="text-center">
-              <Box className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg">
+              <Box className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-lg">
                 <HomeRoundedIcon />
               </Box>
-              <Typography variant="h4" fontWeight={700} color="text.primary">
+              <Typography variant="h4" fontWeight={700} sx={{ color: '#374151' }}>
                 Welcome Back
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: '#6b7280' }}>
                 Sign in to continue managing your UniHome experience
               </Typography>
             </Box>
@@ -158,9 +158,17 @@ const LoginPage = () => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <EmailRoundedIcon fontSize="small" color="action" />
+                        <EmailRoundedIcon fontSize="small" sx={{ color: '#14b8a6' }} />
                       </InputAdornment>
                     ),
+                  }}
+                  sx={{
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#10b981' },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: '#d1d5db' },
+                      '&:hover fieldset': { borderColor: '#6ee7b7' },
+                      '&.Mui-focused fieldset': { borderColor: '#10b981' },
+                    },
                   }}
                 />
 
@@ -177,18 +185,26 @@ const LoginPage = () => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <LockRoundedIcon fontSize="small" color="action" />
+                        <LockRoundedIcon fontSize="small" sx={{ color: '#14b8a6' }} />
                       </InputAdornment>
                     ),
+                  }}
+                  sx={{
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#10b981' },
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { borderColor: '#d1d5db' },
+                      '&:hover fieldset': { borderColor: '#6ee7b7' },
+                      '&.Mui-focused fieldset': { borderColor: '#10b981' },
+                    },
                   }}
                 />
 
                 <Box className="flex items-center justify-between">
                   <FormControlLabel
-                    control={<Checkbox size="small" />}
+                    control={<Checkbox size="small" sx={{ color: '#14b8a6', '&.Mui-checked': { color: '#10b981' } }} />}
                     label={<Typography variant="body2">Remember me</Typography>}
                   />
-                  <Link to="/forgot-password" className="text-sm font-medium text-sky-700 hover:text-sky-800">
+                  <Link to="/forgot-password" className="text-sm font-medium text-primary-700 hover:text-primary-800">
                     Forgot password?
                   </Link>
                 </Box>
@@ -204,7 +220,7 @@ const LoginPage = () => {
                     py: 1.25,
                     textTransform: 'none',
                     fontWeight: 700,
-                    background: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)',
+                    background: 'linear-gradient(135deg, #10B981 0%, #14B8A6 100%)',
                   }}
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
@@ -214,12 +230,12 @@ const LoginPage = () => {
 
             <Typography variant="body2" color="text.secondary" textAlign="center">
               Don&apos;t have an account?{' '}
-              <Link to="/register" className="font-semibold text-sky-700 hover:text-sky-800">
+              <Link to="/register" className="font-semibold text-primary-700 hover:text-primary-800">
                 Create one
               </Link>
             </Typography>
 
-            <Alert severity="info" variant="outlined" className="rounded-2xl">
+            <Alert severity="info" variant="outlined" className="rounded-2xl" sx={{ borderColor: '#99f6e4', bgcolor: '#f0fdfa', color: '#115e59' }}>
               Demo password: <strong>Password123!</strong>
             </Alert>
 

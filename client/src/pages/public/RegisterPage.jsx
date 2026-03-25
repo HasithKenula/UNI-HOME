@@ -33,21 +33,21 @@ const RegisterPage = () => {
       name: 'Student',
       icon: <SchoolRoundedIcon fontSize="small" />,
       description: 'Find your ideal accommodation',
-      accent: '#0ea5e9',
+      accent: '#10B981',
     },
     {
       id: 'owner',
       name: 'Property Owner',
       icon: <ApartmentRoundedIcon fontSize="small" />,
       description: 'List your properties',
-      accent: '#2563eb',
+      accent: '#14B8A6',
     },
     {
       id: 'service_provider',
       name: 'Service Provider',
       icon: <BuildCircleRoundedIcon fontSize="small" />,
       description: 'Offer maintenance services',
-      accent: '#0f766e',
+      accent: '#047857',
     },
   ];
 
@@ -69,19 +69,19 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-900 px-4 py-10">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,0.25),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(14,116,144,0.25),transparent_45%),linear-gradient(135deg,#0f172a,#1e293b_45%,#0f172a)]" />
-      <div className="absolute -left-28 top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
-      <div className="absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
+    <div className="relative min-h-screen overflow-hidden bg-secondary px-4 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(16,185,129,0.15),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(20,184,166,0.18),transparent_45%),linear-gradient(135deg,#ecfdf5,#fafafa_45%,#f0fdfa)]" />
+      <div className="absolute -left-28 top-24 h-72 w-72 rounded-full bg-primary-300/20 blur-3xl" />
+      <div className="absolute -right-20 bottom-10 h-80 w-80 rounded-full bg-accent-400/20 blur-3xl" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <Paper elevation={0} className="rounded-3xl border border-white/20 bg-white/95 p-6 shadow-2xl md:p-8">
+        <Paper elevation={0} className="rounded-3xl border border-primary-100 bg-white/95 p-6 shadow-xl md:p-8">
           <Stack spacing={3}>
             <Box className="text-center">
-              <Typography variant="h4" fontWeight={700} color="text.primary">
+              <Typography variant="h4" fontWeight={700} sx={{ color: '#374151' }}>
                 Create Your Account
               </Typography>
-              <Typography variant="body2" color="text.secondary" className="mt-1">
+              <Typography variant="body2" sx={{ color: '#6b7280' }} className="mt-1">
                 Choose your account type and complete the registration form
               </Typography>
             </Box>
@@ -96,10 +96,15 @@ const RegisterPage = () => {
               sx={{
                 '& .MuiToggleButtonGroup-grouped': {
                   borderRadius: '12px !important',
-                  border: '1px solid #dbeafe',
+                  border: '1px solid #d1fae5',
                   margin: '4px',
                   textTransform: 'none',
                   fontWeight: 600,
+                },
+                '& .MuiToggleButton-root.Mui-selected': {
+                  backgroundColor: '#ecfdf5',
+                  color: '#047857',
+                  borderColor: '#6ee7b7',
                 },
               }}
             >
@@ -113,7 +118,7 @@ const RegisterPage = () => {
               ))}
             </ToggleButtonGroup>
 
-            <Box className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5">
+            <Box className="rounded-2xl border border-primary-100 bg-gradient-to-r from-primary-50/60 to-accent-50/40 p-4 md:p-5">
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2} className="mb-4">
                 <Box>
                   <Typography variant="h6" fontWeight={700} sx={{ color: selectedRoleData?.accent }}>
@@ -123,7 +128,11 @@ const RegisterPage = () => {
                     {selectedRoleData?.description}
                   </Typography>
                 </Box>
-                <Chip label="Secure onboarding" color="info" variant="outlined" />
+                <Chip
+                  label="Secure onboarding"
+                  variant="outlined"
+                  sx={{ borderColor: '#99f6e4', color: '#0f766e', bgcolor: '#f0fdfa', fontWeight: 700 }}
+                />
               </Stack>
 
               <div className="max-h-[60vh] overflow-y-auto pr-1">
@@ -133,7 +142,7 @@ const RegisterPage = () => {
               </div>
             </Box>
 
-            <Paper elevation={0} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5">
+            <Paper elevation={0} className="rounded-2xl border border-primary-100 bg-white p-4 md:p-5">
               <Typography variant="subtitle1" fontWeight={700} color="text.primary" className="mb-3">
                 Registration Notes
               </Typography>
@@ -152,7 +161,7 @@ const RegisterPage = () => {
 
             <Typography variant="body2" color="text.secondary" textAlign="center">
               Already have an account?{' '}
-              <Link to="/login" className="font-semibold text-sky-700 hover:text-sky-800">
+              <Link to="/login" className="font-semibold text-primary-700 hover:text-primary-800">
                 Sign In
               </Link>
               {' '}|{' '}
