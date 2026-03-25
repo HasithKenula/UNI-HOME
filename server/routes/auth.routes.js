@@ -9,11 +9,12 @@ import {
   resetPassword,
 } from '../controllers/auth.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
+import { uploadSingle } from '../middleware/upload.middleware.js';
 
 const router = express.Router();
 
 // Public routes
-router.post('/register', register);
+router.post('/register', uploadSingle('profileImage'), register);
 router.post('/login', login);
 router.post('/refresh', refreshToken);
 router.get('/verify-email', verifyEmail);

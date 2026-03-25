@@ -48,19 +48,21 @@ const Navbar = () => {
     <nav
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'backdrop-blur-xl bg-white/80 border-b border-gray-200 shadow-lg'
-          : 'bg-white shadow-md'
+          ? 'backdrop-blur-xl bg-white/90 border-b border-primary-100 shadow-sm'
+          : 'bg-white shadow-sm border-b border-gray-100'
       }`}
     >
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <div className="text-3xl transform group-hover:scale-110 transition-transform duration-300">
-              🏠
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              SLIIT Accommodation
+            <img
+              src="/branding/unihome-logo.png"
+              alt="UNIHOME logo"
+              className="h-9 w-9 rounded-md object-cover transform group-hover:scale-110 transition-transform duration-300"
+            />
+            <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+              UNIHOME
             </span>
           </Link>
 
@@ -69,12 +71,12 @@ const Navbar = () => {
             <Link
               to="/"
               className={`relative font-medium transition-colors duration-300 ${
-                isActive('/') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                isActive('/') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
               } group`}
             >
               Home
               <span
-                className={`absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 transform origin-left transition-transform duration-300 ${
+                className={`absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary-500 to-accent-500 transform origin-left transition-transform duration-300 ${
                   isActive('/') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                 }`}
               ></span>
@@ -82,12 +84,12 @@ const Navbar = () => {
             <Link
               to="/search"
               className={`relative font-medium transition-colors duration-300 ${
-                isActive('/search') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                isActive('/search') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
               } group`}
             >
-              Search
+              Accommodations
               <span
-                className={`absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 transform origin-left transition-transform duration-300 ${
+                className={`absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary-500 to-accent-500 transform origin-left transition-transform duration-300 ${
                   isActive('/search') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                 }`}
               ></span>
@@ -95,13 +97,26 @@ const Navbar = () => {
             <Link
               to="/about"
               className={`relative font-medium transition-colors duration-300 ${
-                isActive('/about') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                isActive('/about') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
               } group`}
             >
               About
               <span
-                className={`absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 transform origin-left transition-transform duration-300 ${
+                className={`absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary-500 to-accent-500 transform origin-left transition-transform duration-300 ${
                   isActive('/about') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                }`}
+              ></span>
+            </Link>
+            <Link
+              to="/contact"
+              className={`relative font-medium transition-colors duration-300 ${
+                isActive('/contact') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
+              } group`}
+            >
+              Contact
+              <span
+                className={`absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary-500 to-accent-500 transform origin-left transition-transform duration-300 ${
+                  isActive('/contact') ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                 }`}
               ></span>
             </Link>
@@ -110,14 +125,14 @@ const Navbar = () => {
               <>
                 <Link
                   to={getDashboardLink()}
-                  className="relative font-medium text-gray-700 hover:text-blue-600 transition-colors group"
+                  className="relative font-medium text-gray-700 hover:text-primary-600 transition-colors group"
                 >
                   Dashboard
-                  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary-500 to-accent-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                 </Link>
                 <div className="flex items-center space-x-4 pl-4 border-l border-gray-200">
-                  <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2 rounded-lg">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
+                  <div className="flex items-center space-x-2 bg-gradient-to-r from-primary-50 to-accent-50 px-3 py-2 rounded-lg border border-primary-100">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 flex items-center justify-center text-white font-semibold">
                       {user?.firstName?.charAt(0) || 'U'}
                     </div>
                     <span className="text-sm font-semibold text-gray-700">
@@ -186,7 +201,7 @@ const Navbar = () => {
               to="/"
               className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                 isActive('/')
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600'
+                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
               onClick={() => setMobileMenuOpen(false)}
@@ -197,7 +212,7 @@ const Navbar = () => {
               to="/search"
               className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                 isActive('/search')
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600'
+                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
               onClick={() => setMobileMenuOpen(false)}
@@ -208,12 +223,23 @@ const Navbar = () => {
               to="/about"
               className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                 isActive('/about')
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600'
+                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
               onClick={() => setMobileMenuOpen(false)}
             >
               About
+            </Link>
+            <Link
+              to="/contact"
+              className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                isActive('/contact')
+                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Contact
             </Link>
 
             {isAuthenticated ? (
@@ -226,8 +252,8 @@ const Navbar = () => {
                   Dashboard
                 </Link>
                 <div className="pt-3 border-t mt-3">
-                  <div className="flex items-center space-x-3 px-4 py-2 mb-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold">
+                  <div className="flex items-center space-x-3 px-4 py-2 mb-3 bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl border border-primary-100">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold">
                       {user?.firstName?.charAt(0) || 'U'}
                     </div>
                     <div>
