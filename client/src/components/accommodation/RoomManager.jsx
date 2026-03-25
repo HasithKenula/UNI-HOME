@@ -145,12 +145,24 @@ const RoomManager = ({ accommodationId }) => {
 
     const handleRoomPhotoChange = (event) => {
         const files = Array.from(event.target.files || []);
-        setRoomPhotos(files);
+        if (files.length === 0) return;
+        setRoomPhotos((prev) => [...prev, ...files]);
+        event.target.value = '';
     };
 
     const handleRoomVideoChange = (event) => {
         const files = Array.from(event.target.files || []);
-        setRoomVideos(files);
+        if (files.length === 0) return;
+        setRoomVideos((prev) => [...prev, ...files]);
+        event.target.value = '';
+    };
+
+    const removeSelectedRoomPhoto = (indexToRemove) => {
+        setRoomPhotos((prev) => prev.filter((_, index) => index !== indexToRemove));
+    };
+
+    const removeSelectedRoomVideo = (indexToRemove) => {
+        setRoomVideos((prev) => prev.filter((_, index) => index !== indexToRemove));
     };
 
     const handleDelete = async (roomId) => {
@@ -255,7 +267,33 @@ const RoomManager = ({ accommodationId }) => {
                             className="w-full rounded-xl border-2 border-gray-300 px-3 py-2 text-sm"
                         />
                         {roomPhotos.length > 0 && (
-                            <p className="mt-1 text-xs text-gray-500">{roomPhotos.length} photo(s) selected</p>
+                            <>
+                                <p className="mt-1 text-xs text-gray-500">{roomPhotos.length} photo(s) selected</p>
+                                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                    {roomPhotos.map((file, index) => (
+                                        <div
+                                            key={`${file.name}-${index}`}
+                                            className="rounded border border-gray-200 p-2 text-xs"
+                                        >
+                                            <img
+                                                src={URL.createObjectURL(file)}
+                                                alt={file.name}
+                                                className="h-24 w-full rounded object-cover"
+                                            />
+                                            <div className="mt-1 flex items-center justify-between gap-2">
+                                                <span className="truncate pr-2">{file.name}</span>
+                                                <button
+                                                    type="button"
+                                                    className="text-red-600"
+                                                    onClick={() => removeSelectedRoomPhoto(index)}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                     <div>
@@ -268,7 +306,33 @@ const RoomManager = ({ accommodationId }) => {
                             className="w-full rounded-xl border-2 border-gray-300 px-3 py-2 text-sm"
                         />
                         {roomVideos.length > 0 && (
-                            <p className="mt-1 text-xs text-gray-500">{roomVideos.length} video(s) selected</p>
+                            <>
+                                <p className="mt-1 text-xs text-gray-500">{roomVideos.length} video(s) selected</p>
+                                <div className="mt-2 space-y-2">
+                                    {roomVideos.map((file, index) => (
+                                        <div
+                                            key={`${file.name}-${index}`}
+                                            className="rounded border border-gray-200 p-2 text-xs"
+                                        >
+                                            <video
+                                                controls
+                                                className="h-24 w-full rounded bg-black object-cover"
+                                                src={URL.createObjectURL(file)}
+                                            />
+                                            <div className="mt-1 flex items-center justify-between gap-2">
+                                                <span className="truncate pr-2">{file.name}</span>
+                                                <button
+                                                    type="button"
+                                                    className="text-red-600"
+                                                    onClick={() => removeSelectedRoomVideo(index)}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
@@ -351,7 +415,7 @@ const RoomManager = ({ accommodationId }) => {
                             {((room.media?.photos || []).length > 0 || (room.media?.videos || []).length > 0) && (
                                 <div className="mt-3 border-t border-gray-100 pt-3">
                                     {(room.media?.photos || []).length > 0 && (
-                                        <div className="mb-2">
+                                        <div className="mb-3">
                                             <p className="mb-2 text-xs font-semibold text-gray-500">Photos</p>
                                             <div className="grid grid-cols-4 gap-2">
                                                 {room.media.photos.slice(0, 4).map((photo) => (
@@ -365,10 +429,26 @@ const RoomManager = ({ accommodationId }) => {
                                             </div>
                                         </div>
                                     )}
+
                                     {(room.media?.videos || []).length > 0 && (
-                                        <p className="text-xs font-semibold text-gray-500">
-                                            Videos: {room.media.videos.length}
-                                        </p>
+                                        <div>
+                                            <p className="mb-2 text-xs font-semibold text-gray-500">Videos</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {room.media.videos.slice(0, 2).map((video) => (
+                                                    <video
+                                                        key={video.url}
+                                                        controls
+                                                        className="h-24 w-full rounded-lg bg-black object-cover"
+                                                        src={getMediaUrl(video.url)}
+                                                    />
+                                                ))}
+                                            </div>
+                                            {room.media.videos.length > 2 && (
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    +{room.media.videos.length - 2} more video(s)
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             )}
