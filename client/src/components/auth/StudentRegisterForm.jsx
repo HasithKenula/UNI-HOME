@@ -5,6 +5,12 @@ import Input from '../common/Input';
 import Select from '../common/Select';
 import Button from '../common/Button';
 
+const NAME_REGEX = /^[A-Za-z][A-Za-z\s'-]*$/;
+const PHONE_REGEX = /^\d{10}$/;
+const STUDENT_EMAIL_REGEX = /^[^\s@]+@my\.sliit\.lk$/i;
+const STUDENT_ID_REGEX = /^IT\d+$/;
+const PASSWORD_REGEX = /^[A-Z].{8,}$/;
+
 const StudentRegisterForm = ({ onSuccess }) => {
   const dispatch = useDispatch();
   const { loading } = useSelector((state) => state.auth);
@@ -41,58 +47,52 @@ const StudentRegisterForm = ({ onSuccess }) => {
     { value: 'Y4S2', label: 'Year 4 Semester 2' },
   ];
 
+  const validateField = (name, value, data = formData) => {
+    switch (name) {
+      case 'firstName':
+      case 'lastName':
+        if (!value.trim()) return `${name === 'firstName' ? 'First' : 'Last'} name is required`;
+        if (!NAME_REGEX.test(value.trim())) return 'Name cannot include numbers or special characters';
+        return '';
+      case 'email':
+        if (!value.trim()) return 'SLIIT email is required';
+        if (!STUDENT_EMAIL_REGEX.test(value.trim())) return 'Email must include @my.sliit.lk';
+        return '';
+      case 'studentId':
+        if (!value.trim()) return 'Student ID is required';
+        if (!STUDENT_ID_REGEX.test(value.trim().toUpperCase())) return 'Student ID must start with IT';
+        return '';
+      case 'phone':
+        if (!value) return 'Phone number is required';
+        if (!PHONE_REGEX.test(value)) return 'Mobile number must contain exactly 10 digits';
+        return '';
+      case 'password':
+        if (!value) return 'Password is required';
+        if (!PASSWORD_REGEX.test(value)) return 'Password must start with a capital letter and be more than 8 characters';
+        return '';
+      case 'confirmPassword':
+        if (!value) return 'Confirm password is required';
+        if (data.password !== value) return 'Passwords do not match';
+        return '';
+      case 'batch':
+        return value ? '' : 'Batch is required';
+      case 'faculty':
+        return value ? '' : 'Faculty is required';
+      default:
+        return '';
+    }
+  };
+
   const validateForm = () => {
+    const fields = ['firstName', 'lastName', 'email', 'studentId', 'phone', 'password', 'confirmPassword', 'batch', 'faculty'];
     const newErrors = {};
 
-    // Name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    }
-
-    // Email validation (SLIIT email)
-    if (!formData.email) {
-      newErrors.email = 'SLIIT email is required';
-    } else if (!formData.email.endsWith('@my.sliit.lk')) {
-      newErrors.email = 'Please use your SLIIT email (@my.sliit.lk)';
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    // Phone validation
-    if (!formData.phone) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\+94\d{9}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone must be in format +94XXXXXXXXX';
-    }
-
-    // Student ID validation
-    if (!formData.studentId) {
-      newErrors.studentId = 'Student ID is required';
-    } else if (!/^[A-Z]{2}\d{8}$/.test(formData.studentId)) {
-      newErrors.studentId = 'Student ID must be in format: IT12345678';
-    }
-
-    if (!formData.batch) {
-      newErrors.batch = 'Batch is required';
-    }
-
-    if (!formData.faculty) {
-      newErrors.faculty = 'Faculty is required';
-    }
+    fields.forEach((field) => {
+      const error = validateField(field, formData[field], formData);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -100,17 +100,30 @@ const StudentRegisterForm = ({ onSuccess }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
+    let nextValue = value;
+
+    if (name === 'phone') {
+      nextValue = value.replace(/\D/g, '').slice(0, 10);
     }
+
+    if (name === 'studentId') {
+      nextValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    }
+
+    const nextFormData = {
+      ...formData,
+      [name]: nextValue,
+    };
+
+    setFormData(nextFormData);
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, nextValue, nextFormData),
+      ...(name === 'password' || name === 'confirmPassword'
+        ? { confirmPassword: validateField('confirmPassword', nextFormData.confirmPassword, nextFormData) }
+        : {}),
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -170,6 +183,7 @@ const StudentRegisterForm = ({ onSuccess }) => {
         onChange={handleChange}
         error={errors.studentId}
         placeholder="IT23822580"
+        maxLength={12}
         required
       />
 
@@ -204,7 +218,9 @@ const StudentRegisterForm = ({ onSuccess }) => {
         value={formData.phone}
         onChange={handleChange}
         error={errors.phone}
-        placeholder="+94771234567"
+        placeholder="0771234567"
+        inputMode="numeric"
+        maxLength={10}
         required
       />
 
