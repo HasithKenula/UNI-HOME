@@ -32,8 +32,26 @@ const roleTabs = [
 
 const statusOptions = ['all', 'pending', 'active', 'suspended', 'deleted'];
 const editableStatusOptions = ['pending', 'active', 'suspended', 'deleted'];
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const backendBaseUrl = apiBaseUrl.replace(/\/api\/?$/, '');
 
 const formatRole = (role = '') => role.replace('_', ' ');
+
+const getProfileImageSrc = (profileImage) => {
+  if (!profileImage) return '';
+  if (/^https?:\/\//i.test(profileImage)) return profileImage;
+
+  const cleanedPath = String(profileImage).replace(/\\/g, '/');
+  let normalizedPath = cleanedPath.startsWith('/') ? cleanedPath : `/${cleanedPath}`;
+
+  // Backward compatibility for older saved paths like /uploads/<file>.
+  if (/^\/uploads\/[^/]+$/i.test(normalizedPath)) {
+    const fileName = normalizedPath.split('/').pop();
+    normalizedPath = `/uploads/profiles/${fileName}`;
+  }
+
+  return `${backendBaseUrl}${normalizedPath}`;
+};
 
 const statusChipSxMap = {
   active: { bgcolor: '#ecfdf3', color: '#047857', borderColor: '#a7f3d0' },
@@ -184,8 +202,19 @@ const UserManagementPage = () => {
                 rows.map((user) => (
                   <tr key={user._id} className="align-top transition hover:bg-slate-50/70">
                     <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          src={getProfileImageSrc(user.profileImage)}
+                          alt={`${user.firstName || ''} ${user.lastName || ''}`.trim()}
+                          sx={{ width: 40, height: 40, bgcolor: '#1e40af', fontSize: 14, fontWeight: 700 }}
+                        >
+                          {(user.firstName?.[0] || 'U').toUpperCase()}
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm capitalize text-gray-700">{formatRole(user.role)}</td>
                     <td className="px-4 py-3">
@@ -267,7 +296,11 @@ const UserManagementPage = () => {
         <DialogContent>
           {editingUser && (
             <div className="mt-1 mb-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <Avatar sx={{ bgcolor: '#1e40af' }}>
+              <Avatar
+                src={getProfileImageSrc(editingUser.profileImage)}
+                alt={`${editingUser.firstName || ''} ${editingUser.lastName || ''}`.trim()}
+                sx={{ bgcolor: '#1e40af' }}
+              >
                 {(editingUser.firstName?.[0] || 'U').toUpperCase()}
               </Avatar>
               <div>

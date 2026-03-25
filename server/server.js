@@ -12,6 +12,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 // Import database connection
 import connectDB from './config/db.js';
@@ -21,6 +24,12 @@ import errorHandler from './middleware/error.middleware.js';
 
 // Initialize Express app
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const configuredUploadPath = process.env.UPLOAD_PATH || './uploads';
+const uploadsDirectory = path.isAbsolute(configuredUploadPath)
+  ? configuredUploadPath
+  : path.resolve(__dirname, configuredUploadPath);
 
 // Connect to MongoDB
 connectDB();
@@ -30,7 +39,11 @@ connectDB();
 // ============================================================================
 
 // Security headers
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // CORS configuration
 const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');
@@ -87,7 +100,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Static files (for uploaded files)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(uploadsDirectory));
 
 // ============================================================================
 // ROUTES

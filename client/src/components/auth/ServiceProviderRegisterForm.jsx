@@ -27,6 +27,7 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
     areasOfOperation: [],
     experience: '',
     certifications: '',
+    profileImage: null,
   });
 
   const [errors, setErrors] = useState({});
@@ -193,6 +194,15 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0] || null;
+
+    setFormData((prev) => ({
+      ...prev,
+      profileImage: file,
+    }));
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -354,6 +364,23 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
         placeholder="Re-enter your password"
         required
       />
+
+      <div>
+        <label htmlFor="serviceProviderProfileImage" className="block text-sm font-semibold text-gray-700 mb-2">
+          Profile Picture
+        </label>
+        <input
+          id="serviceProviderProfileImage"
+          name="profileImage"
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-white file:mr-4 file:rounded-lg file:border-0 file:bg-sky-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-sky-700 hover:border-gray-400"
+        />
+        {formData.profileImage && (
+          <p className="mt-2 text-sm text-gray-600">Selected: {formData.profileImage.name}</p>
+        )}
+      </div>
 
       <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
         Create Service Provider Account
