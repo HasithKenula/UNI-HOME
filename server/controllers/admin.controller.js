@@ -48,7 +48,12 @@ export const getUsers = async (req, res) => {
     const filter = {};
 
     if (role !== 'all') filter.role = role;
-    if (status !== 'all') filter.accountStatus = status;
+    if (status !== 'all') {
+      filter.accountStatus = status;
+    } else {
+      // Exclude deleted users when status is 'all'
+      filter.accountStatus = { $ne: 'deleted' };
+    }
 
     if (search) {
       const regex = new RegExp(escapeRegex(search), 'i');
@@ -117,12 +122,33 @@ export const updateUserStatus = async (req, res) => {
     const user = await User.findById(id).select('-password');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
+    if (accountStatus === 'deleted') {
+      await User.findByIdAndDelete(id);
+
+      await AuditLog.create({
+        performedBy: req.user._id,
+        action: 'user_delete',
+        entityType: 'user',
+        entityId: user._id,
+        description: 'Admin permanently deleted user account',
+        metadata: { actor: adminActor(req), previousRole: user.role, accountStatus },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'User deleted successfully',
+        data: { _id: id, deleted: true },
+      });
+    }
+
     user.accountStatus = accountStatus;
     await user.save();
 
     await AuditLog.create({
       performedBy: req.user._id,
-      action: accountStatus === 'deleted' ? 'user_delete' : 'user_suspend',
+      action: 'user_suspend',
       entityType: 'user',
       entityId: user._id,
       description: `Admin updated user status to ${accountStatus}`,
