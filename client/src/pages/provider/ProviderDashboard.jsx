@@ -1,15 +1,21 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import Button from '../../components/common/Button';
-import { fetchProviderTasksAsync } from '../../features/providers/providerSlice';
+import {
+    fetchMyProviderBookingsAsync,
+    fetchProviderTasksAsync,
+    updateProviderBookingStatusAsync,
+} from '../../features/providers/providerSlice';
 
 const ProviderDashboard = () => {
     const dispatch = useDispatch();
-    const { tasks, loading } = useSelector((state) => state.providers);
+    const { tasks, providerBookings, loading, actionLoading } = useSelector((state) => state.providers);
+    const [activeBookingTab, setActiveBookingTab] = useState('pending');
 
     useEffect(() => {
         dispatch(fetchProviderTasksAsync({ page: 1, limit: 20 }));
+        dispatch(fetchMyProviderBookingsAsync({}));
     }, [dispatch]);
 
     const upcoming = useMemo(
@@ -25,6 +31,22 @@ const ProviderDashboard = () => {
         [tasks]
     );
 
+    const normalizeBookingStatus = (status) => (status === 'accepted' ? 'in_progress' : status);
+
+    const bookingCounts = useMemo(() => {
+        return {
+            pending: providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === 'pending').length,
+            in_progress: providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === 'in_progress').length,
+            completed: providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === 'completed').length,
+            rejected: providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === 'rejected').length,
+        };
+    }, [providerBookings]);
+
+    const filteredBookings = useMemo(
+        () => providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === activeBookingTab),
+        [providerBookings, activeBookingTab]
+    );
+
     const taskStats = useMemo(() => {
         const assigned = tasks.filter((task) => task.status === 'assigned').length;
         const inProgress = tasks.filter((task) => task.status === 'in_progress').length;
@@ -32,6 +54,18 @@ const ProviderDashboard = () => {
 
         return { assigned, inProgress, completed };
     }, [tasks]);
+
+    const handleUpdateBookingStatus = async (bookingId, status) => {
+        const result = await dispatch(updateProviderBookingStatusAsync({
+            id: bookingId,
+            payload: { status },
+        }));
+
+        if (result.type === 'providers/updateServiceBookingStatus/fulfilled') {
+            dispatch(fetchMyProviderBookingsAsync({}));
+        }
+    };
+
 
     return (
         <div className="mx-auto max-w-6xl px-4 py-10">
@@ -90,7 +124,109 @@ const ProviderDashboard = () => {
                 </div>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
+                <h2 className="text-xl font-bold text-gray-900">Recent Owner Bookings</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setActiveBookingTab('pending')}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                            activeBookingTab === 'pending' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                        }`}
+                    >
+                        Pending ({bookingCounts.pending})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveBookingTab('in_progress')}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                            activeBookingTab === 'in_progress' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-700'
+                        }`}
+                    >
+                        In Progress ({bookingCounts.in_progress})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveBookingTab('completed')}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                            activeBookingTab === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'
+                        }`}
+                    >
+                        Completed ({bookingCounts.completed})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveBookingTab('rejected')}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                            activeBookingTab === 'rejected' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700'
+                        }`}
+                    >
+                        Rejected ({bookingCounts.rejected})
+                    </button>
+                </div>
+
+                {loading ? (
+                    <p className="mt-3 text-gray-600">Loading...</p>
+                ) : filteredBookings.length === 0 ? (
+                    <p className="mt-3 text-gray-600">No bookings in this tab.</p>
+                ) : (
+                    <div className="mt-3 space-y-3">
+                        {filteredBookings.map((booking) => (
+                            <div key={booking._id} className="rounded-xl border border-gray-200 p-3">
+                                <p className="font-semibold text-gray-900 capitalize">
+                                    {booking.category} • {normalizeBookingStatus(booking.status).replace('_', ' ')}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    Owner: {booking.owner?.firstName} {booking.owner?.lastName}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    Area: {booking.district} / {booking.area}
+                                </p>
+                                <p className="text-sm text-gray-600">Contact: {booking.owner?.phone || '-'} • {booking.owner?.email || '-'}</p>
+                                {booking.note && <p className="mt-1 text-sm text-gray-700">Note: {booking.note}</p>}
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {normalizeBookingStatus(booking.status) === 'pending' && (
+                                        <>
+                                            <Button
+                                                size="sm"
+                                                loading={actionLoading}
+                                                onClick={() => handleUpdateBookingStatus(booking._id, 'in_progress')}
+                                            >
+                                                Accept Request
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="danger"
+                                                loading={actionLoading}
+                                                onClick={() => handleUpdateBookingStatus(booking._id, 'rejected')}
+                                            >
+                                                Reject Request
+                                            </Button>
+                                        </>
+                                    )}
+
+                                    {normalizeBookingStatus(booking.status) === 'in_progress' && (
+                                        <Button
+                                            size="sm"
+                                            variant="success"
+                                            loading={actionLoading}
+                                            onClick={() => handleUpdateBookingStatus(booking._id, 'completed')}
+                                        >
+                                            Mark Completed
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+                <Link to="/provider/profile">
+                    <Button variant="outline">Manage Profile</Button>
+                </Link>
                 <Link to="/provider/tasks">
                     <Button>Go to My Tasks</Button>
                 </Link>

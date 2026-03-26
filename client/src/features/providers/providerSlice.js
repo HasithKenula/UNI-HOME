@@ -4,6 +4,8 @@ import * as providerAPI from './providerAPI';
 
 const initialState = {
     providers: [],
+    providerBookings: [],
+    myProfile: null,
     tasks: [],
     stats: { open: 0, inProgress: 0, completed: 0 },
     loading: false,
@@ -29,6 +31,72 @@ export const fetchProviderTasksAsync = createAsyncThunk(
             return await providerAPI.getMyTasks(params);
         } catch (error) {
             return rejectWithValue(error.response?.data || { message: 'Failed to fetch tasks' });
+        }
+    }
+);
+
+export const createServiceProviderBookingAsync = createAsyncThunk(
+    'providers/createServiceBooking',
+    async (payload, { rejectWithValue }) => {
+        try {
+            return await providerAPI.createServiceProviderBooking(payload);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to create service booking' });
+        }
+    }
+);
+
+export const fetchMyProviderBookingsAsync = createAsyncThunk(
+    'providers/fetchMyServiceBookings',
+    async (params, { rejectWithValue }) => {
+        try {
+            return await providerAPI.getMyServiceProviderBookings(params);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to fetch service bookings' });
+        }
+    }
+);
+
+export const updateProviderBookingStatusAsync = createAsyncThunk(
+    'providers/updateServiceBookingStatus',
+    async ({ id, payload }, { rejectWithValue }) => {
+        try {
+            return await providerAPI.updateServiceProviderBookingStatus(id, payload);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to update service booking status' });
+        }
+    }
+);
+
+export const fetchMyProviderProfileAsync = createAsyncThunk(
+    'providers/fetchMyProfile',
+    async (_, { rejectWithValue }) => {
+        try {
+            return await providerAPI.getMyServiceProviderProfile();
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to load profile' });
+        }
+    }
+);
+
+export const updateMyProviderProfileAsync = createAsyncThunk(
+    'providers/updateMyProfile',
+    async (payload, { rejectWithValue }) => {
+        try {
+            return await providerAPI.updateMyServiceProviderProfile(payload);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to update profile' });
+        }
+    }
+);
+
+export const removeMyProviderProfileAsync = createAsyncThunk(
+    'providers/removeMyProfile',
+    async (_, { rejectWithValue }) => {
+        try {
+            return await providerAPI.removeMyServiceProviderProfile();
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to remove profile' });
         }
     }
 );
@@ -70,6 +138,12 @@ const replaceTask = (state, updatedTask) => {
     state.tasks = state.tasks.map((task) => (task._id === updatedTask._id ? updatedTask : task));
 };
 
+const replaceProviderBooking = (state, updatedBooking) => {
+    state.providerBookings = state.providerBookings.map((booking) => (
+        booking._id === updatedBooking._id ? updatedBooking : booking
+    ));
+};
+
 const providerSlice = createSlice({
     name: 'providers',
     initialState,
@@ -90,6 +164,83 @@ const providerSlice = createSlice({
             .addCase(fetchAvailableProvidersAsync.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload?.message || 'Failed to fetch providers';
+            })
+            .addCase(createServiceProviderBookingAsync.pending, (state) => {
+                state.actionLoading = true;
+                state.error = null;
+            })
+            .addCase(createServiceProviderBookingAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                if (action.payload.data) {
+                    state.providerBookings.unshift(action.payload.data);
+                }
+                toast.success(action.payload?.message || 'Service booking created successfully');
+            })
+            .addCase(createServiceProviderBookingAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                toast.error(action.payload?.message || 'Failed to create service booking');
+            })
+            .addCase(fetchMyProviderBookingsAsync.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchMyProviderBookingsAsync.fulfilled, (state, action) => {
+                state.loading = false;
+                state.providerBookings = action.payload.data || [];
+            })
+            .addCase(fetchMyProviderBookingsAsync.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || 'Failed to fetch service bookings';
+            })
+            .addCase(updateProviderBookingStatusAsync.pending, (state) => {
+                state.actionLoading = true;
+            })
+            .addCase(updateProviderBookingStatusAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                if (action.payload.data) {
+                    replaceProviderBooking(state, action.payload.data);
+                }
+                toast.success(action.payload?.message || 'Service booking status updated');
+            })
+            .addCase(updateProviderBookingStatusAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                toast.error(action.payload?.message || 'Failed to update booking status');
+            })
+            .addCase(fetchMyProviderProfileAsync.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchMyProviderProfileAsync.fulfilled, (state, action) => {
+                state.loading = false;
+                state.myProfile = action.payload.data || null;
+            })
+            .addCase(fetchMyProviderProfileAsync.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || 'Failed to load provider profile';
+            })
+            .addCase(updateMyProviderProfileAsync.pending, (state) => {
+                state.actionLoading = true;
+            })
+            .addCase(updateMyProviderProfileAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                state.myProfile = action.payload.data || state.myProfile;
+                toast.success(action.payload?.message || 'Profile updated successfully');
+            })
+            .addCase(updateMyProviderProfileAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                toast.error(action.payload?.message || 'Failed to update profile');
+            })
+            .addCase(removeMyProviderProfileAsync.pending, (state) => {
+                state.actionLoading = true;
+            })
+            .addCase(removeMyProviderProfileAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                state.myProfile = null;
+                toast.success(action.payload?.message || 'Provider profile removed successfully');
+            })
+            .addCase(removeMyProviderProfileAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                toast.error(action.payload?.message || 'Failed to remove profile');
             })
             .addCase(fetchProviderTasksAsync.pending, (state) => {
                 state.loading = true;
