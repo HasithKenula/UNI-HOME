@@ -93,9 +93,9 @@ const AboutPage = () => {
 
           <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-xl">
             <img
-              src="/images/home/deborah-cortelazzi-gREquCUXQLI-unsplash.jpg"
-              alt="Student accommodation room interior"
-              className="h-full min-h-[300px] w-full object-cover"
+              src="/upload/unihome-logo.png"
+              alt="UNIHOME logo"
+              className="h-full min-h-[300px] w-full object-contain bg-white p-8"
             />
           </div>
         </div>

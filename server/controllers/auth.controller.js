@@ -200,7 +200,7 @@ export const register = async (req, res) => {
         user = await Student.create({
           ...userData,
           sliitEmail: roleSpecificData.email || email,
-          studentId: roleSpecificData.studentId,
+          studentId: String(roleSpecificData.studentId || '').toUpperCase().trim(),
           batch: roleSpecificData.batch,
           faculty: roleSpecificData.faculty,
         });
