@@ -252,7 +252,7 @@ const createServiceProviderBooking = async (req, res) => {
 
     const provider = await ServiceProvider.findOne({
       _id: providerId,
-      verificationStatus: 'approved',
+      verificationStatus: { $in: ['approved', 'pending'] },
       isAvailable: true,
       accountStatus: { $ne: 'deleted' },
     }).select('_id firstName lastName phone email profileNote serviceCategories areasOfOperation');
