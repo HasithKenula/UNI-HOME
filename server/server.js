@@ -12,9 +12,6 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 // Import database connection
 import connectDB from './config/db.js';
@@ -24,12 +21,6 @@ import errorHandler from './middleware/error.middleware.js';
 
 // Initialize Express app
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const configuredUploadPath = process.env.UPLOAD_PATH || './uploads';
-const uploadsDirectory = path.isAbsolute(configuredUploadPath)
-  ? configuredUploadPath
-  : path.resolve(__dirname, configuredUploadPath);
 
 // Connect to MongoDB
 connectDB();
@@ -39,36 +30,25 @@ connectDB();
 // ============================================================================
 
 // Security headers
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-  })
-);
+app.use(helmet());
 
 // CORS configuration
-const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');
-
 const configuredClientUrls = (process.env.CLIENT_URL || '')
   .split(',')
-  .map((url) => normalizeOrigin(url))
+  .map((url) => url.trim())
   .filter(Boolean);
 
 const allowedOrigins = new Set([
   ...configuredClientUrls,
   'http://localhost:3000',
   'http://localhost:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
 ]);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow non-browser requests (no Origin header) and configured browser origins.
-    const normalizedOrigin = normalizeOrigin(origin || '');
-
-    if (!origin || allowedOrigins.has(normalizedOrigin)) {
+    if (!origin || allowedOrigins.has(origin)) {
       callback(null, true);
       return;
     }
@@ -100,7 +80,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Static files (for uploaded files)
-app.use('/uploads', express.static(uploadsDirectory));
+app.use('/uploads', express.static('uploads'));
 
 // ============================================================================
 // ROUTES
@@ -124,8 +104,6 @@ import favoriteRoutes from './routes/favorite.routes.js';
 import inquiryRoutes from './routes/inquiry.routes.js';
 import ticketRoutes from './routes/ticket.routes.js';
 import serviceProviderRoutes from './routes/serviceProvider.routes.js';
-import adminRoutes from './routes/admin.routes.js';
-import reportRoutes from './routes/report.routes.js';
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -136,8 +114,6 @@ app.use('/api/favorites', favoriteRoutes);
 app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/service-providers', serviceProviderRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/reports', reportRoutes);
 
 // Additional routes (to be added in future phases)
 // app.use('/api/rooms', require('./routes/room.routes'));

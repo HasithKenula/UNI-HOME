@@ -21,6 +21,16 @@ export const getMyServiceProviderBookings = async (params = {}) => {
     return response.data;
 };
 
+export const updateMyServiceProviderBooking = async (id, payload) => {
+    const response = await axios.put(`/service-providers/bookings/${id}`, payload);
+    return response.data;
+};
+
+export const cancelMyServiceProviderBooking = async (id, payload = {}) => {
+    const response = await axios.patch(`/service-providers/bookings/${id}/cancel`, payload);
+    return response.data;
+};
+
 export const updateServiceProviderBookingStatus = async (id, payload) => {
     const response = await axios.patch(`/service-providers/bookings/${id}/status`, payload);
     return response.data;
