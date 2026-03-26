@@ -38,19 +38,12 @@ connectDB();
 // MIDDLEWARE
 // ============================================================================
 
-// Security headers
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-  })
-);
-
 // CORS configuration
 const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');
 
-const configuredClientUrls = (process.env.CLIENT_URL || '')
+const configuredClientUrls = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .split(',')
-  .map((url) => normalizeOrigin(url))
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 const allowedOrigins = new Set([
@@ -63,7 +56,7 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:5174',
 ]);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow non-browser requests (no Origin header) and configured browser origins.
     const normalizedOrigin = normalizeOrigin(origin || '');
@@ -72,10 +65,16 @@ app.use(cors({
       callback(null, true);
       return;
     }
+
     callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
-}));
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body parser
 app.use(express.json());
