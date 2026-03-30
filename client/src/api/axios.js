@@ -1,7 +1,24 @@
 import axios from 'axios';
 
+const resolveApiBaseUrl = () => {
+  const configured = import.meta.env.VITE_API_URL;
+
+  if (configured && configured.trim()) {
+    return configured.trim();
+  }
+
+  // In local development, prefer Vite proxy to avoid browser CORS preflight failures.
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+
+  return 'http://localhost:5001/api';
+};
+
+const apiBaseUrl = resolveApiBaseUrl();
+
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +54,7 @@ axiosInstance.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         const response = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/refresh`,
+          `${apiBaseUrl}/auth/refresh`,
           { refreshToken }
         );
 

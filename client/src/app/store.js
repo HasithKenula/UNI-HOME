@@ -1,11 +1,21 @@
 import { configureStore } from '@reduxjs/toolkit';
-// Import slices as they are created
-// import authReducer from '../features/auth/authSlice';
+import authReducer from '../features/auth/authSlice';
+import adminReducer from '../features/admin/adminSlice';
+import bookingReducer from '../features/bookings/bookingSlice';
+import favoriteReducer from '../features/favorites/favoriteSlice';
+import inquiryReducer from '../features/inquiries/inquirySlice';
+import ticketReducer from '../features/tickets/ticketSlice';
+import providerReducer from '../features/providers/providerSlice';
 
 export const store = configureStore({
   reducer: {
-    // Add reducers here as features are developed
-    // auth: authReducer,
+    auth: authReducer,
+    admin: adminReducer,
+    bookings: bookingReducer,
+    favorites: favoriteReducer,
+    inquiries: inquiryReducer,
+    tickets: ticketReducer,
+    providers: providerReducer,
   },
 });
 

@@ -1,35 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-primary: #10b981;
+    --color-secondary: #fafafa;
+    --color-accent: #14b8a6;
+    --color-text: #374151;
+  }
+
+  * {
+    @apply antialiased;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-secondary text-bodytext font-sans;
+    background-image:
+      radial-gradient(circle at 12% 16%, rgba(16, 185, 129, 0.08), transparent 30%),
+      radial-gradient(circle at 88% 0%, rgba(20, 184, 166, 0.06), transparent 28%);
+    min-height: 100vh;
+  }
+
+  #root {
+    min-height: 100vh;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+    @apply px-4 py-2 rounded-lg font-semibold transition-colors duration-200;
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700;
+    @apply bg-primary-500 text-white hover:bg-primary-600;
   }
 
   .btn-secondary {
-    @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+    @apply bg-secondary text-bodytext border border-gray-200 hover:bg-primary-50;
   }
 
   .btn-outline {
-    @apply border-2 border-primary-600 text-primary-600 hover:bg-primary-50;
+    @apply border-2 border-accent-500 text-accent-700 hover:bg-accent-50;
   }
 
   .input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-200 focus:border-accent-500;
   }
 
   .card {
-    @apply bg-white rounded-lg shadow-md p-6;
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
   }
+}
+
+.leaflet-container {
+  z-index: 0;
+}
+
+.sliit-pin {
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.35);
+  white-space: nowrap;
+}
+
+.accommodation-pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
 }

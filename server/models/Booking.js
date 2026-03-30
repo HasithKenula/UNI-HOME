@@ -31,6 +31,11 @@ const bookingSchema = new Schema(
     owner: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
 
     // Booking details
+    bookingScope: {
+      type: String,
+      enum: ["accommodation", "room"],
+      default: "accommodation",
+    },
     roomType: {
       type: String,
       required: true,
@@ -94,7 +99,6 @@ const bookingSchema = new Schema(
   }
 );
 
-bookingSchema.index({ bookingNumber: 1 });
 bookingSchema.index({ student: 1, status: 1 });
 bookingSchema.index({ accommodation: 1, status: 1 });
 bookingSchema.index({ owner: 1, status: 1 });
