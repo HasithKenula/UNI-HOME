@@ -151,10 +151,6 @@ const accommodationSchema = new Schema(
     reviewedAt: { type: Date },
     publishedAt: { type: Date },
 
-    // Soft delete support
-    isDeleted: { type: Boolean, default: false, index: true },
-    deletedAt: { type: Date },
-
     // Rating summary (denormalized for performance)
     ratingsSummary: {
       averageRating: { type: Number, default: 0, min: 0, max: 5 },
@@ -168,7 +164,6 @@ const accommodationSchema = new Schema(
 
     // Analytics
     viewCount: { type: Number, default: 0 },
-    viewedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
     inquiryCount: { type: Number, default: 0 },
   },
   {
@@ -182,7 +177,6 @@ accommodationSchema.index({ status: 1, availabilityStatus: 1 });
 accommodationSchema.index({ "pricing.monthlyRent": 1 });
 accommodationSchema.index({ "houseRules.genderRestriction": 1 });
 accommodationSchema.index({ owner: 1, status: 1 });
-accommodationSchema.index({ isDeleted: 1, status: 1 });
 accommodationSchema.index({
   title: "text",
   description: "text",

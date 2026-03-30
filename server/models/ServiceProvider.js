@@ -19,12 +19,10 @@ import User from "./User.js";
 
 const serviceProviderSchema = new Schema({
   nic: { type: String, required: true, unique: true },
-  yearsOfExperience: { type: Number, default: 0, min: 0 },
-  profileNote: { type: String, default: "" },
   serviceCategories: [
     {
       type: String,
-      enum: ["plumbing", "electrical", "cleaning", "painting", "carpentry", "masons", "welding", "cctv", "general", "other"],
+      enum: ["plumbing", "electrical", "cleaning", "painting", "carpentry", "general", "other"],
     },
   ],
   areasOfOperation: [

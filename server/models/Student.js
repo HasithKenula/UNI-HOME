@@ -24,14 +24,7 @@ const studentSchema = new Schema({
     unique: true,
     match: [/^[a-zA-Z0-9._%+-]+@my\.sliit\.lk$/, "Must be a valid SLIIT email"],
   },
-  studentId: {
-    type: String,
-    required: true,
-    unique: true,
-    uppercase: true,
-    trim: true,
-    match: [/^(IT|BM|EN)\d+$/, "Student ID must start with IT, BM, or EN"],
-  }, // e.g., IT23822580 / BM23822580 / EN23822580
+  studentId: { type: String, required: true, unique: true }, // e.g., IT23822580
   batch: { type: String }, // e.g., Y2S2
   faculty: { type: String }, // e.g., Computing
   favorites: [{ type: Schema.Types.ObjectId, ref: "Accommodation" }],
