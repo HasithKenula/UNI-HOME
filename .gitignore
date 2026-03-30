@@ -27,7 +27,9 @@ yarn-error.log*
 *~
 .DS_Store
 
-
+# Uploads & Media
+/server/uploads/
+/server/public/uploads/
 
 # Temporary files
 *.tmp

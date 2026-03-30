@@ -29,38 +29,14 @@ connectDB();
 // MIDDLEWARE
 // ============================================================================
 
+// Security headers
+app.use(helmet());
+
 // CORS configuration
-const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');
-
-const configuredClientUrls = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
-  .split(',')
-  .map(normalizeOrigin)
-  .filter(Boolean);
-
-const allowedOrigins = new Set([
-  ...configuredClientUrls,
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://127.0.0.1:5174',
-]);
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow non-browser requests (no Origin header) and configured browser origins.
-    if (!origin || allowedOrigins.has(origin)) {
-      callback(null, true);
-      return;
-    }
-
-    callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
 
 // Body parser
 app.use(express.json());
@@ -78,7 +54,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 50 * 60 * 1000, // 50 minutes
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.'
 });
@@ -100,27 +76,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Import routes
-import authRoutes from './routes/auth.routes.js';
-import userRoutes from './routes/user.routes.js';
-import accommodationRoutes from './routes/accommodation.routes.js';
-import bookingRoutes from './routes/booking.routes.js';
-import favoriteRoutes from './routes/favorite.routes.js';
-import inquiryRoutes from './routes/inquiry.routes.js';
-import ticketRoutes from './routes/ticket.routes.js';
-import serviceProviderRoutes from './routes/serviceProvider.routes.js';
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/accommodations', accommodationRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/favorites', favoriteRoutes);
-app.use('/api/inquiries', inquiryRoutes);
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/service-providers', serviceProviderRoutes);
-
-// Additional routes (to be added in future phases)
+// API Routes (to be added in Phase 1+)
+// app.use('/api/auth', require('./routes/auth.routes'));
+// app.use('/api/users', require('./routes/user.routes'));
+// app.use('/api/accommodations', require('./routes/accommodation.routes'));
 // app.use('/api/rooms', require('./routes/room.routes'));
 // app.use('/api/bookings', require('./routes/booking.routes'));
 // app.use('/api/payments', require('./routes/payment.routes'));
@@ -149,34 +108,18 @@ app.use(errorHandler);
 // START SERVER
 // ============================================================================
 
-const BASE_PORT = Number(process.env.PORT) || 5000;
-let server;
+const PORT = process.env.PORT || 5000;
 
-const startServer = (port) => {
-  server = app.listen(port, () => {
-    console.log(`
+const server = app.listen(PORT, () => {
+  console.log(`
   ╔════════════════════════════════════════════════════════════╗
   ║  🏠 SLIIT Accommodation System - Server Running           ║
-  ║  📡 Port: ${port}                                        ║
+  ║  📡 Port: ${PORT}                                        ║
   ║  🌍 Environment: ${process.env.NODE_ENV || 'development'}                        ║
   ║  📅 Started: ${new Date().toLocaleString()}               ║
   ╚════════════════════════════════════════════════════════════╝
   `);
-  });
-
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      const nextPort = port + 1;
-      console.warn(`Port ${port} is in use. Retrying on port ${nextPort}...`);
-      startServer(nextPort);
-      return;
-    }
-
-    throw err;
-  });
-};
-
-startServer(BASE_PORT);
+});
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {

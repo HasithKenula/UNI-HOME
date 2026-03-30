@@ -10,14 +10,9 @@ import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const DEFAULT_MAX_FILE_SIZE = 50 * 1024 * 1024;
-const serverRootDir = path.resolve(__dirname, '..');
 
 // Create uploads directory if it doesn't exist
-const configuredUploadPath = process.env.UPLOAD_PATH || './uploads';
-const uploadDir = path.isAbsolute(configuredUploadPath)
-  ? configuredUploadPath
-  : path.resolve(serverRootDir, configuredUploadPath);
+const uploadDir = process.env.UPLOAD_PATH || './uploads';
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -30,12 +25,15 @@ const storage = multer.diskStorage({
 
     if (file.fieldname === 'profileImage') {
       folder = path.join(uploadDir, 'profiles');
+    } else if (file.fieldname === 'images' || file.fieldname === 'coverImage') {
+      folder = path.join(uploadDir, 'accommodations');
+    } else if (file.fieldname === 'video') {
+      folder = path.join(uploadDir, 'videos');
     } else if (file.fieldname.includes('document') || file.fieldname.includes('Document')) {
       folder = path.join(uploadDir, 'documents');
     } else if (file.fieldname === 'certifications') {
       folder = path.join(uploadDir, 'certifications');
     }
-    // photos and videos go directly to the uploads root
 
     // Create folder if it doesn't exist
     if (!fs.existsSync(folder)) {
@@ -65,7 +63,7 @@ const fileFilter = (req, file, cb) => {
   const mimetype = file.mimetype;
 
   // Check file type based on fieldname
-  if (file.fieldname === 'profileImage' || file.fieldname === 'images' || file.fieldname === 'coverImage' || file.fieldname === 'photos' || file.fieldname === 'roomPhotos') {
+  if (file.fieldname === 'profileImage' || file.fieldname === 'images' || file.fieldname === 'coverImage') {
     if (allowedImageTypes.test(ext) && mimetype.startsWith('image/')) {
       return cb(null, true);
     } else {
@@ -73,7 +71,7 @@ const fileFilter = (req, file, cb) => {
     }
   }
 
-  if (file.fieldname === 'video' || file.fieldname === 'videos' || file.fieldname === 'roomVideos') {
+  if (file.fieldname === 'video') {
     if (allowedVideoTypes.test(ext) && mimetype.startsWith('video/')) {
       return cb(null, true);
     } else {
@@ -97,7 +95,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || DEFAULT_MAX_FILE_SIZE,
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB default
   },
   fileFilter: fileFilter
 });
@@ -116,7 +114,7 @@ const uploadSingle = (fieldName) => {
         if (err.code === 'LIMIT_FILE_SIZE') {
           return res.status(400).json({
             success: false,
-            message: `File too large. Maximum size is ${(parseInt(process.env.MAX_FILE_SIZE) || DEFAULT_MAX_FILE_SIZE) / 1024 / 1024}MB`
+            message: `File too large. Maximum size is ${(parseInt(process.env.MAX_FILE_SIZE) || 5242880) / 1024 / 1024}MB`
           });
         }
         return res.status(400).json({
@@ -146,7 +144,7 @@ const uploadMultiple = (fieldName, maxCount = 10) => {
         if (err.code === 'LIMIT_FILE_SIZE') {
           return res.status(400).json({
             success: false,
-            message: `File too large. Maximum size is ${(parseInt(process.env.MAX_FILE_SIZE) || DEFAULT_MAX_FILE_SIZE) / 1024 / 1024}MB`
+            message: `File too large. Maximum size is ${(parseInt(process.env.MAX_FILE_SIZE) || 5242880) / 1024 / 1024}MB`
           });
         }
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
@@ -182,7 +180,7 @@ const uploadFields = (fields) => {
         if (err.code === 'LIMIT_FILE_SIZE') {
           return res.status(400).json({
             success: false,
-            message: `File too large. Maximum size is ${(parseInt(process.env.MAX_FILE_SIZE) || DEFAULT_MAX_FILE_SIZE) / 1024 / 1024}MB`
+            message: `File too large. Maximum size is ${(parseInt(process.env.MAX_FILE_SIZE) || 5242880) / 1024 / 1024}MB`
           });
         }
         return res.status(400).json({

@@ -42,25 +42,6 @@ const roomSchema = new Schema(
     hasAirConditioning: { type: Boolean, default: false },
     isFurnished: { type: Boolean, default: false },
 
-    // Room-level media
-    media: {
-      photos: [
-        {
-          url: { type: String, required: true },
-          caption: { type: String, default: "" },
-          isPrimary: { type: Boolean, default: false },
-          uploadedAt: { type: Date, default: Date.now },
-        },
-      ],
-      videos: [
-        {
-          url: { type: String, required: true },
-          caption: { type: String, default: "" },
-          uploadedAt: { type: Date, default: Date.now },
-        },
-      ],
-    },
-
     status: {
       type: String,
       enum: ["available", "occupied", "maintenance", "reserved"],
