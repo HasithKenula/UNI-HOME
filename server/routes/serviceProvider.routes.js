@@ -3,18 +3,22 @@ import validate from '../middleware/validate.middleware.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/role.middleware.js';
 import {
+	cancelOwnerServiceBooking,
 	createServiceProviderBooking,
 	getServiceProviderCategories,
 	getMyServiceProviderBookings,
 	getMyServiceProviderProfile,
 	getServiceProviders,
 	removeMyServiceProviderProfile,
+	updateOwnerServiceBooking,
 	updateMyServiceProviderProfile,
 	updateServiceProviderBookingStatus,
 } from '../controllers/serviceProvider.controller.js';
 import {
+	cancelOwnerServiceBookingValidator,
 	createServiceBookingValidator,
 	serviceProvidersFilterValidator,
+	updateOwnerServiceBookingValidator,
 	updateServiceBookingStatusValidator,
 	updateServiceProviderProfileValidator,
 } from '../validators/serviceProvider.validator.js';
@@ -30,6 +34,8 @@ router.delete('/me', protect, authorize('service_provider', 'admin'), removeMySe
 
 router.post('/bookings', protect, authorize('owner', 'admin'), createServiceBookingValidator, validate, createServiceProviderBooking);
 router.get('/bookings/mine', protect, authorize('owner', 'service_provider', 'admin'), getMyServiceProviderBookings);
+router.put('/bookings/:id', protect, authorize('owner', 'admin'), updateOwnerServiceBookingValidator, validate, updateOwnerServiceBooking);
+router.patch('/bookings/:id/cancel', protect, authorize('owner', 'admin'), cancelOwnerServiceBookingValidator, validate, cancelOwnerServiceBooking);
 router.patch('/bookings/:id/status', protect, authorize('service_provider', 'admin'), updateServiceBookingStatusValidator, validate, updateServiceProviderBookingStatus);
 
 export default router;
