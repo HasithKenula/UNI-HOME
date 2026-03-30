@@ -8,7 +8,7 @@ import Button from '../common/Button';
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s'-]*$/;
 const PHONE_REGEX = /^\d{10}$/;
 const STUDENT_EMAIL_REGEX = /^[^\s@]+@my\.sliit\.lk$/i;
-const STUDENT_ID_REGEX = /^IT\d+$/;
+const STUDENT_ID_REGEX = /^(IT|BM|EN)\d+$/;
 const PASSWORD_REGEX = /^[A-Z].{8,}$/;
 
 const StudentRegisterForm = ({ onSuccess }) => {
@@ -61,7 +61,7 @@ const StudentRegisterForm = ({ onSuccess }) => {
         return '';
       case 'studentId':
         if (!value.trim()) return 'Student ID is required';
-        if (!STUDENT_ID_REGEX.test(value.trim().toUpperCase())) return 'Student ID must start with IT';
+        if (!STUDENT_ID_REGEX.test(value.trim().toUpperCase())) return 'Student ID must start with IT, BM, or EN';
         return '';
       case 'phone':
         if (!value) return 'Phone number is required';
@@ -192,7 +192,7 @@ const StudentRegisterForm = ({ onSuccess }) => {
         value={formData.studentId}
         onChange={handleChange}
         error={errors.studentId}
-        placeholder="IT23822580"
+        placeholder="IT23822580 / BM23822580 / EN23822580"
         maxLength={12}
         required
       />
