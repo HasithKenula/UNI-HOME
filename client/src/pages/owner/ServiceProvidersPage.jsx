@@ -8,7 +8,6 @@ import { getServiceProviderCategories } from '../../features/providers/providerA
 import {
   createServiceProviderBookingAsync,
   fetchAvailableProvidersAsync,
-  fetchMyProviderBookingsAsync,
 } from '../../features/providers/providerSlice';
 
 const CATEGORY_OPTIONS = [
@@ -32,11 +31,20 @@ const DISTRICT_OPTIONS = [
   { value: 'Kurunegala', label: 'Kurunegala' },
 ];
 
+const getMinUpcomingDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const ServiceProvidersPage = () => {
   const { category: routeCategory } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { providers, providerBookings, loading, actionLoading } = useSelector((state) => state.providers);
+  const { providers, loading, actionLoading } = useSelector((state) => state.providers);
 
   const [categoryOptions, setCategoryOptions] = useState(CATEGORY_OPTIONS);
 
@@ -59,10 +67,6 @@ const ServiceProvidersPage = () => {
     if (filters.city) params.city = filters.city;
 
     dispatch(fetchAvailableProvidersAsync(params));
-  };
-
-  const loadBookings = () => {
-    dispatch(fetchMyProviderBookingsAsync({}));
   };
 
   useEffect(() => {
@@ -89,10 +93,6 @@ const ServiceProvidersPage = () => {
   useEffect(() => {
     loadProviders();
   }, [dispatch, filters.category, filters.district, filters.city]);
-
-  useEffect(() => {
-    loadBookings();
-  }, [dispatch]);
 
   const openBookingModal = (provider) => {
     const firstArea = provider?.areasOfOperation?.[0];
@@ -124,9 +124,10 @@ const ServiceProvidersPage = () => {
     () => providers.find((provider) => provider._id === bookingForm.providerId),
     [providers, bookingForm.providerId]
   );
+  const minUpcomingDate = useMemo(() => getMinUpcomingDate(), []);
 
   const handleCreateBooking = async () => {
-    if (!bookingForm.providerId || !bookingForm.category || !bookingForm.district || !bookingForm.city) {
+    if (!bookingForm.providerId || !bookingForm.category || !bookingForm.district || !bookingForm.city || !bookingForm.preferredDate) {
       return;
     }
 
@@ -136,12 +137,11 @@ const ServiceProvidersPage = () => {
       district: bookingForm.district,
       area: bookingForm.city,
       note: bookingForm.note,
-      preferredDate: bookingForm.preferredDate || undefined,
+      preferredDate: bookingForm.preferredDate,
     }));
 
     if (result.type === 'providers/createServiceBooking/fulfilled') {
       closeBookingModal();
-      loadBookings();
     }
   };
 
@@ -197,9 +197,15 @@ const ServiceProvidersPage = () => {
         </aside>
 
         <section>
-          <div className="mb-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <Link to="/owner/service-categories" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
               ← Back to Category Page
+            </Link>
+            <Link
+              to="/owner/provider-bookings"
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              My Booking
             </Link>
           </div>
           {!filters.category ? (
@@ -266,35 +272,6 @@ const ServiceProvidersPage = () => {
         </section>
       </div>
 
-      <div className="mt-10 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900">My Provider Bookings</h2>
-        <div className="mt-4 space-y-3">
-          {providerBookings.length === 0 ? (
-            <p className="text-gray-600">No provider bookings yet.</p>
-          ) : (
-            providerBookings.map((booking) => (
-              <div key={booking._id} className="rounded-xl border border-gray-200 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {booking.provider?.firstName} {booking.provider?.lastName}
-                    </p>
-                    <p className="text-sm text-gray-600 capitalize">
-                      {booking.category} • {booking.district} / {booking.area}
-                    </p>
-                    <p className="text-sm text-gray-600">Status: <span className="font-semibold capitalize">{booking.status}</span></p>
-                  </div>
-                </div>
-                {booking.note && <p className="mt-2 text-sm text-gray-700">Note: {booking.note}</p>}
-                <p className="text-xs text-gray-500 mt-1">
-                  Contact: {booking.provider?.phone || '-'} • {booking.provider?.email || '-'}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
       {bookingForm.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
@@ -318,6 +295,8 @@ const ServiceProvidersPage = () => {
                 name="preferredDate"
                 value={bookingForm.preferredDate}
                 onChange={(event) => setBookingForm((prev) => ({ ...prev, preferredDate: event.target.value }))}
+                min={minUpcomingDate}
+                required
               />
               <Select
                 label="District"

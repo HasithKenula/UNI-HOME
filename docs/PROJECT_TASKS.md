@@ -1088,7 +1088,7 @@
 ### `GET /api/service-providers`
 
 - [x] Route (protected: owner)
-- [x] Controller: find approved + available providers, filter by category/district/city/area
+- [x] Controller: find available providers, including newly registered (`pending`) and approved providers, filtered by category/district/city/area
 - [x] Include provider profile note + contact details in provider list response
 - [x] Support expanded maintenance categories (plumbing, electrical, cleaning, painting, carpentry, masons, welding, cctv, other)
 - [ ] Test → 200
@@ -1117,6 +1117,7 @@
 
 - [x] Route (protected: owner)
 - [x] Controller: owner books provider by category + district + area + note
+- [x] Validate `preferredDate` must be an upcoming day (future-only)
 
 ### `GET /api/service-providers/bookings/mine`
 
@@ -1125,8 +1126,12 @@
 
 ### `PATCH /api/service-providers/bookings/:id/status`
 
-- [x] Route (protected: owner)
-- [x] Controller: owner updates booking status to accepted/completed
+- [x] Route (protected: service provider)
+- [x] Controller: provider accepts/rejects pending bookings and completes in-progress bookings
+- [x] Accept action updates booking status to `in_progress`
+- [x] Completed action updates booking status to `completed`
+- [x] Auto-sync provider availability: unavailable while active booking exists, available again after completion/rejection/cancellation
+- [x] Filter owner booking list to show only providers with no active bookings (available only)
 
 ## 6.3 Frontend — Student Ticket Pages
 
@@ -1186,7 +1191,10 @@
 - [x] View provider profile note and contact actions (phone/email)
 - [x] Show provider photo in provider listing cards
 - [x] Book provider under selected category
-- [x] Owner booking status update actions (accepted/completed)
+- [x] Preferred date input allows upcoming days only (no today/past)
+- [x] Move owner service bookings into separate page (`pages/owner/MyProviderBookingsPage.jsx`)
+- [x] Add `My Booking` button on provider finder page to open separate bookings view
+- [x] Owner booking edit and cancel actions in separate bookings view
 
 ### Owner Service Category Page
 
@@ -1205,6 +1213,10 @@
 - [x] Remove embedded profile edit section from dashboard
 - [x] Add quick action link to dedicated provider profile page
 - [x] Show owner service bookings + owner contact details
+- [x] Pending tab actions: Accept Request / Reject Request
+- [x] In Progress tab action: Mark Completed
+- [x] Show booking date in pending, in-progress, and completed booking tabs
+- [x] Remove `Go to My Tasks` button
 
 ### My Tasks Page
 
