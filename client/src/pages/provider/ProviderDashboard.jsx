@@ -182,6 +182,11 @@ const ProviderDashboard = () => {
                                 <p className="text-sm text-gray-600">
                                     Area: {booking.district} / {booking.area}
                                 </p>
+                                {booking.preferredDate && (
+                                    <p className="text-sm text-gray-600">
+                                        Booking Date: {new Date(booking.preferredDate).toLocaleDateString()}
+                                    </p>
+                                )}
                                 <p className="text-sm text-gray-600">Contact: {booking.owner?.phone || '-'} • {booking.owner?.email || '-'}</p>
                                 {booking.note && <p className="mt-1 text-sm text-gray-700">Note: {booking.note}</p>}
 
@@ -226,9 +231,6 @@ const ProviderDashboard = () => {
             <div className="mt-6 flex flex-wrap gap-3">
                 <Link to="/provider/profile">
                     <Button variant="outline">Manage Profile</Button>
-                </Link>
-                <Link to="/provider/tasks">
-                    <Button>Go to My Tasks</Button>
                 </Link>
             </div>
         </div>

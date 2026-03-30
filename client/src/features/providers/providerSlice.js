@@ -57,6 +57,28 @@ export const fetchMyProviderBookingsAsync = createAsyncThunk(
     }
 );
 
+export const updateMyProviderBookingAsync = createAsyncThunk(
+    'providers/updateMyServiceBooking',
+    async ({ id, payload }, { rejectWithValue }) => {
+        try {
+            return await providerAPI.updateMyServiceProviderBooking(id, payload);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to update service booking' });
+        }
+    }
+);
+
+export const cancelMyProviderBookingAsync = createAsyncThunk(
+    'providers/cancelMyServiceBooking',
+    async ({ id, payload }, { rejectWithValue }) => {
+        try {
+            return await providerAPI.cancelMyServiceProviderBooking(id, payload);
+        } catch (error) {
+            return rejectWithValue(error.response?.data || { message: 'Failed to cancel service booking' });
+        }
+    }
+);
+
 export const updateProviderBookingStatusAsync = createAsyncThunk(
     'providers/updateServiceBookingStatus',
     async ({ id, payload }, { rejectWithValue }) => {
@@ -191,6 +213,34 @@ const providerSlice = createSlice({
             .addCase(fetchMyProviderBookingsAsync.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload?.message || 'Failed to fetch service bookings';
+            })
+            .addCase(updateMyProviderBookingAsync.pending, (state) => {
+                state.actionLoading = true;
+            })
+            .addCase(updateMyProviderBookingAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                if (action.payload.data) {
+                    replaceProviderBooking(state, action.payload.data);
+                }
+                toast.success(action.payload?.message || 'Service booking updated');
+            })
+            .addCase(updateMyProviderBookingAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                toast.error(action.payload?.message || 'Failed to update service booking');
+            })
+            .addCase(cancelMyProviderBookingAsync.pending, (state) => {
+                state.actionLoading = true;
+            })
+            .addCase(cancelMyProviderBookingAsync.fulfilled, (state, action) => {
+                state.actionLoading = false;
+                if (action.payload.data) {
+                    replaceProviderBooking(state, action.payload.data);
+                }
+                toast.success(action.payload?.message || 'Service booking cancelled');
+            })
+            .addCase(cancelMyProviderBookingAsync.rejected, (state, action) => {
+                state.actionLoading = false;
+                toast.error(action.payload?.message || 'Failed to cancel service booking');
             })
             .addCase(updateProviderBookingStatusAsync.pending, (state) => {
                 state.actionLoading = true;
