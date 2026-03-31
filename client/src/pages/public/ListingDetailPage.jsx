@@ -81,6 +81,8 @@ const ListingDetailPage = () => {
     const [showContactModal, setShowContactModal] = useState(false);
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [selectedBookingRoomId, setSelectedBookingRoomId] = useState('');
+    const [selectedRoomMedia, setSelectedRoomMedia] = useState(null);
+    const [activeRoomImage, setActiveRoomImage] = useState(0);
     const [latestBookingNumber, setLatestBookingNumber] = useState('');
     const [showBookingSuccessModal, setShowBookingSuccessModal] = useState(false);
 
@@ -166,6 +168,14 @@ const ListingDetailPage = () => {
         });
     }, [photos]);
 
+    const roomImageUrls = useMemo(() => {
+        if (!selectedRoomMedia?.photos) return [];
+        return selectedRoomMedia.photos.map((photo) => {
+            if (!photo?.url) return 'https://placehold.co/900x500?text=No+Image';
+            return withFallbackMedia(photo.url).primary;
+        });
+    }, [selectedRoomMedia]);
+
     if (loading) {
         return (
             <div className="mx-auto max-w-6xl px-4 py-10">
@@ -241,6 +251,67 @@ const ListingDetailPage = () => {
                         <div className="mt-4 text-right">
                             <Button onClick={() => setShowBookingSuccessModal(false)}>Done</Button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {selectedRoomMedia && (
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-2 sm:items-center sm:p-4">
+                    <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-2xl font-bold text-gray-900">{selectedRoomMedia.title}</h3>
+                                <p className="text-sm text-gray-600">Room photos and videos</p>
+                            </div>
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    setSelectedRoomMedia(null);
+                                    setActiveRoomImage(0);
+                                }}
+                            >
+                                Close
+                            </Button>
+                        </div>
+
+                        {roomImageUrls.length > 0 && (
+                            <>
+                                <img
+                                    src={roomImageUrls[activeRoomImage]}
+                                    alt={selectedRoomMedia.title}
+                                    className="h-72 w-full rounded-xl object-cover sm:h-[28rem]"
+                                />
+                                <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                                    {roomImageUrls.map((url, index) => (
+                                        <button
+                                            key={`${url}-${index}`}
+                                            onClick={() => setActiveRoomImage(index)}
+                                            className={`overflow-hidden rounded-lg border-2 ${
+                                                index === activeRoomImage ? 'border-blue-500' : 'border-gray-200'
+                                            }`}
+                                        >
+                                            <img src={url} alt={`Room view ${index + 1}`} className="h-16 w-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
+                        {(selectedRoomMedia.videos || []).length > 0 && (
+                            <div className="mt-6">
+                                <h4 className="mb-3 text-lg font-semibold text-gray-900">Videos</h4>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    {selectedRoomMedia.videos.map((video, index) => (
+                                        <video
+                                            key={`${video.url || index}-${index}`}
+                                            controls
+                                            className="h-56 w-full rounded-xl bg-black object-cover"
+                                            src={video?.url ? withFallbackMedia(video.url).primary : ''}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -515,12 +586,34 @@ const ListingDetailPage = () => {
                                             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
                                                 <span className="rounded-full bg-gray-200 px-2 py-1 text-gray-700">Status: {room.status}</span>
                                                 <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">Slots: {availableSlots}</span>
+                                                {(room.media?.photos || []).length > 0 && (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-sky-700">
+                                                        <Camera className="w-3.5 h-3.5" /> {(room.media?.photos || []).length} photo(s)
+                                                    </span>
+                                                )}
                                                 {(room.media?.videos || []).length > 0 && (
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-purple-700">
                                                         <Video className="w-3.5 h-3.5" /> {(room.media?.videos || []).length} video(s)
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {((room.media?.photos || []).length > 0 || (room.media?.videos || []).length > 0) && (
+                                                <Button
+                                                    fullWidth
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        setSelectedRoomMedia({
+                                                            title: `Room ${room.roomNumber || '-'}`,
+                                                            photos: room.media?.photos || [],
+                                                            videos: room.media?.videos || [],
+                                                        });
+                                                        setActiveRoomImage(0);
+                                                    }}
+                                                >
+                                                    View Room Media
+                                                </Button>
+                                            )}
 
                                             <Button
                                                 fullWidth

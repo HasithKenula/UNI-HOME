@@ -32,12 +32,19 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
         [listing]
     );
 
+    const availableRoomTypes = useMemo(() => {
+        const roomTypesFromListing = Array.isArray(listing?.roomTypes) ? listing.roomTypes : [];
+        const roomTypesFromRooms = (listing?.rooms || []).map((room) => room?.roomType).filter(Boolean);
+        const merged = [...new Set([...roomTypesFromListing, ...roomTypesFromRooms])];
+        return merged.length > 0 ? merged : ['single', 'double', 'shared', 'studio'];
+    }, [listing]);
+
     const firstAvailableRoom = availableRooms[0] || null;
 
     const [form, setForm] = useState({
         bookingScope: firstAvailableRoom ? 'room' : 'accommodation',
         roomId: firstAvailableRoom?._id || '',
-        roomType: listing?.roomTypes?.[0] || firstAvailableRoom?.roomType || 'single',
+        roomType: availableRoomTypes[0] || firstAvailableRoom?.roomType || 'single',
         checkInDate: '',
         contractPeriod: listing?.bookingRules?.minimumPeriod || '6_months',
         specialRequests: '',
@@ -238,7 +245,7 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                     onChange={(e) => handleChange('roomType', e.target.value)}
                     error={errors.roomType}
                     required
-                    options={(listing?.roomTypes || ['single', 'double', 'shared', 'studio']).map((type) => ({
+                    options={availableRoomTypes.map((type) => ({
                         value: type,
                         label: type.charAt(0).toUpperCase() + type.slice(1),
                     }))}

@@ -255,6 +255,25 @@ const sanitizeAccommodationPayload = (payload) => {
     return sanitized;
 };
 
+const syncAccommodationRoomSnapshot = async (accommodationId) => {
+    const rooms = await Room.find({ accommodation: accommodationId }).select('status roomType');
+
+    const totalRooms = rooms.length;
+    const availableRooms = rooms.filter((room) => room.status === 'available').length;
+    const roomTypes = [...new Set(rooms.map((room) => room.roomType).filter(Boolean))];
+
+    const update = {
+        totalRooms,
+        availableRooms,
+    };
+
+    if (roomTypes.length > 0) {
+        update.roomTypes = roomTypes;
+    }
+
+    await Accommodation.findByIdAndUpdate(accommodationId, update);
+};
+
 const ensureOwnerListing = async (accommodationId, reqUser) => {
     const accommodation = await Accommodation.findOne({
         _id: accommodationId,
@@ -778,26 +797,7 @@ const createRoom = async (req, res) => {
             media: roomMedia,
         });
 
-        const counts = await Room.aggregate([
-            { $match: { accommodation: accommodation._id } },
-            {
-                $group: {
-                    _id: '$accommodation',
-                    totalRooms: { $sum: 1 },
-                    availableRooms: {
-                        $sum: {
-                            $cond: [{ $eq: ['$status', 'available'] }, 1, 0],
-                        },
-                    },
-                },
-            },
-        ]);
-
-        if (counts.length > 0) {
-            accommodation.totalRooms = counts[0].totalRooms;
-            accommodation.availableRooms = counts[0].availableRooms;
-            await accommodation.save();
-        }
+        await syncAccommodationRoomSnapshot(accommodation._id);
 
         res.status(201).json({
             success: true,
@@ -883,6 +883,7 @@ const updateRoom = async (req, res) => {
         }
 
         await room.save();
+        await syncAccommodationRoomSnapshot(accommodation._id);
 
         res.status(200).json({
             success: true,
@@ -931,25 +932,7 @@ const deleteRoom = async (req, res) => {
         }
 
         await Room.findByIdAndDelete(room._id);
-
-        const counts = await Room.aggregate([
-            { $match: { accommodation: accommodation._id } },
-            {
-                $group: {
-                    _id: '$accommodation',
-                    totalRooms: { $sum: 1 },
-                    availableRooms: {
-                        $sum: {
-                            $cond: [{ $eq: ['$status', 'available'] }, 1, 0],
-                        },
-                    },
-                },
-            },
-        ]);
-
-        accommodation.totalRooms = counts[0]?.totalRooms || 0;
-        accommodation.availableRooms = counts[0]?.availableRooms || 0;
-        await accommodation.save();
+        await syncAccommodationRoomSnapshot(accommodation._id);
 
         res.status(200).json({
             success: true,

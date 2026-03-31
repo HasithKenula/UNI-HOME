@@ -29,13 +29,12 @@ connectDB();
 // MIDDLEWARE
 // ============================================================================
 
-// Security headers
-app.use(helmet());
-
 // CORS configuration
-const configuredClientUrls = (process.env.CLIENT_URL || '')
+const normalizeOrigin = (url = '') => url.trim().replace(/\/$/, '');
+
+const configuredClientUrls = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .split(',')
-  .map((url) => url.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 const allowedOrigins = new Set([
@@ -45,17 +44,23 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:5174',
 ]);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow non-browser requests (no Origin header) and configured browser origins.
     if (!origin || allowedOrigins.has(origin)) {
       callback(null, true);
       return;
     }
+
     callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
-}));
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body parser
 app.use(express.json());
@@ -73,7 +78,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 50 * 60 * 1000, // 50 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.'
 });

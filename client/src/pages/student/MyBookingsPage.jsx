@@ -33,6 +33,10 @@ const getMediaUrlWithFallback = (url = '') => {
 };
 
 const getBookingPhotoPath = (booking) => {
+    const firstRoomPhoto = booking?.room?.media?.photos?.[0];
+    if (typeof firstRoomPhoto === 'string') return firstRoomPhoto;
+    if (firstRoomPhoto?.url) return firstRoomPhoto.url;
+
     const firstMediaPhoto = booking?.accommodation?.media?.photos?.[0];
     if (typeof firstMediaPhoto === 'string') return firstMediaPhoto;
     if (firstMediaPhoto?.url) return firstMediaPhoto.url;

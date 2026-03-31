@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import EmailRoundedIcon from '@mui/icons-material/EmailRounded';
 import LockRoundedIcon from '@mui/icons-material/LockRounded';
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 
 const PASSWORD_REGEX = /^[A-Z].{8,}$/;
@@ -132,8 +131,8 @@ const LoginPage = () => {
         >
           <Stack spacing={3}>
             <Box className="text-center">
-              <Box className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-lg">
-                <HomeRoundedIcon />
+              <Box className="mx-auto mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-primary-100">
+                <img src="/upload/unihome-logo.png" alt="UNIHOME logo" className="h-full w-full object-cover" />
               </Box>
               <Typography variant="h4" fontWeight={700} sx={{ color: '#374151' }}>
                 Welcome Back
