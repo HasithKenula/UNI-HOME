@@ -559,6 +559,12 @@
 - [x] Controller: find all active tenants, create notification for each
 - [x] Test → 200
 
+### `GET /api/users/tenant-notices`
+
+- [x] Route (protected: student)
+- [x] Controller: fetch tenant notices (owner-sent accommodation notices) for logged-in student
+- [x] Test → 200
+
 ## 2.5 Frontend — Owner Accommodation Pages
 
 ### Create Listing Page
@@ -607,6 +613,7 @@
 - [x] Tenant list with student info, room, contract period, payment status
 - [x] Assign room action (for confirmed bookings without room)
 - [x] Send notice button → notice form modal
+- [x] Student dashboard notice panel shows owner notices for tenant accommodations
 
 ## 2.6 Frontend — Public Search & Listing Pages
 

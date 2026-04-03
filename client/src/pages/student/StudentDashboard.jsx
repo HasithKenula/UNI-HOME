@@ -1,18 +1,37 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { CalendarClock, Clock3, Heart, Wrench } from 'lucide-react';
+import { BellRing, CalendarClock, Clock3, Heart, Wrench } from 'lucide-react';
 import { fetchBookingsAsync } from '../../features/bookings/bookingSlice';
 import Button from '../../components/common/Button';
+import { getTenantNotices } from '../../features/notifications/notificationAPI';
 
 const StudentDashboard = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { list, loading } = useSelector((state) => state.bookings);
+    const [tenantNotices, setTenantNotices] = useState([]);
+    const [noticesLoading, setNoticesLoading] = useState(false);
 
     useEffect(() => {
         dispatch(fetchBookingsAsync({ page: 1, limit: 20 }));
     }, [dispatch]);
+
+    useEffect(() => {
+        const fetchTenantNotices = async () => {
+            try {
+                setNoticesLoading(true);
+                const response = await getTenantNotices({ limit: 6 });
+                setTenantNotices(response.data || []);
+            } catch {
+                setTenantNotices([]);
+            } finally {
+                setNoticesLoading(false);
+            }
+        };
+
+        fetchTenantNotices();
+    }, []);
 
     const stats = useMemo(() => {
         const total = list.length;
@@ -49,6 +68,37 @@ const StudentDashboard = () => {
                     <p className="text-sm text-gray-700">Cancelled</p>
                     <p className="mt-1 text-3xl font-bold text-gray-700">{stats.cancelled}</p>
                 </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <BellRing className="h-5 w-5 text-emerald-600" /> Owner Notices
+                    </h2>
+                </div>
+
+                {noticesLoading ? (
+                    <p className="text-gray-600">Loading notices...</p>
+                ) : tenantNotices.length === 0 ? (
+                    <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center text-gray-500">
+                        No tenant notices yet.
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {tenantNotices.map((notice) => (
+                            <div key={notice._id} className="rounded-xl border-2 border-emerald-100 bg-emerald-50 p-4">
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="font-semibold text-gray-900">{notice.title}</p>
+                                    <span className="text-xs text-gray-500">
+                                        {notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : ''}
+                                    </span>
+                                </div>
+                                <p className="mt-1 text-sm text-emerald-800">{notice.accommodationTitle}</p>
+                                <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{notice.message}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
