@@ -508,11 +508,51 @@ const getAccommodationById = async (req, res) => {
             AIReviewSummary.findOne({ accommodation: accommodation._id }),
         ]);
 
+        const roomIds = rooms.map((room) => room._id);
+        const activeBookingsByRoom = roomIds.length
+            ? await Booking.aggregate([
+                  {
+                      $match: {
+                          room: { $in: roomIds },
+                          status: { $in: ['pending', 'confirmed'] },
+                      },
+                  },
+                  {
+                      $group: {
+                          _id: '$room',
+                          count: { $sum: 1 },
+                      },
+                  },
+              ])
+            : [];
+
+        const bookingCountMap = new Map(
+            activeBookingsByRoom.map((entry) => [String(entry._id), Number(entry.count || 0)])
+        );
+
+        const roomsWithLiveAvailability = rooms.map((room) => {
+            const roomObj = room.toObject();
+            const maxOccupants = Math.max(1, Number(roomObj.maxOccupants || 1));
+            const activeBookingCount = bookingCountMap.get(String(roomObj._id)) || 0;
+            const fallbackOccupants = Number(roomObj.currentOccupants || 0);
+            const occupiedCount = Math.max(activeBookingCount, fallbackOccupants);
+            const availableSlots = Math.max(0, maxOccupants - occupiedCount);
+            const isBookable = roomObj.status === 'available' && availableSlots > 0;
+
+            return {
+                ...roomObj,
+                status: roomObj.status === 'available' && availableSlots <= 0 ? 'occupied' : roomObj.status,
+                activeBookingCount,
+                availableSlots,
+                isBookable,
+            };
+        });
+
         res.status(200).json({
             success: true,
             data: {
                 ...accommodation.toObject(),
-                rooms,
+                rooms: roomsWithLiveAvailability,
                 reviews,
                 aiSummary,
             },

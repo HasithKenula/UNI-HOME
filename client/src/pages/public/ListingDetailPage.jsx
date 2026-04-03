@@ -172,6 +172,12 @@ const ListingDetailPage = () => {
 
     const availableRoomCount = useMemo(() => {
         return (listing?.rooms || []).filter((room) => {
+            if (typeof room?.isBookable === 'boolean') {
+                return room.isBookable;
+            }
+            if (Number.isFinite(Number(room?.availableSlots))) {
+                return Number(room.availableSlots) > 0 && room?.status === 'available';
+            }
             const maxOccupants = Number(room?.maxOccupants || 1);
             const currentOccupants = Number(room?.currentOccupants || 0);
             return room?.status === 'available' && currentOccupants < maxOccupants;
@@ -684,8 +690,12 @@ const ListingDetailPage = () => {
                                 {(listing.rooms || []).map((room) => {
                                     const maxOccupants = Number(room.maxOccupants || 1);
                                     const currentOccupants = Number(room.currentOccupants || 0);
-                                    const availableSlots = Math.max(0, maxOccupants - currentOccupants);
-                                    const isRoomBookable = room.status === 'available' && availableSlots > 0;
+                                    const availableSlots = Number.isFinite(Number(room.availableSlots))
+                                        ? Math.max(0, Number(room.availableSlots))
+                                        : Math.max(0, maxOccupants - currentOccupants);
+                                    const isRoomBookable = typeof room.isBookable === 'boolean'
+                                        ? room.isBookable
+                                        : room.status === 'available' && availableSlots > 0;
                                     const roomPhoto = room.media?.photos?.[0]?.url;
 
                                     return (
@@ -714,7 +724,11 @@ const ListingDetailPage = () => {
 
                                             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
                                                 <span className="rounded-full bg-gray-200 px-2 py-1 text-gray-700">Status: {room.status}</span>
-                                                <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">Slots: {availableSlots}</span>
+                                                <span className={`rounded-full px-2 py-1 ${
+                                                    availableSlots > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                    Slots: {availableSlots}
+                                                </span>
                                                 {(room.media?.photos || []).length > 0 && (
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-sky-700">
                                                         <Camera className="w-3.5 h-3.5" /> {(room.media?.photos || []).length} photo(s)
@@ -757,7 +771,7 @@ const ListingDetailPage = () => {
                                                     setShowBookingModal(true);
                                                 }}
                                             >
-                                                Book This Room
+                                                {isRoomBookable ? 'Book This Room' : 'Already Booked'}
                                             </Button>
                                         </article>
                                     );
