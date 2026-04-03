@@ -326,6 +326,9 @@ Response: 200 OK
 ```
 
 ### Create Accommodation (Owner Only)
+
+> **Note:** Listings are now automatically published when created. They appear in the public listings immediately without waiting for review.
+
 ```http
 POST /api/accommodations
 Authorization: Bearer <token>
@@ -359,7 +362,14 @@ Body:
 Response: 201 Created
 {
   "success": true,
-  "data": { ... }
+  "message": "Accommodation listing published successfully",
+  "data": {
+    "_id": "accommodation-id",
+    "title": "Cozy Student Apartment",
+    "status": "active",
+    "publishedAt": "2024-03-15T10:30:00Z",
+    ... other fields
+  }
 }
 ```
 

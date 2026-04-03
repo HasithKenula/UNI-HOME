@@ -94,7 +94,8 @@ if (process.env.NODE_ENV === 'development') {
 const limiter = rateLimit({
   windowMs: 50 * 60 * 1000, // 50 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  skip: (req) => req.originalUrl.startsWith('/api/auth/logout')
 });
 app.use('/api/', limiter);
 

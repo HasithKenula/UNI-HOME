@@ -257,18 +257,37 @@ const sanitizeAccommodationPayload = (payload) => {
 
 const syncAccommodationRoomSnapshot = async (accommodationId) => {
     const rooms = await Room.find({ accommodation: accommodationId }).select('status roomType');
+    const accommodation = await Accommodation.findById(accommodationId).select(
+        'status publishedAt autoUnpublishedOnNoRooms'
+    );
+
+    if (!accommodation) return;
 
     const totalRooms = rooms.length;
     const availableRooms = rooms.filter((room) => room.status === 'available').length;
     const roomTypes = [...new Set(rooms.map((room) => room.roomType).filter(Boolean))];
+    const availabilityStatus =
+        availableRooms <= 0 ? 'not_available' : availableRooms < totalRooms ? 'limited_slots' : 'available';
 
     const update = {
         totalRooms,
         availableRooms,
+        availabilityStatus,
     };
 
     if (roomTypes.length > 0) {
         update.roomTypes = roomTypes;
+    }
+
+    if (availableRooms <= 0 && accommodation.status === 'active') {
+        update.status = 'unpublished';
+        update.autoUnpublishedOnNoRooms = true;
+    }
+
+    if (availableRooms > 0 && accommodation.status === 'unpublished' && accommodation.autoUnpublishedOnNoRooms) {
+        update.status = 'active';
+        update.autoUnpublishedOnNoRooms = false;
+        update.publishedAt = accommodation.publishedAt || new Date();
     }
 
     await Accommodation.findByIdAndUpdate(accommodationId, update);
@@ -638,7 +657,8 @@ const publishAccommodation = async (req, res) => {
         }
 
         const accommodation = ownedResult.accommodation;
-        accommodation.status = req.user.verificationStatus === 'verified' ? 'active' : 'pending_review';
+        accommodation.status = 'active';
+        accommodation.autoUnpublishedOnNoRooms = false;
         accommodation.publishedAt = new Date();
         await accommodation.save();
 
@@ -668,6 +688,7 @@ const unpublishAccommodation = async (req, res) => {
 
         const accommodation = ownedResult.accommodation;
         accommodation.status = 'unpublished';
+        accommodation.autoUnpublishedOnNoRooms = false;
         await accommodation.save();
 
         res.status(200).json({
@@ -756,10 +777,10 @@ const getOwnerListings = async (req, res) => {
             total: await Accommodation.countDocuments({ owner: req.user._id, isDeleted: false }),
             active: await Accommodation.countDocuments({ owner: req.user._id, isDeleted: false, status: 'active' }),
             draft: await Accommodation.countDocuments({ owner: req.user._id, isDeleted: false, status: 'draft' }),
-            pending: await Accommodation.countDocuments({
+            unpublished: await Accommodation.countDocuments({
                 owner: req.user._id,
                 isDeleted: false,
-                status: 'pending_review',
+                status: 'unpublished',
             }),
         };
 

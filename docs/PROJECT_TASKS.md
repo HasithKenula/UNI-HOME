@@ -462,7 +462,7 @@
 - [x] Route (protected: owner)
 - [x] Validator: required fields (title, description, type, location, pricing)
 - [x] Controller: create listing with owner ref, handle photo/video uploads, set status=draft
-- [ ] Test → 201 Created
+- [x] Test → 201 Created
 
 ### `GET /api/accommodations`
 
@@ -473,45 +473,45 @@
 - [x] Implement sort (price_asc, price_desc, nearest, rating, newest)
 - [x] Implement pagination (page, limit)
 - [x] Populate owner (firstName, lastName)
-- [ ] Test with various filter combinations
+- [x] Test with various filter combinations
 
 ### `GET /api/accommodations/:id`
 
 - [x] Route (public)
 - [x] Controller: findById, populate owner, fetch rooms, fetch approved reviews, fetch AI summary
 - [x] Increment viewCount
-- [ ] Test → 200 with full details
+- [x] Test → 200 with full details
 
 ### `PUT /api/accommodations/:id`
 
 - [x] Route (protected: listing owner only)
 - [x] Middleware: verify req.user.\_id === accommodation.owner
 - [x] Controller: update fields, handle new photo uploads, handle removePhotos array
-- [ ] Test → 200 Updated
+- [x] Test → 200 Updated
 
 ### `PATCH /api/accommodations/:id/publish`
 
 - [x] Route (protected: owner)
 - [x] Controller: set status to pending_review or active
-- [ ] Test → 200
+- [x] Test → 200
 
 ### `PATCH /api/accommodations/:id/unpublish`
 
 - [x] Route (protected: owner)
 - [x] Controller: set status to unpublished
-- [ ] Test → 200
+- [x] Test → 200
 
 ### `DELETE /api/accommodations/:id`
 
 - [x] Route (protected: owner/admin)
 - [x] Controller: check no active bookings, soft delete
-- [ ] Test → 200 / 409
+- [x] Test → 200 / 409
 
 ### `GET /api/accommodations/owner/my-listings`
 
 - [x] Route (protected: owner)
 - [x] Controller: find by owner with status filter, return stats (total, active, draft, pending)
-- [ ] Test → 200
+- [x] Test → 200
 
 ## 2.3 Backend — Room APIs
 
@@ -519,25 +519,25 @@
 
 - [x] Route (protected: listing owner)
 - [x] Controller: create room linked to accommodation, update totalRooms/availableRooms
-- [ ] Test → 201
+- [x] Test → 201
 
 ### `GET /api/accommodations/:accommodationId/rooms`
 
 - [x] Route (protected: owner/admin)
 - [x] Controller: find rooms by accommodation, populate currentTenants
-- [ ] Test → 200
+- [x] Test → 200
 
 ### `PUT /api/rooms/:roomId`
 
 - [x] Route (protected: owner)
 - [x] Controller: update room fields
-- [ ] Test → 200
+- [x] Test → 200
 
 ### `DELETE /api/rooms/:roomId`
 
 - [x] Route (protected: owner)
 - [x] Controller: check not occupied, delete, update counts
-- [ ] Test → 200 / 409
+- [x] Test → 200 / 409
 
 ## 2.4 Backend — Tenant Management APIs
 
@@ -545,19 +545,19 @@
 
 - [x] Route (protected: owner)
 - [x] Controller: find confirmed bookings, populate student + room + payment status
-- [ ] Test → 200
+- [x] Test → 200
 
 ### `PATCH /api/bookings/:bookingId/assign-room`
 
 - [x] Route (protected: owner)
 - [x] Controller: verify room available, assign to booking, update room status + currentTenants
-- [ ] Test → 200
+- [x] Test → 200
 
 ### `POST /api/accommodations/:id/notices`
 
 - [x] Route (protected: owner)
 - [x] Controller: find all active tenants, create notification for each
-- [ ] Test → 200
+- [x] Test → 200
 
 ## 2.5 Frontend — Owner Accommodation Pages
 
@@ -565,11 +565,11 @@
 
 - [x] `pages/owner/CreateListingPage.jsx` — Multi-step form:
   - [x] Step 1: Basic Info (title, description, type)
-  - [ ] Step 2: Location (district dropdown, city, address, map pin with Google Maps / Leaflet)
+  - [x] Step 2: Location (district dropdown, city, address, map pin with Google Maps / Leaflet)
   - [x] Step 3: Room Types & Pricing (monthlyRent, keyMoney, deposit, bills)
   - [x] Step 4: Facilities (checkbox grid — WiFi, furniture, kitchen, etc.)
   - [x] Step 5: House Rules (gender, visitors, smoking, pets, quiet hours)
-  - [ ] Step 6: Photos & Videos upload (drag-drop, preview, set primary)
+  - [x] Step 6: Photos & Videos upload (drag-drop, preview, set primary)
   - [x] Step 7: Booking Rules (minimum period, cancellation policy)
   - [x] Step 8: Review & Publish (summary + publish/save draft buttons)
 - [x] Form validation per step
@@ -643,9 +643,9 @@
 
 ## 2.7 Frontend — State Management
 
-- [ ] `features/accommodations/accommodationSlice.js` — list, single, myListings, filters
+- [x] `features/accommodations/accommodationSlice.js` — list, single, myListings, filters
 - [x] `features/accommodations/accommodationAPI.js` — all accommodation API calls
-- [ ] `features/rooms/roomSlice.js` + `roomAPI.js`
+- [x] `features/rooms/roomSlice.js` + `roomAPI.js`
 
 ---
 
@@ -1009,7 +1009,7 @@
 
 ---
 
-# Phase 6 — Module 6: Maintenance & Support
+# Phase 6 — Module 6: Maintenance & Support 
 
 ## 6.1 Backend — Models
 
