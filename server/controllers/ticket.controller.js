@@ -74,6 +74,10 @@ const createTicket = async (req, res) => {
             room,
         } = req.body;
 
+        if (!bookingId) {
+            return res.status(400).json({ success: false, message: 'bookingId is required' });
+        }
+
         const accommodation = await Accommodation.findOne({
             _id: accommodationId,
             isDeleted: false,
@@ -83,19 +87,12 @@ const createTicket = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Accommodation not found' });
         }
 
-        const bookingQuery = {
+        const activeBooking = await Booking.findOne({
+            _id: bookingId,
             student: req.user._id,
             accommodation: accommodation._id,
             status: 'completed',
-        };
-
-        if (bookingId) {
-            bookingQuery._id = bookingId;
-        }
-
-        const activeBooking = await Booking.findOne(bookingQuery)
-            .sort({ createdAt: -1 })
-            .select('_id room');
+        }).select('_id room');
 
         if (!activeBooking) {
             return res.status(403).json({
@@ -273,7 +270,16 @@ const approveTicket = async (req, res) => {
             relatedEntity: { entityType: 'ticket', entityId: ticket._id },
         });
 
-        res.status(200).json({ success: true, message: 'Ticket approved successfully', data: ticket });
+        res.status(200).json({
+            success: true,
+            message: 'Ticket approved successfully',
+            nextStep: {
+                action: 'assign_provider',
+                route: '/owner/service-categories',
+                ticketId: ticket._id,
+            },
+            data: ticket,
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to approve ticket', error: error.message });
     }

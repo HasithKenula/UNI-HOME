@@ -11,6 +11,11 @@ export const getServiceProviderCategories = async () => {
     return response.data;
 };
 
+export const getProviderBookedDates = async (providerId) => {
+    const response = await axios.get(`/service-providers/${providerId}/booked-dates`);
+    return response.data;
+};
+
 export const createServiceProviderBooking = async (payload) => {
     const response = await axios.post('/service-providers/bookings', payload);
     return response.data;
@@ -23,6 +28,16 @@ export const getMyServiceProviderBookings = async (params = {}) => {
 
 export const updateServiceProviderBookingStatus = async (id, payload) => {
     const response = await axios.patch(`/service-providers/bookings/${id}/status`, payload);
+    return response.data;
+};
+
+export const updateMyServiceProviderBooking = async (id, payload) => {
+    const response = await axios.patch(`/service-providers/bookings/${id}`, payload);
+    return response.data;
+};
+
+export const cancelMyServiceProviderBooking = async (id, payload = {}) => {
+    const response = await axios.patch(`/service-providers/bookings/${id}/cancel`, payload);
     return response.data;
 };
 

@@ -144,7 +144,29 @@ export const updateUserStatus = async (req, res) => {
     }
 
     user.accountStatus = accountStatus;
+
+    if (user.role === 'service_provider' && accountStatus === 'active') {
+      user.verificationStatus = 'approved';
+      user.verificationNote = user.verificationNote || '';
+      user.verifiedBy = req.user._id;
+      user.verifiedAt = new Date();
+    }
+
     await user.save();
+
+    if (user.role === 'service_provider' && accountStatus === 'active') {
+      await Notification.create({
+        recipient: user._id,
+        title: 'Provider application approved',
+        message: 'Your service provider account has been approved by the admin',
+        type: 'verification_approved',
+        category: 'user',
+        channel: 'in_app',
+        relatedEntity: { entityType: 'user', entityId: user._id },
+        isDelivered: true,
+        deliveredAt: new Date(),
+      });
+    }
 
     await AuditLog.create({
       performedBy: req.user._id,

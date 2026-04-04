@@ -20,6 +20,7 @@ import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import {
   fetchAdminUsersAsync,
   updateAdminUserStatusAsync,
+  verifyProviderAsync,
 } from '../../features/admin/adminSlice';
 
 const roleTabs = [
@@ -56,8 +57,10 @@ const getProfileImageSrc = (profileImage) => {
 const statusChipSxMap = {
   active: { bgcolor: '#ecfdf3', color: '#047857', borderColor: '#a7f3d0' },
   pending: { bgcolor: '#fffbeb', color: '#b45309', borderColor: '#fde68a' },
+  approved: { bgcolor: '#ecfdf3', color: '#047857', borderColor: '#a7f3d0' },
   suspended: { bgcolor: '#f1f5f9', color: '#334155', borderColor: '#cbd5e1' },
   deleted: { bgcolor: '#fff1f2', color: '#be123c', borderColor: '#fecdd3' },
+  rejected: { bgcolor: '#fff1f2', color: '#be123c', borderColor: '#fecdd3' },
 };
 
 const UserManagementPage = () => {
@@ -75,15 +78,30 @@ const UserManagementPage = () => {
 
   const rows = useMemo(() => users || [], [users]);
 
+  const getCurrentUserStatus = (user) => (
+    user.role === 'service_provider' ? (user.verificationStatus || 'pending') : (user.accountStatus || 'pending')
+  );
+
+  const persistUserStatus = (user, accountStatus) => {
+    if (user.role === 'service_provider' && accountStatus === 'active') {
+      return dispatch(verifyProviderAsync({ id: user._id, payload: { action: 'approve' } }));
+    }
+
+    return dispatch(updateAdminUserStatusAsync({ id: user._id, accountStatus }));
+  };
+
   const updateStatus = (id, accountStatus) => {
-    dispatch(updateAdminUserStatusAsync({ id, accountStatus })).then(() => {
+    const user = rows.find((item) => item._id === id);
+    if (!user) return;
+
+    persistUserStatus(user, accountStatus).then(() => {
       dispatch(fetchAdminUsersAsync({ role, status, search, page: 1, limit: 20 }));
     });
   };
 
   const openEditModal = (user) => {
     setEditingUser(user);
-    setEditingStatus(user.accountStatus || 'pending');
+    setEditingStatus(getCurrentUserStatus(user));
   };
 
   const closeEditModal = () => {
@@ -94,7 +112,7 @@ const UserManagementPage = () => {
   const handleSaveUserStatus = () => {
     if (!editingUser?._id || !editingStatus) return;
 
-    dispatch(updateAdminUserStatusAsync({ id: editingUser._id, accountStatus: editingStatus })).then(() => {
+    persistUserStatus(editingUser, editingStatus).then(() => {
       dispatch(fetchAdminUsersAsync({ role, status, search, page: 1, limit: 20 }));
       closeEditModal();
     });
@@ -253,17 +271,23 @@ const UserManagementPage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm capitalize text-gray-700">{formatRole(user.role)}</td>
                     <td className="px-4 py-3">
+                      {(() => {
+                        const currentStatus = getCurrentUserStatus(user);
+
+                        return (
                       <Chip
                         size="small"
-                        label={user.accountStatus}
+                        label={currentStatus}
                         variant="outlined"
                         sx={{
                           textTransform: 'capitalize',
                           fontWeight: 700,
                           borderRadius: '999px',
-                          ...(statusChipSxMap[user.accountStatus] || statusChipSxMap.suspended),
+                          ...(statusChipSxMap[currentStatus] || statusChipSxMap.suspended),
                         }}
                       />
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
@@ -274,7 +298,9 @@ const UserManagementPage = () => {
                             variant="contained"
                             color="success"
                             startIcon={<CheckCircleRoundedIcon fontSize="small" />}
-                            disabled={actionLoading || user.accountStatus === 'active'}
+                            disabled={actionLoading || (user.role === 'service_provider'
+                              ? getCurrentUserStatus(user) === 'approved'
+                              : user.accountStatus === 'active')}
                             onClick={() => updateStatus(user._id, 'active')}
                             sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 }}
                           >
@@ -399,7 +425,7 @@ const UserManagementPage = () => {
           <MuiButton
             variant="contained"
             onClick={handleSaveUserStatus}
-            disabled={actionLoading || !editingUser || editingStatus === editingUser.accountStatus}
+            disabled={actionLoading || !editingUser || editingStatus === getCurrentUserStatus(editingUser)}
             sx={{
               borderRadius: '10px',
               textTransform: 'none',
