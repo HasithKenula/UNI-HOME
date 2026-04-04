@@ -79,3 +79,28 @@
   border: 2px solid #ffffff;
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
 }
+
+.provider-date-calendar .react-datepicker__day.provider-date-day--booked-other,
+.provider-date-calendar .react-datepicker__day.provider-date-day--booked-other:hover {
+  background-color: #fee2e2;
+  border: 1px solid #dc2626;
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.provider-date-calendar .react-datepicker__day.provider-date-day--booked-self,
+.provider-date-calendar .react-datepicker__day.provider-date-day--booked-self:hover {
+  background-color: #fef3c7;
+  border: 1px solid #d97706;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.provider-date-calendar .react-datepicker__day.provider-date-day--available:hover {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.provider-date-calendar .react-datepicker__day.provider-date-day--past {
+  color: #9ca3af;
+}

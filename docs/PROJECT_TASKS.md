@@ -12,6 +12,34 @@
 - [x] Added room media fallback in student bookings list to show room image when available.
 - [x] Added room management panel to edit listing page so owners can add and review multiple rooms in one flow.
 
+## Recent Updates (2026-03-31)
+
+- [x] Added dedicated owner page for provider bookings with tabbed statuses (pending, in progress, completed, rejected, cancelled).
+- [x] Added owner-side provider booking edit and cancel actions with backend authorization and validation.
+- [x] Added provider availability lifecycle so providers become unavailable when booked and available again when booking is completed/rejected/cancelled.
+- [x] Synced booking date visibility across provider pending, in-progress, and completed views.
+- [x] Removed provider dashboard shortcut button labeled "Go to My Tasks".
+
+## Recent Updates (2026-04-03)
+
+- [x] Fixed service provider approval so admin approval updates provider verification state and approved providers now appear in category-based provider lists.
+
+## Recent Updates (2026-04-04)
+
+- [x] Added all 25 Sri Lankan districts to the service provider search filter and booking district dropdown.
+- [x] Added backend date validation to prevent booking service providers for past dates.
+- [x] Added conflict detection endpoint to fetch booked dates for a specific provider.
+- [x] Prevented double-booking: owners cannot book a date already booked by another person.
+- [x] Enhanced booking modal with visual date availability indicators (red for booked by others, yellow for own bookings).
+- [x] Added real-time date validation feedback in the service provider booking form with clear error messages.
+- [x] Highlighted unbookable calendar dates in the booking date picker and blocked selecting dates already booked by other owners.
+- [x] Kept service providers visible in category lists after bookings by removing global availability filtering from list queries.
+- [x] Updated booking creation to use date-level conflict checks without globally marking providers unavailable.
+- [x] Restricted maintenance ticket submission to completed accommodation bookings only.
+- [x] Added owner dashboard shortcut to the tickets management page.
+- [x] Kept owner ticket approval and rejection flow available from the dedicated tickets page.
+- [x] Restored the owner ticket details modal and assignment handoff to maintenance categories after the undo.
+
 ---
 
 ## 📌 Table of Contents

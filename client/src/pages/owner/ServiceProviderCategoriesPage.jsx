@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getServiceProviderCategories } from '../../features/providers/providerAPI';
 
 const FALLBACK_CATEGORIES = [
@@ -27,8 +27,10 @@ const ICONS = {
 };
 
 const ServiceProviderCategoriesPage = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
+  const ticketAssignment = location.state?.ticketAssignment || null;
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -50,13 +52,20 @@ const ServiceProviderCategoriesPage = () => {
       <h1 className="text-3xl font-bold text-gray-900">Maintenance Categories</h1>
       <p className="mt-2 text-gray-600">Select a category to open a dedicated provider list page for that service.</p>
 
+      {ticketAssignment && (
+        <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Assigning provider for ticket <span className="font-semibold">{ticketAssignment.ticketNumber || ticketAssignment.ticketId}</span>.
+          Choose the maintenance category first.
+        </div>
+      )}
+
       <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {categories.map((category) => (
             <button
               key={category.value}
               type="button"
-              onClick={() => navigate(`/owner/service-providers/${category.value}`)}
+              onClick={() => navigate(`/owner/service-providers/${category.value}`, { state: { ticketAssignment } })}
               className="rounded-xl border-2 border-gray-200 bg-white px-4 py-5 text-center transition-all hover:border-amber-300 hover:bg-amber-100"
             >
               <div className="text-4xl">{ICONS[category.value] || '🛠️'}</div>
