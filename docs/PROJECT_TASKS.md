@@ -349,12 +349,6 @@
 - [ ] Controller: invalidate refresh token
 - [ ] Test → 200 Logged out
 
-### `GET /api/auth/verify-email/:token`
-
-- [ ] Route definition
-- [ ] Controller: find user by token, check expiry, set isEmailVerified=true, clear token
-- [ ] Test → 200 Email verified
-
 ### `POST /api/auth/forgot-password`
 
 - [ ] Route definition
@@ -1404,41 +1398,46 @@
 
 ## 8.1 Backend
 
-- [ ] `models/Notification.js` — Full schema with TTL index, idempotency
-- [ ] `models/NotificationTemplate.js` — Template schema
-- [ ] `models/AuditLog.js` — Audit trail schema
-- [ ] `utils/notification.util.js`:
-  - [ ] `createNotification(recipientId, type, category, data)` — create in-app notification
-  - [ ] `sendEmailNotification(to, templateName, variables)` — render template + send via Nodemailer
-  - [ ] `checkIdempotency(key)` — prevent duplicate notifications
-- [ ] Integrate notification calls into all controllers:
-  - [ ] Registration → confirmation email
-  - [ ] Booking request → owner email + in-app
-  - [ ] Booking accept/reject → student email + in-app
+- [x] `models/Notification.js` — Full schema with TTL index, idempotency
+- [x] `models/NotificationTemplate.js` — Template schema
+- [x] `models/AuditLog.js` — Audit trail schema
+- [x] `utils/notification.util.js`:
+  - [x] `createNotification(recipientId, type, category, data)` — create in-app notification
+  - [x] `sendEmailNotification(to, templateName, variables)` — render template + send via Nodemailer
+  - [x] `checkIdempotency(key)` — prevent duplicate notifications
+- [x] Integrate notification calls into all controllers:
+  - [x] Registration → auto-login
+  - [x] Booking request → owner email + in-app
+  - [x] Booking accept/reject → student email + in-app
   - [ ] Payment success/fail → email + in-app
   - [ ] Invoice generated → email + in-app
-  - [ ] Ticket created → owner notification
-  - [ ] Ticket assigned → provider notification
-  - [ ] Ticket completed → student notification
-  - [ ] Report submitted → admin notification
+  - [x] Ticket created → owner notification
+  - [x] Ticket assigned → provider notification
+  - [x] Ticket completed → student notification
+  - [x] Report submitted → admin notification
 
 ### Notification User APIs
 
-- [ ] `GET /api/notifications` — user's notifications with unread count
-- [ ] `PATCH /api/notifications/:id/read` — mark as read
-- [ ] `PATCH /api/notifications/read-all` — mark all read
+- [x] `GET /api/notifications` — user's notifications with unread count
+- [x] `PATCH /api/notifications/:id/read` — mark as read
+- [x] `PATCH /api/notifications/read-all` — mark all read
 
 ## 8.2 Frontend
 
-- [ ] `components/notification/NotificationBell.jsx` — navbar bell icon with unread badge count
-- [ ] `components/notification/NotificationDropdown.jsx` — dropdown list of recent notifications
-- [ ] `components/notification/NotificationItem.jsx` — icon + title + time + read/unread style
-- [ ] Click notification → navigate to related entity (booking, ticket, payment, etc.)
-- [ ] Mark as read on click
-- [ ] "Mark all as read" button
-- [ ] Polling or WebSocket for real-time updates (optional: Socket.io)
-- [ ] `hooks/useNotifications.js` — custom hook for notification polling
-- [ ] `features/notifications/notificationSlice.js` + `notificationAPI.js`
+- [x] `components/notification/NotificationBell.jsx` — navbar bell icon with unread badge count
+- [x] `components/notification/NotificationDropdown.jsx` — dropdown list of recent notifications
+- [x] `components/notification/NotificationItem.jsx` — icon + title + time + read/unread style
+- [x] Click notification → navigate to related entity (booking, ticket, payment, etc.)
+- [x] Mark as read on click
+- [x] "Mark all as read" button
+- [x] Polling or WebSocket for real-time updates (optional: Socket.io)
+- [x] `hooks/useNotifications.js` — custom hook for notification polling
+- [x] `features/notifications/notificationSlice.js` + `notificationAPI.js`
+
+### Phase 8 Completion Notes
+
+- [x] Implemented with polling-based real-time updates (30s interval + focus/visibility refresh).
+- [x] Payment/invoice notification controller hooks are tracked separately and still pending under Phase 5 payment flow finalization.
 
 ---
 

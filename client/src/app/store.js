@@ -6,6 +6,7 @@ import favoriteReducer from '../features/favorites/favoriteSlice';
 import inquiryReducer from '../features/inquiries/inquirySlice';
 import ticketReducer from '../features/tickets/ticketSlice';
 import providerReducer from '../features/providers/providerSlice';
+import notificationReducer from '../features/notifications/notificationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     inquiries: inquiryReducer,
     tickets: ticketReducer,
     providers: providerReducer,
+    notifications: notificationReducer,
   },
 });
 

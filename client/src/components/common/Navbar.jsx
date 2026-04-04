@@ -3,7 +3,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { logoutAsync } from '../../features/auth/authSlice';
 import useAuth from '../../hooks/useAuth';
+import useNotifications from '../../hooks/useNotifications';
 import Button from './Button';
+import NotificationBell from '../notification/NotificationBell';
 
 const Navbar = () => {
   const { isAuthenticated, user } = useAuth();
@@ -12,6 +14,10 @@ const Navbar = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { items: notifications, unreadCount, loading: notificationsLoading } = useNotifications({
+    limit: 10,
+    pollMs: 30000,
+  });
 
   // Handle scroll effect
   useEffect(() => {
@@ -131,6 +137,11 @@ const Navbar = () => {
                   <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary-500 to-accent-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                 </Link>
                 <div className="flex items-center space-x-4 pl-4 border-l border-gray-200">
+                  <NotificationBell
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    loading={notificationsLoading}
+                  />
                   <div className="flex items-center space-x-2 bg-gradient-to-r from-primary-50 to-accent-50 px-3 py-2 rounded-lg border border-primary-100">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 flex items-center justify-center text-white font-semibold">
                       {user?.firstName?.charAt(0) || 'U'}

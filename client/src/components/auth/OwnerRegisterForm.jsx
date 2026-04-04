@@ -197,7 +197,7 @@ const OwnerRegisterForm = ({ onSuccess }) => {
 
     const result = await dispatch(registerOwnerAsync(registrationData));
     if (result.type === 'auth/registerOwner/fulfilled') {
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess(result.payload.user);
     }
   };
 

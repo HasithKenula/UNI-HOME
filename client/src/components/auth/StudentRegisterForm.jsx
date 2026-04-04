@@ -138,7 +138,7 @@ const StudentRegisterForm = ({ onSuccess }) => {
 
     const result = await dispatch(registerStudentAsync(registrationData));
     if (result.type === 'auth/registerStudent/fulfilled') {
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess(result.payload.user);
     }
   };
 
