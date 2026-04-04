@@ -3,7 +3,7 @@ import { body, param, query } from 'express-validator';
 const ticketIdValidator = [param('id').isMongoId().withMessage('Invalid ticket id')];
 
 const createTicketValidator = [
-    body('bookingId').optional().isMongoId().withMessage('Invalid booking id'),
+    body('bookingId').isMongoId().withMessage('Valid bookingId is required'),
     body('accommodationId').isMongoId().withMessage('Valid accommodationId is required'),
     body('category')
         .isIn(['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'general', 'other'])

@@ -39,18 +39,22 @@ Body:
 Response: 201 Created
 {
   "success": true,
-  "message": "Registration successful. Please verify your email.",
-  "accessToken": "eyJhbGciOiJ...",
-  "refreshToken": "eyJhbGciOiJ...",
+  "message": "Registration successful. Please check your email to verify your account.",
+  "verificationEmailSent": true,
   "user": {
     "_id": "65a1b2c3d4e5f6g7h8i9j0k1",
     "firstName": "John",
     "lastName": "Doe",
     "email": "john@my.sliit.lk",
     "role": "student",
-    "accountStatus": "pending"
+    "isEmailVerified": false,
+    "accountStatus": "active"
   }
 }
+
+Note:
+- Register does not return auth tokens.
+- User must verify email, then login.
 ```
 
 ### Login
@@ -72,6 +76,16 @@ Response: 200 OK
   "refreshToken": "eyJhbGciOiJ...",
   "user": { ... }
 }
+
+If email is not verified:
+```json
+{
+  "success": false,
+  "message": "Please verify your email before logging in.",
+  "requiresEmailVerification": true,
+  "email": "john@my.sliit.lk"
+}
+```
 ```
 
 ### Logout
@@ -101,17 +115,6 @@ Response: 200 OK
   "success": true,
   "accessToken": "eyJhbGciOiJ...",
   "refreshToken": "eyJhbGciOiJ..."
-}
-```
-
-### Verify Email
-```http
-GET /api/auth/verify-email?token=<verification-token>
-
-Response: 200 OK
-{
-  "success": true,
-  "message": "Email verified successfully"
 }
 ```
 
@@ -326,6 +329,9 @@ Response: 200 OK
 ```
 
 ### Create Accommodation (Owner Only)
+
+> **Note:** Listings are now automatically published when created. They appear in the public listings immediately without waiting for review.
+
 ```http
 POST /api/accommodations
 Authorization: Bearer <token>
@@ -359,7 +365,14 @@ Body:
 Response: 201 Created
 {
   "success": true,
-  "data": { ... }
+  "message": "Accommodation listing published successfully",
+  "data": {
+    "_id": "accommodation-id",
+    "title": "Cozy Student Apartment",
+    "status": "active",
+    "publishedAt": "2024-03-15T10:30:00Z",
+    ... other fields
+  }
 }
 ```
 
@@ -724,38 +737,61 @@ Response: 200 OK
   "data": [
     {
       "_id": "notification-id",
-      "type": "booking_update",
+      "type": "booking_request",
+      "category": "booking",
+      "channel": "in_app",
       "title": "Booking Confirmed",
       "message": "Your booking has been confirmed",
       "isRead": false,
+      "relatedEntity": {
+        "entityType": "booking",
+        "entityId": "booking-id"
+      },
+      "actionUrl": "/student/bookings/booking-id",
       "createdAt": "2026-03-23T10:30:00Z"
     }
   ],
-  "unreadCount": 5
+  "unreadCount": 5,
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 42,
+    "totalPages": 5
+  }
 }
 ```
 
 ### Mark Notification as Read
 ```http
-PUT /api/notifications/:id/read
+PATCH /api/notifications/:id/read
 Authorization: Bearer <token>
 
 Response: 200 OK
 {
   "success": true,
-  "data": { ... }
+  "message": "Notification marked as read",
+  "data": {
+    "_id": "notification-id",
+    "isRead": true,
+    "readAt": "2026-04-04T08:22:00Z"
+  },
+  "unreadCount": 4
 }
 ```
 
 ### Mark All as Read
 ```http
-PUT /api/notifications/read-all
+PATCH /api/notifications/read-all
 Authorization: Bearer <token>
 
 Response: 200 OK
 {
   "success": true,
-  "message": "All notifications marked as read"
+  "message": "All notifications marked as read",
+  "data": {
+    "modifiedCount": 4
+  },
+  "unreadCount": 0
 }
 ```
 

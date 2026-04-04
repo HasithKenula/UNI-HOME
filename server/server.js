@@ -94,7 +94,8 @@ if (process.env.NODE_ENV === 'development') {
 const limiter = rateLimit({
   windowMs: 50 * 60 * 1000, // 50 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  skip: (req) => req.originalUrl.startsWith('/api/auth/logout')
 });
 app.use('/api/', limiter);
 
@@ -127,6 +128,7 @@ import adminRoutes from './routes/admin.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import reviewRoutes from './routes/review.routes.js';
 import aiSummaryRoutes from './routes/aiSummary.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -141,6 +143,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/ai-summaries', aiSummaryRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Additional routes (to be added in future phases)
 // app.use('/api/rooms', require('./routes/room.routes'));

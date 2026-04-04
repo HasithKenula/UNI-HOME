@@ -18,6 +18,13 @@ const CATEGORY_LABELS = {
 
 const normalizeCategory = (category = '') => String(category || '').trim().toLowerCase();
 
+const normalizeBookingStatus = (status = '') => {
+  const normalized = String(status || '').trim().toLowerCase();
+  return normalized === 'accepted' ? 'in_progress' : normalized;
+};
+
+const ACTIVE_PROVIDER_BOOKING_STATUSES = ['pending', 'in_progress', 'accepted'];
+
 const normalizeCategories = (categories = []) => {
   if (!Array.isArray(categories)) return [];
 
@@ -27,6 +34,11 @@ const normalizeCategories = (categories = []) => {
       .filter((category) => SERVICE_PROVIDER_CATEGORIES.includes(category))
   )];
 };
+
+const APPROVED_PROVIDER_FILTER = [
+  { verificationStatus: 'approved' },
+  { accountStatus: 'active' },
+];
 
 const mapProviderForList = (provider) => ({
   _id: provider._id,
@@ -44,6 +56,17 @@ const mapProviderForList = (provider) => ({
   isAvailable: provider.isAvailable,
 });
 
+const refreshProviderAvailability = async (providerId) => {
+  const activeBookingsCount = await ServiceBooking.countDocuments({
+    provider: providerId,
+    status: { $in: ACTIVE_PROVIDER_BOOKING_STATUSES },
+  });
+
+  await ServiceProvider.findByIdAndUpdate(providerId, {
+    isAvailable: activeBookingsCount === 0,
+  });
+};
+
 const getServiceProviderCategories = async (req, res) => {
   res.status(200).json({
     success: true,
@@ -58,9 +81,8 @@ const getServiceProviders = async (req, res) => {
     const { category, district, area, city } = req.query;
 
     const query = {
-      verificationStatus: 'approved',
-      isAvailable: true,
       accountStatus: { $ne: 'deleted' },
+      $or: APPROVED_PROVIDER_FILTER,
     };
 
     const normalizedCategory = normalizeCategory(category);
@@ -198,6 +220,29 @@ const removeMyServiceProviderProfile = async (req, res) => {
   }
 };
 
+const getProviderBookedDates = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+
+    const bookings = await ServiceBooking.find({
+      provider: providerId,
+      status: { $in: ['pending', 'in_progress', 'accepted'] },
+      preferredDate: { $exists: true, $ne: null },
+    }).select('owner preferredDate status');
+
+    const bookedDates = bookings.map((booking) => ({
+      date: booking.preferredDate,
+      owner: booking.owner.toString(),
+      bookedBy: booking.owner.toString() === req.user._id.toString() ? 'self' : 'other',
+      status: booking.status,
+    }));
+
+    res.status(200).json({ success: true, data: bookedDates });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch booked dates', error: error.message });
+  }
+};
+
 const createServiceProviderBooking = async (req, res) => {
   try {
     const {
@@ -215,15 +260,43 @@ const createServiceProviderBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid service category' });
     }
 
+    // Validate preferred date: cannot be in the past
+    if (preferredDate) {
+      const bookingDate = new Date(preferredDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      bookingDate.setHours(0, 0, 0, 0);
+
+      if (bookingDate < today) {
+        return res.status(400).json({ success: false, message: 'Cannot book service for past dates' });
+      }
+
+      // Check for conflicting bookings on the same date
+      const conflictingBooking = await ServiceBooking.findOne({
+        provider: providerId,
+        preferredDate: {
+          $gte: new Date(bookingDate.setHours(0, 0, 0, 0)),
+          $lt: new Date(bookingDate.setHours(23, 59, 59, 999)),
+        },
+        status: { $in: ['pending', 'in_progress', 'accepted'] },
+      });
+
+      if (conflictingBooking) {
+        return res.status(409).json({
+          success: false,
+          message: 'Service provider is already booked for this date. Please select another date.',
+        });
+      }
+    }
+
     const provider = await ServiceProvider.findOne({
       _id: providerId,
-      verificationStatus: 'approved',
-      isAvailable: true,
       accountStatus: { $ne: 'deleted' },
-    }).select('_id firstName lastName phone email profileNote serviceCategories areasOfOperation');
+      $or: APPROVED_PROVIDER_FILTER,
+    }).select('_id firstName lastName phone email profileNote serviceCategories areasOfOperation isAvailable');
 
     if (!provider) {
-      return res.status(404).json({ success: false, message: 'Service provider not found or unavailable' });
+      return res.status(404).json({ success: false, message: 'Service provider not found' });
     }
 
     if (!provider.serviceCategories?.includes(normalizedCategory)) {
@@ -254,6 +327,113 @@ const createServiceProviderBooking = async (req, res) => {
     res.status(201).json({ success: true, message: 'Service provider booked successfully', data: populated });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to create service booking', error: error.message });
+  }
+};
+
+const updateMyServiceProviderBooking = async (req, res) => {
+  try {
+    const booking = await ServiceBooking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Service booking not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && booking.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to edit this booking' });
+    }
+
+    const currentStatus = normalizeBookingStatus(booking.status);
+    if (currentStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Only pending bookings can be edited' });
+    }
+
+    const {
+      category,
+      district,
+      area,
+      note,
+      preferredDate,
+    } = req.body;
+
+    const provider = await ServiceProvider.findById(booking.provider).select('serviceCategories');
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Linked service provider not found' });
+    }
+
+    if (category !== undefined) {
+      const normalizedCategory = normalizeCategory(category);
+      if (!SERVICE_PROVIDER_CATEGORIES.includes(normalizedCategory)) {
+        return res.status(400).json({ success: false, message: 'Invalid service category' });
+      }
+      if (!provider.serviceCategories?.includes(normalizedCategory)) {
+        return res.status(400).json({ success: false, message: 'Selected provider does not offer this category' });
+      }
+      booking.category = normalizedCategory;
+    }
+
+    if (district !== undefined) booking.district = String(district || '').trim();
+    if (area !== undefined) booking.area = String(area || '').trim();
+    if (note !== undefined) booking.note = String(note || '').trim();
+    if (preferredDate !== undefined) booking.preferredDate = preferredDate ? new Date(preferredDate) : undefined;
+
+    booking.statusHistory.push({
+      status: booking.status,
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      note: 'Booking details edited by owner',
+    });
+
+    await booking.save();
+
+    const populated = await ServiceBooking.findById(booking._id)
+      .populate('provider', 'firstName lastName email phone profileNote serviceCategories areasOfOperation')
+      .populate('owner', 'firstName lastName email phone');
+
+    res.status(200).json({ success: true, message: 'Service booking updated successfully', data: populated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update service booking', error: error.message });
+  }
+};
+
+const cancelMyServiceProviderBooking = async (req, res) => {
+  try {
+    const booking = await ServiceBooking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Service booking not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && booking.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to cancel this booking' });
+    }
+
+    const currentStatus = normalizeBookingStatus(booking.status);
+    if (['completed', 'rejected', 'cancelled'].includes(currentStatus)) {
+      return res.status(400).json({ success: false, message: 'This booking cannot be cancelled anymore' });
+    }
+
+    const reason = String(req.body?.reason || '').trim();
+
+    booking.status = 'cancelled';
+    booking.statusHistory.push({
+      status: 'cancelled',
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      note: reason || 'Cancelled by owner',
+    });
+
+    await booking.save();
+    await refreshProviderAvailability(booking.provider);
+
+    const populated = await ServiceBooking.findById(booking._id)
+      .populate('provider', 'firstName lastName email phone profileNote serviceCategories areasOfOperation')
+      .populate('owner', 'firstName lastName email phone');
+
+    res.status(200).json({ success: true, message: 'Service booking cancelled', data: populated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to cancel service booking', error: error.message });
   }
 };
 
@@ -292,14 +472,13 @@ const updateServiceProviderBookingStatus = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this booking status' });
     }
 
-    let normalizedStatus = String(status || '').trim().toLowerCase();
-    if (normalizedStatus === 'accepted') normalizedStatus = 'in_progress';
+    const normalizedStatus = normalizeBookingStatus(status);
 
     if (!['in_progress', 'rejected', 'completed'].includes(normalizedStatus)) {
       return res.status(400).json({ success: false, message: 'Only in_progress, rejected, or completed statuses are supported' });
     }
 
-    const currentStatus = booking.status === 'accepted' ? 'in_progress' : booking.status;
+    const currentStatus = normalizeBookingStatus(booking.status);
 
     if (normalizedStatus === 'in_progress' && currentStatus !== 'pending') {
       return res.status(400).json({ success: false, message: 'Only pending bookings can be accepted' });
@@ -326,6 +505,7 @@ const updateServiceProviderBookingStatus = async (req, res) => {
     });
 
     await booking.save();
+    await refreshProviderAvailability(booking.provider);
 
     const populated = await ServiceBooking.findById(booking._id)
       .populate('provider', 'firstName lastName email phone profileNote serviceCategories areasOfOperation')
@@ -345,5 +525,8 @@ export {
   removeMyServiceProviderProfile,
   createServiceProviderBooking,
   getMyServiceProviderBookings,
+  updateMyServiceProviderBooking,
+  cancelMyServiceProviderBooking,
   updateServiceProviderBookingStatus,
+  getProviderBookedDates,
 };

@@ -121,7 +121,9 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('accessToken', action.payload.accessToken);
-        localStorage.setItem('refreshToken', action.payload.refreshToken);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
         toast.success(action.payload.message || 'Registration successful!');
       })
       .addCase(registerStudentAsync.rejected, (state, action) => {
@@ -140,7 +142,9 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('accessToken', action.payload.accessToken);
-        localStorage.setItem('refreshToken', action.payload.refreshToken);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
         toast.success(action.payload.message || 'Registration successful!');
       })
       .addCase(registerOwnerAsync.rejected, (state, action) => {
@@ -159,7 +163,9 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('accessToken', action.payload.accessToken);
-        localStorage.setItem('refreshToken', action.payload.refreshToken);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
         toast.success(action.payload.message || 'Registration successful!');
       })
       .addCase(registerServiceProviderAsync.rejected, (state, action) => {

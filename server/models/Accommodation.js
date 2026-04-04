@@ -141,6 +141,7 @@ const accommodationSchema = new Schema(
       enum: ["draft", "pending_review", "active", "unpublished", "frozen", "rejected"],
       default: "draft",
     },
+    autoUnpublishedOnNoRooms: { type: Boolean, default: false },
     availabilityStatus: {
       type: String,
       enum: ["available", "not_available", "limited_slots"],

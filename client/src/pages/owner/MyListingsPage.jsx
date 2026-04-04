@@ -43,6 +43,7 @@ const statusTabs = [
     { key: '', label: 'All' },
     { key: 'active', label: 'Active' },
     { key: 'draft', label: 'Draft' },
+    { key: 'unpublished', label: 'Unpublished' },
 ];
 
 const badgeStyles = {
@@ -65,7 +66,7 @@ const MyListingsPage = () => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('');
     const [listings, setListings] = useState([]);
-    const [stats, setStats] = useState({ total: 0, active: 0, draft: 0, pending: 0 });
+    const [stats, setStats] = useState({ total: 0, active: 0, draft: 0, unpublished: 0 });
     const [expandedRoomManager, setExpandedRoomManager] = useState('');
 
     const currentTab = useMemo(() => statusTabs.find((item) => item.key === status), [status]);
@@ -75,7 +76,7 @@ const MyListingsPage = () => {
         try {
             const response = await getMyListings(status);
             setListings(response.data || []);
-            setStats(response.stats || { total: 0, active: 0, draft: 0, pending: 0 });
+            setStats(response.stats || { total: 0, active: 0, draft: 0, unpublished: 0 });
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to fetch listings');
         } finally {
@@ -87,7 +88,7 @@ const MyListingsPage = () => {
         try {
             const response = await getMyListings(status);
             setListings(response.data || []);
-            setStats(response.stats || { total: 0, active: 0, draft: 0, pending: 0 });
+            setStats(response.stats || { total: 0, active: 0, draft: 0, unpublished: 0 });
         } catch (error) {
             // Ignore background refresh errors to avoid noisy toasts.
         }
@@ -165,7 +166,7 @@ const MyListingsPage = () => {
             </div>
 
             {/* Stats Dashboard */}
-            <div className="mb-8 grid gap-4 sm:grid-cols-3">
+            <div className="mb-8 grid gap-4 sm:grid-cols-4">
                 <div className="rounded-2xl border-2 border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 shadow-lg">
                     <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-semibold text-gray-600">Total Listings</p>
@@ -180,12 +181,19 @@ const MyListingsPage = () => {
                     </div>
                     <p className="text-4xl font-bold text-green-700">{stats.active}</p>
                 </div>
-                <div className="rounded-2xl border-2 border-gray-300 bg-gradient-to-br from-gray-50 to-slate-50 p-6 shadow-lg">
+                <div className="rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-6 shadow-lg">
                     <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-semibold text-gray-600">Draft</p>
-                        <Edit className="w-8 h-8 text-gray-600 opacity-50" />
+                        <Edit className="w-8 h-8 text-amber-600 opacity-50" />
                     </div>
-                    <p className="text-4xl font-bold text-slate-700">{stats.draft}</p>
+                    <p className="text-4xl font-bold text-amber-700">{stats.draft}</p>
+                </div>
+                <div className="rounded-2xl border-2 border-gray-300 bg-gradient-to-br from-gray-50 to-slate-50 p-6 shadow-lg">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-gray-600">Unpublished</p>
+                        <EyeOff className="w-8 h-8 text-gray-600 opacity-50" />
+                    </div>
+                    <p className="text-4xl font-bold text-slate-700">{stats.unpublished}</p>
                 </div>
 
             </div>

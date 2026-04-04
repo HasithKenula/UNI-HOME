@@ -34,9 +34,6 @@ const userSchema = new Schema(
       enum: ["student", "owner", "service_provider", "admin"],
     },
     profileImage: { type: String, default: null }, // URL
-    isEmailVerified: { type: Boolean, default: false },
-    emailVerificationToken: { type: String, default: null },
-    emailVerificationExpires: { type: Date, default: null },
     passwordResetToken: { type: String, default: null },
     passwordResetExpires: { type: Date, default: null },
     accountStatus: {

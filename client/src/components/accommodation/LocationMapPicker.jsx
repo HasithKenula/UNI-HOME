@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import Input from '../common/Input';
 
@@ -14,15 +14,15 @@ L.Icon.Default.mergeOptions({
 });
 
 const SLIIT = {
-    lat: 6.9069,
-    lng: 79.9729,
+    lat: 6.91435,
+    lng: 79.972684,
 };
 
 const sliitPinIcon = L.divIcon({
     className: 'sliit-pin-wrapper',
-    html: '<div class="sliit-pin">SLIIT Main</div>',
-    iconSize: [92, 28],
-    iconAnchor: [46, 28],
+    html: '<div class="sliit-pin">SLIIT Campus</div>',
+    iconSize: [108, 28],
+    iconAnchor: [54, 28],
 });
 
 const accommodationPinIcon = L.divIcon({
@@ -31,6 +31,13 @@ const accommodationPinIcon = L.divIcon({
     iconSize: [20, 20],
     iconAnchor: [10, 10],
 });
+
+const routeLineStyle = {
+    color: '#2563eb',
+    weight: 5,
+    opacity: 0.9,
+    lineCap: 'round',
+};
 
 const toRadians = (value) => (value * Math.PI) / 180;
 
@@ -55,8 +62,14 @@ const parseCoordinates = (location) => {
         return { hasCoordinates: false, lat: SLIIT.lat, lng: SLIIT.lng };
     }
 
-    const lng = Number(raw[0]);
-    const lat = Number(raw[1]);
+    const [rawLng, rawLat] = raw;
+    const hasEmptyValue = [rawLng, rawLat].some((item) => item === '' || item === null || item === undefined);
+    if (hasEmptyValue) {
+        return { hasCoordinates: false, lat: SLIIT.lat, lng: SLIIT.lng };
+    }
+
+    const lng = Number(rawLng);
+    const lat = Number(rawLat);
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         return { hasCoordinates: false, lat: SLIIT.lat, lng: SLIIT.lng };
@@ -75,12 +88,21 @@ const PinSelectionHandler = ({ onPick }) => {
     return null;
 };
 
-const RecenterMap = ({ lat, lng }) => {
+const FitMapToPoints = ({ hasCoordinates, lat, lng }) => {
     const map = useMap();
 
     useEffect(() => {
-        map.setView([lat, lng], map.getZoom(), { animate: true });
-    }, [lat, lng, map]);
+        if (!hasCoordinates) {
+            map.setView([SLIIT.lat, SLIIT.lng], 15, { animate: true });
+            return;
+        }
+
+        const bounds = L.latLngBounds([
+            [SLIIT.lat, SLIIT.lng],
+            [lat, lng],
+        ]);
+        map.fitBounds(bounds, { padding: [40, 40], animate: true });
+    }, [hasCoordinates, lat, lng, map]);
 
     return null;
 };
@@ -89,6 +111,8 @@ const LocationMapPicker = ({ value, onChange, disabled = false }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searching, setSearching] = useState(false);
     const [reverseGeocoding, setReverseGeocoding] = useState(false);
+    const [roadRoutePoints, setRoadRoutePoints] = useState([]);
+    const [roadDistanceKm, setRoadDistanceKm] = useState(null);
 
     const coordinates = useMemo(() => parseCoordinates(value), [value]);
     const selectedDistanceKm = useMemo(() => {
@@ -97,18 +121,79 @@ const LocationMapPicker = ({ value, onChange, disabled = false }) => {
     }, [coordinates]);
 
     useEffect(() => {
-        if (!coordinates.hasCoordinates || !selectedDistanceKm) return;
+        if (!coordinates.hasCoordinates) {
+            setRoadRoutePoints([]);
+            setRoadDistanceKm(null);
+            return;
+        }
+
+        const abortController = new AbortController();
+
+        const fetchRoadRoute = async () => {
+            try {
+                const endpoint = `https://router.project-osrm.org/route/v1/driving/${SLIIT.lng},${SLIIT.lat};${coordinates.lng},${coordinates.lat}?overview=full&geometries=geojson`;
+                const response = await fetch(endpoint, { signal: abortController.signal });
+                const payload = await response.json();
+
+                const route = payload?.routes?.[0];
+                if (!route?.geometry?.coordinates?.length) {
+                    setRoadRoutePoints([]);
+                    setRoadDistanceKm(null);
+                    return;
+                }
+
+                setRoadRoutePoints(route.geometry.coordinates.map(([lng, lat]) => [lat, lng]));
+                setRoadDistanceKm(Number((route.distance / 1000).toFixed(2)));
+            } catch (_error) {
+                if (!abortController.signal.aborted) {
+                    setRoadRoutePoints([]);
+                    setRoadDistanceKm(null);
+                }
+            }
+        };
+
+        fetchRoadRoute();
+
+        return () => abortController.abort();
+    }, [coordinates.hasCoordinates, coordinates.lat, coordinates.lng]);
+
+    const displayDistanceKm = Number.isFinite(roadDistanceKm)
+        ? roadDistanceKm
+        : (Number.isFinite(selectedDistanceKm) ? selectedDistanceKm : 0);
+
+    const displayRoutePoints = useMemo(() => {
+        if (!coordinates.hasCoordinates) return [];
+        if (roadRoutePoints.length) return roadRoutePoints;
+        return [
+            [SLIIT.lat, SLIIT.lng],
+            [coordinates.lat, coordinates.lng],
+        ];
+    }, [coordinates.hasCoordinates, coordinates.lat, coordinates.lng, roadRoutePoints]);
+
+    useEffect(() => {
+        if (!coordinates.hasCoordinates) {
+            const currentDistance = Number(value?.distanceToSLIIT);
+            if (currentDistance !== 0) {
+                onChange({
+                    ...value,
+                    distanceToSLIIT: 0,
+                });
+            }
+            return;
+        }
+
+        if (!Number.isFinite(displayDistanceKm)) return;
 
         const currentDistance = Number(value?.distanceToSLIIT);
-        if (Number.isFinite(currentDistance) && Math.abs(currentDistance - selectedDistanceKm) < 0.01) {
+        if (Number.isFinite(currentDistance) && Math.abs(currentDistance - displayDistanceKm) < 0.01) {
             return;
         }
 
         onChange({
             ...value,
-            distanceToSLIIT: Number(selectedDistanceKm.toFixed(2)),
+            distanceToSLIIT: Number(displayDistanceKm.toFixed(2)),
         });
-    }, [coordinates, selectedDistanceKm, onChange, value]);
+    }, [coordinates, displayDistanceKm, onChange, value]);
 
     const setCoordinateSelection = (lat, lng) => {
         onChange({
@@ -183,8 +268,8 @@ const LocationMapPicker = ({ value, onChange, disabled = false }) => {
         }
     };
 
-    const walkingMinutes = selectedDistanceKm ? Math.round((selectedDistanceKm / 5) * 60) : null;
-    const drivingMinutes = selectedDistanceKm ? Math.round((selectedDistanceKm / 25) * 60) : null;
+    const walkingMinutes = Math.round((displayDistanceKm / 5) * 60);
+    const drivingMinutes = Math.round((displayDistanceKm / 25) * 60);
 
     return (
         <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
@@ -241,7 +326,7 @@ const LocationMapPicker = ({ value, onChange, disabled = false }) => {
 
             <MapContainer
                 center={[coordinates.lat, coordinates.lng]}
-                zoom={14}
+                zoom={15}
                 scrollWheelZoom
                 className="h-[340px] w-full rounded-xl"
             >
@@ -250,7 +335,7 @@ const LocationMapPicker = ({ value, onChange, disabled = false }) => {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
-                <RecenterMap lat={coordinates.lat} lng={coordinates.lng} />
+                <FitMapToPoints hasCoordinates={coordinates.hasCoordinates} lat={coordinates.lat} lng={coordinates.lng} />
 
                 <Marker position={[SLIIT.lat, SLIIT.lng]} icon={sliitPinIcon}>
                     <Popup>
@@ -263,9 +348,16 @@ const LocationMapPicker = ({ value, onChange, disabled = false }) => {
                         <Popup>
                             <strong>Accommodation Location</strong>
                             <br />
-                            Distance to SLIIT: {selectedDistanceKm ? `${selectedDistanceKm.toFixed(2)} km` : '--'}
+                            Distance to SLIIT: {displayDistanceKm.toFixed(2)} km
                         </Popup>
                     </Marker>
+                )}
+
+                {coordinates.hasCoordinates && (
+                    <Polyline
+                        positions={displayRoutePoints}
+                        pathOptions={routeLineStyle}
+                    />
                 )}
 
                 {coordinates.hasCoordinates && (
@@ -293,27 +385,27 @@ const LocationMapPicker = ({ value, onChange, disabled = false }) => {
                 <div className="rounded-lg border border-gray-200 p-3 text-center">
                     <p className="text-xs uppercase tracking-wide text-gray-500">Distance To SLIIT</p>
                     <p className="mt-1 text-lg font-bold text-gray-900">
-                        {selectedDistanceKm ? `${selectedDistanceKm.toFixed(2)} km` : 'Not selected'}
+                        {displayDistanceKm.toFixed(2)} km
                     </p>
                 </div>
 
                 <div className="rounded-lg border border-gray-200 p-3 text-center">
                     <p className="text-xs uppercase tracking-wide text-gray-500">Approx Walk</p>
                     <p className="mt-1 text-lg font-bold text-gray-900">
-                        {walkingMinutes ? `${walkingMinutes} min` : '--'}
+                        {walkingMinutes} min
                     </p>
                 </div>
 
                 <div className="rounded-lg border border-gray-200 p-3 text-center">
                     <p className="text-xs uppercase tracking-wide text-gray-500">Approx Drive</p>
                     <p className="mt-1 text-lg font-bold text-gray-900">
-                        {drivingMinutes ? `${drivingMinutes} min` : '--'}
+                        {drivingMinutes} min
                     </p>
                 </div>
             </div>
 
             <p className="text-xs text-gray-500">
-                {reverseGeocoding ? 'Resolving clicked location address...' : 'Coordinates and distance are auto-calculated from map selection.'}
+                {reverseGeocoding ? 'Resolving clicked location address...' : 'SLIIT Campus is shown first. Distance starts at 0.00 km and updates after you place the red pin.'}
             </p>
         </div>
     );

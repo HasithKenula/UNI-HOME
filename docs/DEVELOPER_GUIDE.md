@@ -68,15 +68,19 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_specific_password
-EMAIL_FROM=SLIIT Accommodation <noreply@sliit-accommodation.lk>
+EMAIL_FROM=SLIIT Accommodation <your_email@gmail.com>
 
 # Client URL
-CLIENT_URL=http://localhost:3000
+CLIENT_URL=http://localhost:5173
 
 # File Upload
 MAX_FILE_SIZE=5242880
 UPLOAD_PATH=./uploads
 ```
+
+Email note:
+- Email delivery is used for application notifications such as booking confirmations and password reset links.
+- Set real `EMAIL_USER` and `EMAIL_PASS` values (not placeholders) so outbound emails can be delivered successfully.
 
 Create `client/.env` (optional):
 ```env

@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { protect } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/role.middleware.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
+import Accommodation from '../models/Accommodation.js';
 
 const router = express.Router();
 
@@ -190,6 +192,78 @@ router.put('/notification-preferences', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update notification preferences',
+      error: error.message,
+    });
+  }
+});
+
+// @desc    Get tenant notices sent by owners
+// @route   GET /api/users/tenant-notices
+// @access  Private (student)
+router.get('/tenant-notices', protect, authorize('student'), async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 8, 1), 30);
+    const filter = {
+      recipient: req.user.id,
+      channel: 'in_app',
+      'relatedEntity.entityType': 'accommodation',
+    };
+
+    const notices = await Notification.find(filter)
+      .select('title message isRead createdAt relatedEntity')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const accommodationIds = [
+      ...new Set(
+        notices
+          .map((item) => item?.relatedEntity?.entityId)
+          .filter(Boolean)
+          .map((id) => String(id))
+      ),
+    ];
+
+    const accommodations = accommodationIds.length
+      ? await Accommodation.find({ _id: { $in: accommodationIds } })
+          .select('title')
+          .lean()
+      : [];
+
+    const accommodationTitleById = new Map(
+      accommodations.map((item) => [String(item._id), item.title])
+    );
+
+    const data = notices.map((notice) => {
+      const accommodationId = notice?.relatedEntity?.entityId
+        ? String(notice.relatedEntity.entityId)
+        : null;
+
+      return {
+        _id: notice._id,
+        title: notice.title,
+        message: notice.message,
+        isRead: Boolean(notice.isRead),
+        createdAt: notice.createdAt,
+        accommodationId,
+        accommodationTitle: accommodationId
+          ? accommodationTitleById.get(accommodationId) || 'Your Accommodation'
+          : 'Your Accommodation',
+      };
+    });
+
+    const unreadCount = await Notification.countDocuments({ ...filter, isRead: false });
+
+    res.status(200).json({
+      success: true,
+      data,
+      unreadCount,
+    });
+  } catch (error) {
+    console.error('Get tenant notices error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch tenant notices',
       error: error.message,
     });
   }

@@ -7,6 +7,7 @@ import inquiryReducer from '../features/inquiries/inquirySlice';
 import ticketReducer from '../features/tickets/ticketSlice';
 import providerReducer from '../features/providers/providerSlice';
 import reviewReducer from '../features/reviews/reviewSlice';
+import notificationReducer from '../features/notifications/notificationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     tickets: ticketReducer,
     providers: providerReducer,
     reviews: reviewReducer,
+    notifications: notificationReducer,
   },
 });
 

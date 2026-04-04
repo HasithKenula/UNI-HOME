@@ -18,6 +18,7 @@ import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerReviewsPage from './pages/owner/OwnerReviewsPage';
 import ServiceProviderCategoriesPage from './pages/owner/ServiceProviderCategoriesPage';
 import ServiceProvidersPage from './pages/owner/ServiceProvidersPage';
+import MyProviderBookingsPage from './pages/owner/MyProviderBookingsPage';
 import MyBookingsPage from './pages/student/MyBookingsPage';
 import FavoritesPage from './pages/student/FavoritesPage';
 import BookingDetailPage from './pages/student/BookingDetailPage';
@@ -162,6 +163,16 @@ function App() {
               <PrivateRoute>
                 <RoleRoute allowedRoles={['owner', 'admin']}>
                   <ServiceProvidersPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/owner/provider-bookings"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['owner', 'admin']}>
+                  <MyProviderBookingsPage />
                 </RoleRoute>
               </PrivateRoute>
             }

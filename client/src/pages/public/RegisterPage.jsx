@@ -51,14 +51,15 @@ const RegisterPage = () => {
     },
   ];
 
-  const handleRegistrationSuccess = () => {
-    // Navigate to appropriate dashboard after successful registration
+  const handleRegistrationSuccess = (user) => {
+    // Auto-redirect based on role
     const dashboardMap = {
       student: '/student/dashboard',
       owner: '/owner/dashboard',
       service_provider: '/provider/dashboard',
+      admin: '/admin/dashboard',
     };
-    navigate(dashboardMap[selectedRole] || '/');
+    navigate(dashboardMap[user.role] || '/');
   };
 
   const selectedRoleData = roles.find((r) => r.id === selectedRole);
@@ -151,7 +152,7 @@ const RegisterPage = () => {
                   Students should use their institutional email ending with <strong>@my.sliit.lk</strong>.
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Property owner and service provider accounts may require verification before full access.
+                  Property owner and service provider accounts may require approval before full access.
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Your data is processed securely and used only for platform services.

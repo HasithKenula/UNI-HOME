@@ -25,6 +25,12 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
     const availableRooms = useMemo(
         () =>
             (listing?.rooms || []).filter((room) => {
+                if (typeof room?.isBookable === 'boolean') {
+                    return room.isBookable;
+                }
+                if (Number.isFinite(Number(room?.availableSlots))) {
+                    return room?.status === 'available' && Number(room.availableSlots) > 0;
+                }
                 const maxOccupants = Number(room?.maxOccupants || 1);
                 const currentOccupants = Number(room?.currentOccupants || 0);
                 return room?.status === 'available' && currentOccupants < maxOccupants;
@@ -230,7 +236,9 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                     options={availableRooms.map((room) => {
                         const maxOccupants = Number(room.maxOccupants || 1);
                         const currentOccupants = Number(room.currentOccupants || 0);
-                        const remaining = Math.max(0, maxOccupants - currentOccupants);
+                        const remaining = Number.isFinite(Number(room.availableSlots))
+                            ? Math.max(0, Number(room.availableSlots))
+                            : Math.max(0, maxOccupants - currentOccupants);
 
                         return {
                             value: room._id,

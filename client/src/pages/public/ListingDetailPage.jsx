@@ -38,7 +38,7 @@ import ReviewList from '../../components/review/ReviewList';
 import WriteReviewForm from '../../components/review/WriteReviewForm';
 import useAuth from '../../hooks/useAuth';
 import { getAccommodationById, recordAccommodationView } from '../../features/accommodations/accommodationAPI';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -67,6 +67,51 @@ import {
 } from '../../features/reviews/reviewSlice';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+const SLIIT_ENTRANCE = {
+    lat: 6.91435,
+    lng: 79.972684,
+};
+
+const toRadians = (value) => (value * Math.PI) / 180;
+
+const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
+    const earthRadiusKm = 6371;
+    const dLat = toRadians(lat2 - lat1);
+    const dLng = toRadians(lng2 - lng1);
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+};
+
+const sliitPinIcon = L.divIcon({
+    className: 'sliit-pin-wrapper',
+    html: '<div class="sliit-pin">SLIIT Campus</div>',
+    iconSize: [108, 28],
+    iconAnchor: [54, 28],
+});
+
+const routeLineStyle = {
+    color: '#2563eb',
+    weight: 5,
+    opacity: 0.9,
+    lineCap: 'round',
+};
+
+const FitMapToCampusAndProperty = ({ points }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!points?.length) return;
+        map.fitBounds(points, { padding: [32, 32] });
+    }, [map, points]);
+
+    return null;
+};
 
 const withFallbackMedia = (url = '') => {
     const primary = `${API_ORIGIN}${url}`;
@@ -104,6 +149,8 @@ const ListingDetailPage = () => {
     const [activeRoomImage, setActiveRoomImage] = useState(0);
     const [latestBookingNumber, setLatestBookingNumber] = useState('');
     const [showBookingSuccessModal, setShowBookingSuccessModal] = useState(false);
+    const [roadRoutePoints, setRoadRoutePoints] = useState([]);
+    const [roadDistanceKm, setRoadDistanceKm] = useState(null);
 
     useEffect(() => {
         const fetchListing = async () => {
@@ -145,6 +192,12 @@ const ListingDetailPage = () => {
     const videos = listing?.media?.videos || [];
     const availableRoomCount = useMemo(() => {
         return (listing?.rooms || []).filter((room) => {
+            if (typeof room?.isBookable === 'boolean') {
+                return room.isBookable;
+            }
+            if (Number.isFinite(Number(room?.availableSlots))) {
+                return Number(room.availableSlots) > 0 && room?.status === 'available';
+            }
             const maxOccupants = Number(room?.maxOccupants || 1);
             const currentOccupants = Number(room?.currentOccupants || 0);
             return room?.status === 'available' && currentOccupants < maxOccupants;
@@ -253,6 +306,89 @@ const ListingDetailPage = () => {
             return withFallbackMedia(photo.url).primary;
         });
     }, [selectedRoomMedia]);
+
+    const listingCoordinates = useMemo(() => {
+        const raw = listing?.location?.coordinates?.coordinates;
+
+        if (!Array.isArray(raw) || raw.length !== 2) return null;
+
+        const lng = Number(raw[0]);
+        const lat = Number(raw[1]);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+        return { lat, lng };
+    }, [listing]);
+
+    const distanceToSliitKm = useMemo(() => {
+        if (!listingCoordinates) return null;
+        return calculateDistanceKm(SLIIT_ENTRANCE.lat, SLIIT_ENTRANCE.lng, listingCoordinates.lat, listingCoordinates.lng);
+    }, [listingCoordinates]);
+
+    const mapRoutePoints = useMemo(() => {
+        if (!listingCoordinates) return [];
+        return [
+            [SLIIT_ENTRANCE.lat, SLIIT_ENTRANCE.lng],
+            [listingCoordinates.lat, listingCoordinates.lng],
+        ];
+    }, [listingCoordinates]);
+
+    useEffect(() => {
+        if (!listingCoordinates) {
+            setRoadRoutePoints([]);
+            setRoadDistanceKm(null);
+            return;
+        }
+
+        const abortController = new AbortController();
+
+        const fetchRoadRoute = async () => {
+            try {
+                const endpoint = `https://router.project-osrm.org/route/v1/driving/${SLIIT_ENTRANCE.lng},${SLIIT_ENTRANCE.lat};${listingCoordinates.lng},${listingCoordinates.lat}?overview=full&geometries=geojson`;
+                const response = await fetch(endpoint, { signal: abortController.signal });
+                const payload = await response.json();
+
+                const route = payload?.routes?.[0];
+                if (!route?.geometry?.coordinates?.length) {
+                    setRoadRoutePoints([]);
+                    setRoadDistanceKm(null);
+                    return;
+                }
+
+                setRoadRoutePoints(route.geometry.coordinates.map(([lng, lat]) => [lat, lng]));
+                setRoadDistanceKm(Number((route.distance / 1000).toFixed(2)));
+            } catch (_error) {
+                if (!abortController.signal.aborted) {
+                    setRoadRoutePoints([]);
+                    setRoadDistanceKm(null);
+                }
+            }
+        };
+
+        fetchRoadRoute();
+
+        return () => abortController.abort();
+    }, [listingCoordinates]);
+
+    const directionsUrl = useMemo(() => {
+        if (!listingCoordinates) return '';
+        const origin = `${SLIIT_ENTRANCE.lat},${SLIIT_ENTRANCE.lng}`;
+        const destination = `${listingCoordinates.lat},${listingCoordinates.lng}`;
+        return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+    }, [listingCoordinates]);
+
+    const walkDirectionsUrl = useMemo(() => {
+        if (!listingCoordinates) return '';
+        const origin = `${SLIIT_ENTRANCE.lat},${SLIIT_ENTRANCE.lng}`;
+        const destination = `${listingCoordinates.lat},${listingCoordinates.lng}`;
+        return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=walking`;
+    }, [listingCoordinates]);
+
+    const displayDistanceKm = roadDistanceKm ?? distanceToSliitKm;
+    const displayRoutePoints = roadRoutePoints.length ? roadRoutePoints : mapRoutePoints;
+
+    const walkingMinutes = displayDistanceKm ? Math.round((displayDistanceKm / 5) * 60) : null;
+    const drivingMinutes = displayDistanceKm ? Math.round((displayDistanceKm / 25) * 60) : null;
 
     if (loading) {
         return (
@@ -548,16 +684,15 @@ const ListingDetailPage = () => {
                     {/* Pricing Section */}
                     <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
                         <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <DollarSign className="w-6 h-6 text-blue-600" />
                             Pricing Details
                         </h2>
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-200">
+                            {/* <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-200">
                                 <p className="text-sm text-gray-600 mb-1">Monthly Rent</p>
                                 <p className="text-3xl font-bold text-blue-600">
                                     LKR {listing.pricing?.monthlyRent?.toLocaleString()}
                                 </p>
-                            </div>
+                            </div> */}
                             <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
                                 <p className="text-sm text-gray-600 mb-1">Key Money</p>
                                 <p className="text-2xl font-bold text-gray-900">
@@ -633,8 +768,12 @@ const ListingDetailPage = () => {
                                 {(listing.rooms || []).map((room) => {
                                     const maxOccupants = Number(room.maxOccupants || 1);
                                     const currentOccupants = Number(room.currentOccupants || 0);
-                                    const availableSlots = Math.max(0, maxOccupants - currentOccupants);
-                                    const isRoomBookable = room.status === 'available' && availableSlots > 0;
+                                    const availableSlots = Number.isFinite(Number(room.availableSlots))
+                                        ? Math.max(0, Number(room.availableSlots))
+                                        : Math.max(0, maxOccupants - currentOccupants);
+                                    const isRoomBookable = typeof room.isBookable === 'boolean'
+                                        ? room.isBookable
+                                        : room.status === 'available' && availableSlots > 0;
                                     const roomPhoto = room.media?.photos?.[0]?.url;
 
                                     return (
@@ -663,7 +802,11 @@ const ListingDetailPage = () => {
 
                                             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
                                                 <span className="rounded-full bg-gray-200 px-2 py-1 text-gray-700">Status: {room.status}</span>
-                                                <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">Slots: {availableSlots}</span>
+                                                <span className={`rounded-full px-2 py-1 ${
+                                                    availableSlots > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                    Slots: {availableSlots}
+                                                </span>
                                                 {(room.media?.photos || []).length > 0 && (
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-sky-700">
                                                         <Camera className="w-3.5 h-3.5" /> {(room.media?.photos || []).length} photo(s)
@@ -706,7 +849,7 @@ const ListingDetailPage = () => {
                                                     setShowBookingModal(true);
                                                 }}
                                             >
-                                                Book This Room
+                                                {isRoomBookable ? 'Book This Room' : 'Already Booked'}
                                             </Button>
                                         </article>
                                     );
@@ -775,19 +918,26 @@ const ListingDetailPage = () => {
                                 <span className="font-semibold">Property Map Location</span>
                             </p>
                             
-                            {listing.location?.coordinates?.coordinates && listing.location.coordinates.coordinates.length === 2 ? (
+                            {listingCoordinates ? (
+                                <>
                                 <div className="h-64 mt-2 rounded-lg overflow-hidden border-2 border-blue-200">
                                     <MapContainer 
-                                        center={[listing.location.coordinates.coordinates[1], listing.location.coordinates.coordinates[0]]} 
+                                        center={[listingCoordinates.lat, listingCoordinates.lng]} 
                                         zoom={15} 
                                         scrollWheelZoom={false}
                                         style={{ height: '100%', width: '100%', zIndex: 10 }}
                                     >
+                                        <FitMapToCampusAndProperty points={displayRoutePoints} />
                                         <TileLayer
                                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         />
-                                        <Marker position={[listing.location.coordinates.coordinates[1], listing.location.coordinates.coordinates[0]]}>
+                                        <Marker position={[SLIIT_ENTRANCE.lat, SLIIT_ENTRANCE.lng]} icon={sliitPinIcon}>
+                                            <Popup>
+                                                <div className="font-bold text-center">SLIIT Campus</div>
+                                            </Popup>
+                                        </Marker>
+                                        <Marker position={[listingCoordinates.lat, listingCoordinates.lng]}>
                                             <Popup>
                                                 <div className="font-bold text-center">
                                                     {listing.title} <br />
@@ -795,8 +945,45 @@ const ListingDetailPage = () => {
                                                 </div>
                                             </Popup>
                                         </Marker>
+                                        <Polyline positions={displayRoutePoints} pathOptions={routeLineStyle}>
+                                            <Popup>
+                                                <div className="text-center text-sm font-semibold">
+                                                    Route from SLIIT Campus to this property
+                                                </div>
+                                            </Popup>
+                                        </Polyline>
                                     </MapContainer>
                                 </div>
+
+                                <div className="mt-4 grid gap-3 rounded-xl bg-white p-3 md:grid-cols-3">
+                                    <div className="rounded-lg border border-gray-200 p-3 text-center">
+                                        <p className="text-xs uppercase tracking-wide text-gray-500">Distance To SLIIT</p>
+                                        <p className="mt-1 text-lg font-bold text-gray-900">
+                                            {displayDistanceKm ? `${displayDistanceKm.toFixed(2)} km` : '--'}
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-lg border border-gray-200 p-3 text-center">
+                                        <p className="text-xs uppercase tracking-wide text-gray-500">Approx Walk</p>
+                                        <p className="mt-1 text-lg font-bold text-gray-900">
+                                            {walkingMinutes ? `${walkingMinutes} min` : '--'}
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-lg border border-gray-200 p-3 text-center">
+                                        <p className="text-xs uppercase tracking-wide text-gray-500">Approx Drive</p>
+                                        <p className="mt-1 text-lg font-bold text-gray-900">
+                                            {drivingMinutes ? `${drivingMinutes} min` : '--'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Distance is calculated between this accommodation and the SLIIT Campus pin.
+                                </p>
+
+        
+                                </>
                             ) : (
                                 <p className="text-sm text-gray-700 font-mono mt-1">
                                     Location map not available
@@ -932,13 +1119,13 @@ const ListingDetailPage = () => {
                                         <div className="flex items-center gap-2 text-sm text-gray-700">
                                             <Phone className="w-4 h-4 text-blue-600" />
                                             <span className="font-semibold">
-                                                {listing.owner?.phone || 'Not available'}
+                                                {listing.owner?.phone || 'Available'}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 text-sm text-gray-700">
                                             <Mail className="w-4 h-4 text-blue-600" />
                                             <span className="font-semibold">
-                                                {listing.owner?.email || 'Not available'}
+                                                {listing.owner?.email || 'Available'}
                                             </span>
                                         </div>
                                     </div>

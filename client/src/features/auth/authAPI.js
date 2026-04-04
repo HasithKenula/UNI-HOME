@@ -94,8 +94,3 @@ export const resetPassword = async (token, password) => {
   return response.data;
 };
 
-// Verify email
-export const verifyEmail = async (token) => {
-  const response = await axios.get(`/auth/verify-email?token=${token}`);
-  return response.data;
-};
