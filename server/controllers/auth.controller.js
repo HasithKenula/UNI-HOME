@@ -7,6 +7,7 @@ import ServiceProvider from '../models/ServiceProvider.js';
 import crypto from 'crypto';
 import path from 'path';
 
+
 const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
 const normalizeServiceCategories = (categories = []) => {
@@ -148,6 +149,8 @@ const generateRefreshToken = (userId) => {
   });
 };
 
+
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -264,13 +267,13 @@ export const register = async (req, res) => {
         });
     }
 
-    // Generate tokens
-    const accessToken = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
-
     // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
+
+    // Generate tokens for auto-login
+    const accessToken = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.status(201).json({
       success: true,
@@ -441,44 +444,6 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-// @desc    Verify email
-// @route   GET /api/auth/verify-email
-// @access  Public
-export const verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.query;
-
-    const user = await User.findOne({
-      emailVerificationToken: token,
-      emailVerificationExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired verification token',
-      });
-    }
-
-    user.isEmailVerified = true;
-    user.emailVerificationToken = null;
-    user.emailVerificationExpires = null;
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Email verified successfully',
-    });
-  } catch (error) {
-    console.error('Email verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Email verification failed',
-      error: error.message,
-    });
-  }
-};
-
 // @desc    Forgot password
 // @route   POST /api/auth/forgot-password
 // @access  Public
@@ -566,7 +531,6 @@ export default {
   login,
   logout,
   refreshToken,
-  verifyEmail,
   forgotPassword,
   resetPassword,
 };

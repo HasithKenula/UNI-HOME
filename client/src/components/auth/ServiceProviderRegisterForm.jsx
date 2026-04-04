@@ -190,7 +190,7 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
 
     const result = await dispatch(registerServiceProviderAsync(registrationData));
     if (result.type === 'auth/registerServiceProvider/fulfilled') {
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess(result.payload.user);
     }
   };
 

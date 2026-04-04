@@ -4,19 +4,65 @@
 
 import nodemailer from 'nodemailer';
 
+let cachedTransporter = null;
+let usingDevFallback = false;
+
+const allowEtherealFallback = () =>
+  String(process.env.ALLOW_ETHEREAL_FALLBACK || '').trim().toLowerCase() === 'true';
+
+const hasRealEmailConfig = () => {
+  const host = String(process.env.EMAIL_HOST || '').trim();
+  const user = String(process.env.EMAIL_USER || '').trim();
+  const pass = String(process.env.EMAIL_PASS || '').trim();
+
+  if (!host || !user || !pass) return false;
+  if (user === 'your_email@gmail.com') return false;
+  if (pass === 'your_app_specific_password') return false;
+
+  return true;
+};
+
 /**
  * Create reusable transporter
  */
-const createTransporter = () => {
-  return nodemailer.createTransporter({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT || 587,
-    secure: false, // true for 465, false for other ports
+const createTransporter = async () => {
+  if (cachedTransporter) return cachedTransporter;
+
+  if (hasRealEmailConfig()) {
+    cachedTransporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: Number(process.env.EMAIL_PORT) || 587,
+      secure: Number(process.env.EMAIL_PORT) === 465,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    return cachedTransporter;
+  }
+
+  if (!allowEtherealFallback()) {
+    throw new Error('Email service is not configured. Set real EMAIL_HOST, EMAIL_USER and EMAIL_PASS values in server/.env. For Gmail, use an App Password (not your account password).');
+  }
+
+  const testAccount = await nodemailer.createTestAccount();
+  usingDevFallback = true;
+
+  cachedTransporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: testAccount.user,
+      pass: testAccount.pass,
     },
   });
+
+  console.warn('⚠️ Email config missing. Using Ethereal test inbox for development.');
+  console.warn(`📨 Ethereal user: ${testAccount.user}`);
+
+  return cachedTransporter;
 };
 
 /**
@@ -29,10 +75,10 @@ const createTransporter = () => {
  */
 const sendEmail = async (options) => {
   try {
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@unihome.local',
       to: options.to,
       subject: options.subject,
       text: options.text,
@@ -40,52 +86,24 @@ const sendEmail = async (options) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
+    const previewUrl = nodemailer.getTestMessageUrl(info) || null;
 
     console.log(`✅ Email sent: ${info.messageId}`);
+    if (usingDevFallback && previewUrl) {
+      console.log(`🔍 Preview email URL: ${previewUrl}`);
+    } else {
+      console.log('📬 Email delivered via configured SMTP. Check your mailbox provider (e.g., Gmail inbox).');
+    }
+
     return {
       success: true,
-      messageId: info.messageId
+      messageId: info.messageId,
+      previewUrl,
     };
   } catch (error) {
     console.error(`❌ Email send error: ${error.message}`);
     throw new Error(`Failed to send email: ${error.message}`);
   }
-};
-
-/**
- * Send verification email
- */
-const sendVerificationEmail = async (user, verificationToken) => {
-  const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #333;">Email Verification</h2>
-      <p>Hi ${user.firstName},</p>
-      <p>Thank you for registering with SLIIT Accommodation System!</p>
-      <p>Please click the button below to verify your email address:</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${verificationUrl}"
-           style="background-color: #4CAF50; color: white; padding: 12px 30px;
-                  text-decoration: none; border-radius: 5px; display: inline-block;">
-          Verify Email
-        </a>
-      </div>
-      <p>Or copy and paste this link in your browser:</p>
-      <p style="color: #666; font-size: 14px;">${verificationUrl}</p>
-      <p>This link will expire in 24 hours.</p>
-      <hr style="border: 1px solid #eee; margin: 30px 0;">
-      <p style="color: #999; font-size: 12px;">
-        If you didn't create an account, please ignore this email.
-      </p>
-    </div>
-  `;
-
-  return sendEmail({
-    to: user.email,
-    subject: 'Verify Your Email - SLIIT Accommodation',
-    html
-  });
 };
 
 /**
@@ -167,7 +185,7 @@ const sendWelcomeEmail = async (user) => {
       <h2 style="color: #333;">Welcome to SLIIT Accommodation!</h2>
       <p>Hi ${user.firstName},</p>
       <p>Welcome to the SLIIT Student Accommodation Management System!</p>
-      <p>Your account has been successfully verified and you can now:</p>
+      <p>Your account is ready and you can now:</p>
       <ul>
         <li>Search and book accommodations</li>
         <li>Manage your bookings</li>
@@ -194,7 +212,6 @@ const sendWelcomeEmail = async (user) => {
 
 export {
   sendEmail,
-  sendVerificationEmail,
   sendPasswordResetEmail,
   sendBookingConfirmation,
   sendWelcomeEmail
