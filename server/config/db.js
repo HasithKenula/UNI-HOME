@@ -3,6 +3,7 @@
 // ============================================================================
 
 import mongoose from 'mongoose';
+import Review from '../models/Review.js';
 
 const connectDB = async () => {
   try {
@@ -19,6 +20,9 @@ const connectDB = async () => {
     ║  🖥️  Host: ${conn.connection.host.padEnd(44)}║
     ╚════════════════════════════════════════════════════════════╝
     `);
+
+    // Keep review indexes aligned with current schema (drops stale unique index if present).
+    await Review.syncIndexes();
 
     // Handle connection events
     mongoose.connection.on('error', (err) => {

@@ -24,8 +24,6 @@ import {
     BookOpen,
     Camera,
     Video,
-    ThumbsUp,
-    ThumbsDown,
     Expand,
     ChevronLeft,
     ChevronRight
@@ -35,6 +33,9 @@ import ImageGalleryModal from '../../components/common/ImageGalleryModal';
 import LoadingSkeleton from '../../components/common/LoadingSkeleton';
 import BookingForm from '../../components/booking/BookingForm';
 import ContactOwnerModal from '../../components/inquiry/ContactOwnerModal';
+import ReviewSummaryCard from '../../components/review/ReviewSummaryCard';
+import ReviewList from '../../components/review/ReviewList';
+import WriteReviewForm from '../../components/review/WriteReviewForm';
 import useAuth from '../../hooks/useAuth';
 import { getAccommodationById, recordAccommodationView } from '../../features/accommodations/accommodationAPI';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
@@ -55,8 +56,16 @@ import {
     fetchFavoritesAsync,
     removeFavoriteAsync,
 } from '../../features/favorites/favoriteSlice';
+import {
+    createReviewAsync,
+    deleteReviewAsync,
+    fetchAISummaryAsync,
+    fetchReviewEligibilityAsync,
+    fetchReviewsByAccommodationAsync,
+    markReviewHelpfulAsync,
+    updateReviewAsync,
+} from '../../features/reviews/reviewSlice';
 
-const REVIEWS_PER_PAGE = 4;
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
 const SLIIT_ENTRANCE = {
     lat: 6.91435,
@@ -116,8 +125,18 @@ const withFallbackMedia = (url = '') => {
 const ListingDetailPage = () => {
     const dispatch = useDispatch();
     const { favoriteIds } = useSelector((state) => state.favorites);
+    const {
+        reviews,
+        pagination: reviewsPagination,
+        distribution,
+        aiSummary,
+        ratingsSummary,
+        eligibility,
+        actionLoading: reviewActionLoading,
+        helpfulLoading,
+    } = useSelector((state) => state.reviews);
     const { id } = useParams();
-    const { isAuthenticated, isStudent } = useAuth();
+    const { user, isAuthenticated, isStudent } = useAuth();
     const [activeImage, setActiveImage] = useState(0);
     const [reviewPage, setReviewPage] = useState(1);
     const [loading, setLoading] = useState(true);
@@ -153,6 +172,17 @@ const ListingDetailPage = () => {
     }, [id]);
 
     useEffect(() => {
+        dispatch(fetchReviewsByAccommodationAsync({ accommodationId: id, page: reviewPage, limit: 4 }));
+        dispatch(fetchAISummaryAsync(id));
+    }, [dispatch, id, reviewPage]);
+
+    useEffect(() => {
+        if (isAuthenticated && isStudent) {
+            dispatch(fetchReviewEligibilityAsync(id));
+        }
+    }, [dispatch, id, isAuthenticated, isStudent]);
+
+    useEffect(() => {
         if (isAuthenticated && isStudent) {
             dispatch(fetchFavoritesAsync());
         }
@@ -160,16 +190,6 @@ const ListingDetailPage = () => {
 
     const photos = listing?.media?.photos || [];
     const videos = listing?.media?.videos || [];
-    const paginatedReviews = useMemo(() => {
-        const allReviews = listing?.reviews || [];
-        const start = (reviewPage - 1) * REVIEWS_PER_PAGE;
-        const end = start + REVIEWS_PER_PAGE;
-        return {
-            items: allReviews.slice(start, end),
-            totalPages: Math.max(1, Math.ceil(allReviews.length / REVIEWS_PER_PAGE)),
-        };
-    }, [listing, reviewPage]);
-
     const availableRoomCount = useMemo(() => {
         return (listing?.rooms || []).filter((room) => {
             if (typeof room?.isBookable === 'boolean') {
@@ -188,6 +208,64 @@ const ListingDetailPage = () => {
     const canBookNow = hasAccommodationSlots || availableRoomCount > 0;
 
     const handleAction = (message) => toast.info(message);
+
+    const handleReviewSubmit = async (payload) => {
+        const result = await dispatch(createReviewAsync(payload));
+
+        if (!result.error) {
+            dispatch(fetchReviewEligibilityAsync(id));
+            dispatch(fetchReviewsByAccommodationAsync({ accommodationId: id, page: 1, limit: 4 }));
+            dispatch(fetchAISummaryAsync(id));
+            setReviewPage(1);
+        }
+    };
+
+    const handleHelpful = async (reviewId) => {
+        await dispatch(markReviewHelpfulAsync(reviewId));
+    };
+
+    const handleDeleteReview = async (reviewId) => {
+        const confirmed = window.confirm('Delete this review?');
+        if (!confirmed) return;
+
+        const result = await dispatch(deleteReviewAsync(reviewId));
+        if (!result.error) {
+            dispatch(fetchReviewEligibilityAsync(id));
+            dispatch(fetchReviewsByAccommodationAsync({ accommodationId: id, page: reviewPage, limit: 4 }));
+            dispatch(fetchAISummaryAsync(id));
+        }
+    };
+
+    const handleEditReview = async (review) => {
+        const nextRatingRaw = window.prompt('Update rating (1-5)', review.overallRating);
+        const nextContent = window.prompt('Update review content', review.content || '');
+
+        if (!nextRatingRaw || !nextContent) return;
+
+        const nextRating = Number(nextRatingRaw);
+        if (!Number.isInteger(nextRating) || nextRating < 1 || nextRating > 5) {
+            toast.error('Rating must be an integer between 1 and 5');
+            return;
+        }
+
+        const result = await dispatch(
+            updateReviewAsync({
+                id: review._id,
+                payload: {
+                    overallRating: nextRating,
+                    content: nextContent,
+                    title: review.title,
+                    categoryRatings: review.categoryRatings,
+                },
+            })
+        );
+
+        if (!result.error) {
+            dispatch(fetchReviewEligibilityAsync(id));
+            dispatch(fetchReviewsByAccommodationAsync({ accommodationId: id, page: reviewPage, limit: 4 }));
+            dispatch(fetchAISummaryAsync(id));
+        }
+    };
 
     const isFavorite = favoriteIds.includes(id);
 
@@ -921,92 +999,33 @@ const ListingDetailPage = () => {
                                 <Star className="w-6 h-6 text-amber-500 fill-current" />
                                 Reviews & Ratings
                             </h2>
-                            <div className="flex items-center gap-2">
-                                <div className="text-right">
-                                    <div className="text-3xl font-bold text-amber-600">
-                                        {listing.ratingsSummary?.averageRating?.toFixed(1) || '0.0'}
-                                    </div>
-                                    <div className="text-xs text-gray-500">out of 5</div>
-                                </div>
-                            </div>
                         </div>
 
-                        <div className={`mb-4 p-4 rounded-xl border-2 ${
-                            listing.ratingsSummary?.sentimentLabel === 'positive'
-                                ? 'bg-green-50 border-green-200'
-                                : listing.ratingsSummary?.sentimentLabel === 'negative'
-                                ? 'bg-red-50 border-red-200'
-                                : 'bg-gray-50 border-gray-200'
-                        }`}>
-                            <div className="flex items-center gap-2 mb-2">
-                                {listing.ratingsSummary?.sentimentLabel === 'positive' ? (
-                                    <ThumbsUp className="w-5 h-5 text-green-600" />
-                                ) : listing.ratingsSummary?.sentimentLabel === 'negative' ? (
-                                    <ThumbsDown className="w-5 h-5 text-red-600" />
-                                ) : (
-                                    <Star className="w-5 h-5 text-gray-600" />
-                                )}
-                                <span className="font-bold text-sm capitalize">
-                                    {listing.ratingsSummary?.sentimentLabel || 'No'} Sentiment
-                                </span>
-                            </div>
-                            {listing.aiSummary?.summary && (
-                                <p className="text-sm text-gray-700 leading-relaxed">
-                                    <span className="font-semibold">AI Summary:</span> {listing.aiSummary.summary}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-4">
-                            {paginatedReviews.items.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <Star className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                    <p className="text-gray-500">No reviews yet. Be the first to review!</p>
-                                </div>
-                            ) : (
-                                paginatedReviews.items.map((review) => (
-                                    <article
-                                        key={review._id}
-                                        className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-white to-gray-50 p-4 hover:shadow-md transition-shadow"
-                                    >
-                                        <div className="flex items-start justify-between mb-2">
-                                            <h4 className="font-bold text-gray-900">
-                                                {review.title || 'Student Review'}
-                                            </h4>
-                                            <div className="flex items-center gap-1">
-                                                <Star className="w-4 h-4 text-amber-500 fill-current" />
-                                                <span className="font-bold text-amber-600">{review.overallRating}</span>
-                                            </div>
-                                        </div>
-                                        <p className="text-gray-700 leading-relaxed">{review.content}</p>
-                                    </article>
-                                ))
-                            )}
-                        </div>
-
-                        {paginatedReviews.totalPages > 1 && (
-                            <div className="mt-6 flex items-center justify-between">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={reviewPage <= 1}
-                                    onClick={() => setReviewPage((prev) => Math.max(1, prev - 1))}
-                                >
-                                    Previous
-                                </Button>
-                                <span className="text-sm font-semibold text-gray-700">
-                                    Page {reviewPage} of {paginatedReviews.totalPages}
-                                </span>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={reviewPage >= paginatedReviews.totalPages}
-                                    onClick={() => setReviewPage((prev) => Math.min(paginatedReviews.totalPages, prev + 1))}
-                                >
-                                    Next
-                                </Button>
-                            </div>
+                        {isAuthenticated && isStudent && (
+                            <WriteReviewForm
+                                accommodationId={id}
+                                eligibility={eligibility}
+                                loading={reviewActionLoading}
+                                onSubmit={handleReviewSubmit}
+                            />
                         )}
+
+                        <ReviewSummaryCard
+                            ratingsSummary={ratingsSummary || listing.ratingsSummary}
+                            aiSummary={aiSummary || listing.aiSummary}
+                            distribution={distribution}
+                        />
+
+                        <ReviewList
+                            reviews={reviews}
+                            pagination={reviewsPagination}
+                            currentUserId={user?._id}
+                            helpfulLoading={helpfulLoading}
+                            onHelpful={handleHelpful}
+                            onDelete={handleDeleteReview}
+                            onEdit={handleEditReview}
+                            onPageChange={setReviewPage}
+                        />
                     </section>
                 </div>
 
