@@ -5,6 +5,40 @@ import { CalendarClock, Clock3, Heart, Wrench } from 'lucide-react';
 import { fetchBookingsAsync } from '../../features/bookings/bookingSlice';
 import Button from '../../components/common/Button';
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const normalizeMediaPath = (url = '') => {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.startsWith('/') ? url : `/${url}`;
+};
+
+const getMediaUrlWithFallback = (url = '') => {
+    const normalizedUrl = normalizeMediaPath(url);
+    const primary = `${API_ORIGIN}${normalizedUrl}`;
+    const fallback = url.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${normalizedUrl.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
+
+const getBookingPhotoPath = (booking) => {
+    const firstRoomPhoto = booking?.room?.media?.photos?.[0];
+    if (typeof firstRoomPhoto === 'string') return firstRoomPhoto;
+    if (firstRoomPhoto?.url) return firstRoomPhoto.url;
+
+    const firstMediaPhoto = booking?.accommodation?.media?.photos?.[0];
+    if (typeof firstMediaPhoto === 'string') return firstMediaPhoto;
+    if (firstMediaPhoto?.url) return firstMediaPhoto.url;
+
+    const firstLegacyPhoto = booking?.accommodation?.photos?.[0];
+    if (typeof firstLegacyPhoto === 'string') return firstLegacyPhoto;
+    if (firstLegacyPhoto?.url) return firstLegacyPhoto.url;
+
+    return '';
+};
+
 const StudentDashboard = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
@@ -76,12 +110,35 @@ const StudentDashboard = () => {
                                 className="block rounded-xl border-2 border-gray-100 p-4 transition-all hover:border-blue-200 hover:bg-blue-50"
                             >
                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <p className="text-xs text-gray-500">{booking.bookingNumber}</p>
-                                        <p className="font-semibold text-gray-900">{booking.accommodation?.title || 'Accommodation'}</p>
-                                        <p className="text-sm text-gray-600">
-                                            Check-in: {booking.checkInDate ? new Date(booking.checkInDate).toLocaleDateString() : '-'}
-                                        </p>
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={(() => {
+                                                const mediaPath = getBookingPhotoPath(booking);
+                                                return mediaPath
+                                                    ? getMediaUrlWithFallback(mediaPath).primary
+                                                    : 'https://placehold.co/180x120?text=Listing';
+                                            })()}
+                                            alt={booking.accommodation?.title || 'Accommodation'}
+                                            className="h-16 w-24 rounded-lg object-cover"
+                                            onError={(event) => {
+                                                const mediaUrl = getBookingPhotoPath(booking);
+                                                if (!mediaUrl) return;
+                                                const { fallback } = getMediaUrlWithFallback(mediaUrl);
+                                                if (event.currentTarget.src !== fallback) {
+                                                    event.currentTarget.src = fallback;
+                                                } else {
+                                                    event.currentTarget.src = 'https://placehold.co/180x120?text=Listing';
+                                                }
+                                            }}
+                                        />
+
+                                        <div>
+                                            <p className="text-xs text-gray-500">{booking.bookingNumber}</p>
+                                            <p className="font-semibold text-gray-900">{booking.accommodation?.title || 'Accommodation'}</p>
+                                            <p className="text-sm text-gray-600">
+                                                Check-in: {booking.checkInDate ? new Date(booking.checkInDate).toLocaleDateString() : '-'}
+                                            </p>
+                                        </div>
                                     </div>
                                     <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 capitalize w-fit">
                                         {booking.status}

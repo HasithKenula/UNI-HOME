@@ -11,6 +11,7 @@
 - [x] Added student-facing room media viewer in listing details to browse room photos and videos similarly to accommodation media.
 - [x] Added room media fallback in student bookings list to show room image when available.
 - [x] Added room management panel to edit listing page so owners can add and review multiple rooms in one flow.
+- [x] Implemented Phase 4 Review APIs, AI summary regeneration (Hugging Face), and listing page review UI/state integration.
 
 ---
 
@@ -840,75 +841,75 @@
 
 ## 4.1 Backend — Models
 
-- [ ] `models/Review.js` — Rating schema with categories, moderation, unique per student+booking
-- [ ] `models/AIReviewSummary.js` — AI summary with sentiment, keywords, themes
+- [x] `models/Review.js` — Rating schema with categories, moderation, unique per student+booking
+- [x] `models/AIReviewSummary.js` — AI summary with sentiment, keywords, themes
 
 ## 4.2 Backend — Review APIs
 
 ### `POST /api/reviews`
 
-- [ ] Route (protected: student)
-- [ ] Validator: accommodationId, bookingId, overallRating (1-5), content (min 10 chars)
-- [ ] Controller: verify booking belongs to student + completed/active, check no duplicate, create with pending_approval status
+- [x] Route (protected: student)
+- [x] Validator: accommodationId, bookingId, overallRating (1-5), content (min 10 chars)
+- [x] Controller: verify booking belongs to student + completed/active, check no duplicate, create with pending_approval status
 - [ ] Test → 201
 
 ### `GET /api/reviews/accommodation/:accommodationId`
 
-- [ ] Route (public)
-- [ ] Controller: find approved reviews, populate student, sort + paginate, calculate rating distribution
+- [x] Route (public)
+- [x] Controller: find approved reviews, populate student, sort + paginate, calculate rating distribution
 - [ ] Test → 200
 
 ### `PUT /api/reviews/:id`
 
-- [ ] Route (protected: student — own only)
-- [ ] Controller: update rating/content, reset to pending_approval
+- [x] Route (protected: student — own only)
+- [x] Controller: update rating/content, reset to pending_approval
 - [ ] Test → 200
 
 ### `DELETE /api/reviews/:id`
 
-- [ ] Route (protected: student own / admin)
-- [ ] Controller: delete, trigger rating recalculation
+- [x] Route (protected: student own / admin)
+- [x] Controller: delete, trigger rating recalculation
 - [ ] Test → 200
 
 ### `POST /api/reviews/:id/helpful`
 
-- [ ] Route (protected: student)
-- [ ] Controller: increment helpfulCount (idempotent per user — can use a Set or separate collection)
+- [x] Route (protected: student)
+- [x] Controller: increment helpfulCount (idempotent per user — can use a Set or separate collection)
 - [ ] Test → 200
 
 ## 4.3 Backend — AI Summary APIs
 
 ### `GET /api/ai-summaries/:accommodationId`
 
-- [ ] Route (public)
-- [ ] Controller: findOne by accommodation
+- [x] Route (public)
+- [x] Controller: findOne by accommodation
 - [ ] Test → 200
 
 ### `POST /api/ai-summaries/:accommodationId/regenerate`
 
-- [ ] Route (protected: admin)
-- [ ] Controller: fetch all approved reviews, call AI analysis function (keyword extraction, sentiment scoring, summary generation), upsert AIReviewSummary, update accommodation.ratingsSummary
-- [ ] Implement AI summary logic (OpenAI API or rule-based keyword analysis)
+- [x] Route (protected: admin)
+- [x] Controller: fetch all approved reviews, call AI analysis function (keyword extraction, sentiment scoring, summary generation), upsert AIReviewSummary, update accommodation.ratingsSummary
+- [x] Implement AI summary logic (OpenAI API or rule-based keyword analysis)
 - [ ] Test → 200
 
 ## 4.4 Frontend — Review Components
 
 ### Review Section (on Listing Detail Page)
 
-- [ ] `components/review/ReviewSummaryCard.jsx` — average rating, star bars, sentiment badge, AI summary
-- [ ] `components/review/ReviewList.jsx` — individual review cards with pagination
-- [ ] `components/review/ReviewCard.jsx` — student name, rating, date, content, helpful button
-- [ ] `components/review/WriteReviewForm.jsx` — star rating input (overall + categories), textarea, submit
+- [x] `components/review/ReviewSummaryCard.jsx` — average rating, star bars, sentiment badge, AI summary
+- [x] `components/review/ReviewList.jsx` — individual review cards with pagination
+- [x] `components/review/ReviewCard.jsx` — student name, rating, date, content, helpful button
+- [x] `components/review/WriteReviewForm.jsx` — star rating input (overall + categories), textarea, submit
 
 ### Review Integration
 
-- [ ] Show "Write a Review" button only for completed/active bookings
-- [ ] API calls: POST review, GET reviews, POST helpful
-- [ ] Toast notifications on submit/error
+- [x] Show "Write a Review" button only for completed/active bookings
+- [x] API calls: POST review, GET reviews, POST helpful
+- [x] Toast notifications on submit/error
 
 ## 4.5 Frontend — State
 
-- [ ] `features/reviews/reviewSlice.js` + `reviewAPI.js`
+- [x] `features/reviews/reviewSlice.js` + `reviewAPI.js`
 
 ---
 
