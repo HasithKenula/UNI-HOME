@@ -79,11 +79,27 @@ const reserveAccommodationSlot = async (accommodationId) => {
         { new: true }
     );
 
+    if (!reserved) return reserved;
+
+    const totalRooms = Number(reserved.totalRooms || 0);
+    const availableRooms = Number(reserved.availableRooms || 0);
+    reserved.availabilityStatus =
+        availableRooms <= 0 ? 'not_available' : availableRooms < totalRooms ? 'limited_slots' : 'available';
+
+    if (availableRooms <= 0 && reserved.status === 'active') {
+        reserved.status = 'unpublished';
+        reserved.autoUnpublishedOnNoRooms = true;
+    }
+
+    await reserved.save();
+
     return reserved;
 };
 
 const releaseAccommodationSlot = async (accommodationId) => {
-    const accommodation = await Accommodation.findById(accommodationId).select('availableRooms totalRooms');
+    const accommodation = await Accommodation.findById(accommodationId).select(
+        'availableRooms totalRooms status publishedAt autoUnpublishedOnNoRooms'
+    );
     if (!accommodation) return;
 
     const nextValue = Math.min(
@@ -92,6 +108,22 @@ const releaseAccommodationSlot = async (accommodationId) => {
     );
 
     accommodation.availableRooms = Math.max(0, nextValue);
+
+    const totalRooms = Number(accommodation.totalRooms || 0);
+    const availableRooms = Number(accommodation.availableRooms || 0);
+    accommodation.availabilityStatus =
+        availableRooms <= 0 ? 'not_available' : availableRooms < totalRooms ? 'limited_slots' : 'available';
+
+    if (
+        availableRooms > 0 &&
+        accommodation.status === 'unpublished' &&
+        accommodation.autoUnpublishedOnNoRooms
+    ) {
+        accommodation.status = 'active';
+        accommodation.autoUnpublishedOnNoRooms = false;
+        accommodation.publishedAt = accommodation.publishedAt || new Date();
+    }
+
     await accommodation.save();
 };
 
