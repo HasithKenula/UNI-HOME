@@ -54,6 +54,7 @@ const reviewSchema = new Schema(
 
     // Helpfulness
     helpfulCount: { type: Number, default: 0 },
+    helpfulBy: [{ type: Schema.Types.ObjectId, ref: 'User', select: false }],
     reportCount: { type: Number, default: 0 },
   },
   {
@@ -63,8 +64,7 @@ const reviewSchema = new Schema(
 
 reviewSchema.index({ accommodation: 1, status: 1 });
 reviewSchema.index({ student: 1 });
-// Ensure one review per student per booking
-reviewSchema.index({ student: 1, booking: 1 }, { unique: true });
+reviewSchema.index({ student: 1, booking: 1 });
 
 const Review = mongoose.model("Review", reviewSchema);
 

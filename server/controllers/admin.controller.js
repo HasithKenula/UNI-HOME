@@ -10,6 +10,7 @@ import Notification from '../models/Notification.js';
 import NotificationTemplate from '../models/NotificationTemplate.js';
 import AuditLog from '../models/AuditLog.js';
 import Booking from '../models/Booking.js';
+import { regenerateAIReviewSummary } from '../utils/reviewSummary.util.js';
 
 const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -472,6 +473,7 @@ export const moderateReview = async (req, res) => {
     review.moderatedAt = new Date();
     review.rejectionReason = action === 'reject' ? reason : '';
     await review.save();
+    await regenerateAIReviewSummary(review.accommodation, { regeneratedBy: req.user._id });
 
     await AuditLog.create({
       performedBy: req.user._id,

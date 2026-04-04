@@ -126,6 +126,8 @@ import ticketRoutes from './routes/ticket.routes.js';
 import serviceProviderRoutes from './routes/serviceProvider.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import reviewRoutes from './routes/review.routes.js';
+import aiSummaryRoutes from './routes/aiSummary.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 
 // API Routes
@@ -139,6 +141,8 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/service-providers', serviceProviderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/ai-summaries', aiSummaryRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Additional routes (to be added in future phases)
