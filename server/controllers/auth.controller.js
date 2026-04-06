@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import path from 'path';
 
 
-const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
+const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'ac', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
 const normalizeServiceCategories = (categories = []) => {
   if (!Array.isArray(categories)) return [];

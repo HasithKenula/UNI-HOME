@@ -5,6 +5,7 @@ import { getServiceProviderCategories } from '../../features/providers/providerA
 const FALLBACK_CATEGORIES = [
   { value: 'plumbing', label: 'Plumbing' },
   { value: 'electrical', label: 'Electrical' },
+  { value: 'ac', label: 'AC' },
   { value: 'cleaning', label: 'Cleaning' },
   { value: 'painting', label: 'Painting' },
   { value: 'carpentry', label: 'Carpentry' },
@@ -17,6 +18,7 @@ const FALLBACK_CATEGORIES = [
 const ICONS = {
   plumbing: '🚰',
   electrical: '🔌',
+  ac: '❄️',
   cleaning: '🧹',
   painting: '🖌️',
   carpentry: '🪚',

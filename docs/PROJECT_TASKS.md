@@ -41,6 +41,19 @@
 - [x] Kept owner ticket approval and rejection flow available from the dedicated tickets page.
 - [x] Restored the owner ticket details modal and assignment handoff to maintenance categories after the undo.
 
+## Recent Updates (2026-04-06)
+
+- [x] Redesigned owner Find Service Providers flow to match legacy UX stages: provider list view, quick-view modal, and full profile details page.
+- [x] Added backend provider details endpoint for owner/admin profile view consumption.
+- [x] Added provider review submission endpoint and persistence model, then integrated review listing + write review form on the provider full-details page.
+- [x] Replaced quick-view Email action with Book Now and restored booking form flow from owner provider search.
+- [x] Applied project-aligned green color palette to new provider quick-view and related booking/review actions.
+- [x] Extended backend booking validation/controller to accept either area or city from quick-book payloads.
+- [x] Highlighted previously booked dates in the provider booking calendar using distinct colors for self-booked and other-booked days.
+- [x] Removed duplicate working-area labels in provider quick-view and detail screens by normalizing area display text.
+- [x] Removed district/city inputs from owner service-provider booking forms and replaced them with a single accommodation location field.
+- [x] Updated service booking backend model, validators, and controller logic to accept and persist accommodation location for create/edit booking flows.
+
 ---
 
 ## 📌 Table of Contents
@@ -1223,6 +1236,43 @@
 - [x] `pages/owner/ServiceProviderCategoriesPage.jsx`
 - [x] Category selection opens separate provider page route (`/owner/service-providers/:category`)
 - [x] Provider page reads selected category from route and shows providers under that category
+
+#### Acceptance Criteria
+
+**AC1: Page Display & Structure**
+- [x] Page displays with title "Maintenance Categories" and description text
+- [x] Categories displayed in responsive grid (2 columns on mobile, 3 on tablet, 5 on desktop)
+- [x] Each category shows icon emoji and label name
+- [x] All 9 categories available: Plumbing, Electrical, Cleaning, Painting, Carpentry, Masons, Welding, CCTV, Other Services
+
+**AC2: Category Data Loading**
+- [x] Categories fetched from `GET /api/service-providers/categories` endpoint
+- [x] Fallback to hardcoded category list if API fails or returns empty
+- [x] API failure handled gracefully without breaking page
+
+**AC3: Category Navigation**
+- [x] Clicking category button navigates to `/owner/service-providers/:category` route
+- [x] Selected category value passed as route parameter
+- [x] Provider details page loads with category pre-selected in filters
+
+**AC4: Ticket Assignment Context**
+- [x] When navigated from ticket assignment flow, `ticketAssignment` state passed via location
+- [x] Blue info banner displays: "Assigning provider for ticket [ticketNumber]. Choose the maintenance category first."
+- [x] Banner hidden when not in ticket assignment mode
+- [x] `ticketAssignment` state forwarded to provider page via navigation state
+
+**AC5: Styling & Interactions**
+- [x] Category buttons have white background with 2px gray border
+- [x] Hover state: border changes to amber-300, background changes to amber-100
+- [x] Buttons have rounded corners (rounded-xl) and smooth transitions
+- [x] Container has 2px gray border and shadow styling
+- [x] Page has appropriate padding and spacing (py-10, px-4)
+
+**AC6: Responsive Design**
+- [x] Mobile: 2-column grid layout
+- [x] Tablet (sm): 3-column grid layout  
+- [x] Desktop (lg): 5-column grid layout
+- [x] Consistent padding and gaps across all breakpoints
 
 ## 6.5 Frontend — Provider Pages
 

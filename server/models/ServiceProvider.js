@@ -24,7 +24,7 @@ const serviceProviderSchema = new Schema({
   serviceCategories: [
     {
       type: String,
-      enum: ["plumbing", "electrical", "cleaning", "painting", "carpentry", "masons", "welding", "cctv", "general", "other"],
+      enum: ["plumbing", "electrical", "ac", "cleaning", "painting", "carpentry", "masons", "welding", "cctv", "general", "other"],
     },
   ],
   areasOfOperation: [

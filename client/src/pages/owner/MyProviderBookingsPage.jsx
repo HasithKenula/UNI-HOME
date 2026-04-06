@@ -13,6 +13,7 @@ import {
 const CATEGORY_OPTIONS = [
   { value: 'plumbing', label: 'Plumbing' },
   { value: 'electrical', label: 'Electrical' },
+  { value: 'ac', label: 'AC' },
   { value: 'cleaning', label: 'Cleaning' },
   { value: 'painting', label: 'Painting' },
   { value: 'carpentry', label: 'Carpentry' },
@@ -20,15 +21,6 @@ const CATEGORY_OPTIONS = [
   { value: 'welding', label: 'Welding' },
   { value: 'cctv', label: 'CCTV' },
   { value: 'other', label: 'Other Services' },
-];
-
-const DISTRICT_OPTIONS = [
-  { value: 'Colombo', label: 'Colombo' },
-  { value: 'Gampaha', label: 'Gampaha' },
-  { value: 'Kalutara', label: 'Kalutara' },
-  { value: 'Kandy', label: 'Kandy' },
-  { value: 'Galle', label: 'Galle' },
-  { value: 'Kurunegala', label: 'Kurunegala' },
 ];
 
 const BOOKING_TABS = [
@@ -60,8 +52,7 @@ const MyProviderBookingsPage = () => {
     open: false,
     bookingId: '',
     category: '',
-    district: '',
-    area: '',
+    accommodationLocation: '',
     note: '',
     preferredDate: '',
   });
@@ -96,8 +87,7 @@ const MyProviderBookingsPage = () => {
       open: true,
       bookingId: booking._id,
       category: booking.category || '',
-      district: booking.district || '',
-      area: booking.area || '',
+      accommodationLocation: booking.accommodationLocation || booking.area || booking.district || '',
       note: booking.note || '',
       preferredDate: booking.preferredDate ? new Date(booking.preferredDate).toISOString().split('T')[0] : '',
     });
@@ -108,8 +98,7 @@ const MyProviderBookingsPage = () => {
       open: false,
       bookingId: '',
       category: '',
-      district: '',
-      area: '',
+      accommodationLocation: '',
       note: '',
       preferredDate: '',
     });
@@ -118,8 +107,7 @@ const MyProviderBookingsPage = () => {
   const submitEdit = async () => {
     const payload = {
       category: editModal.category,
-      district: editModal.district,
-      area: editModal.area,
+      accommodationLocation: editModal.accommodationLocation,
       note: editModal.note,
       preferredDate: editModal.preferredDate || undefined,
     };
@@ -192,7 +180,7 @@ const MyProviderBookingsPage = () => {
                     {booking.provider?.firstName} {booking.provider?.lastName}
                   </p>
                   <p className="text-sm text-gray-600 capitalize">
-                    {booking.category} • {booking.district} / {booking.area}
+                    {booking.category} • {booking.accommodationLocation || booking.area || booking.district || '-'}
                   </p>
                   <p className="text-sm text-gray-600">
                     Status: <span className="font-semibold capitalize">{normalizeStatus(booking.status).replace('_', ' ')}</span>
@@ -250,19 +238,11 @@ const MyProviderBookingsPage = () => {
                 value={editModal.preferredDate}
                 onChange={(event) => setEditModal((prev) => ({ ...prev, preferredDate: event.target.value }))}
               />
-              <Select
-                label="District"
-                name="district"
-                value={editModal.district}
-                options={DISTRICT_OPTIONS}
-                onChange={(event) => setEditModal((prev) => ({ ...prev, district: event.target.value }))}
-                required
-              />
               <Input
-                label="City"
-                name="area"
-                value={editModal.area}
-                onChange={(event) => setEditModal((prev) => ({ ...prev, area: event.target.value }))}
+                label="Accommodation Location"
+                name="accommodationLocation"
+                value={editModal.accommodationLocation}
+                onChange={(event) => setEditModal((prev) => ({ ...prev, accommodationLocation: event.target.value }))}
                 required
               />
             </div>
