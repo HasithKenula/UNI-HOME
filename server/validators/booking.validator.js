@@ -85,6 +85,53 @@ const updateBookingValidator = [
     }),
 ];
 
+const createBookingPaymentValidator = [
+    ...bookingIdValidator,
+    body('paymentMethod')
+        .isIn(['card', 'bank_transfer'])
+        .withMessage('paymentMethod must be card or bank_transfer'),
+    body('paymentType')
+        .optional()
+        .isIn(['booking_fee', 'key_money', 'deposit', 'monthly_rent', 'water_bill', 'electricity_bill', 'other'])
+        .withMessage('Invalid paymentType'),
+    body('amount').optional().isFloat({ gt: 0 }).withMessage('amount must be greater than 0'),
+    body('billingContact').optional().isObject().withMessage('billingContact must be an object'),
+    body('billingContact.email').optional().isEmail().withMessage('billingContact.email must be valid'),
+    body('billingContact.phone')
+        .optional()
+        .matches(/^\d{10}$/)
+        .withMessage('billingContact.phone must be exactly 10 digits'),
+    body().custom((value) => {
+        if (value.paymentMethod === 'card') {
+            const last4 = value.cardDetails?.last4;
+            if (!/^\d{4}$/.test(String(last4 || ''))) {
+                throw new Error('cardDetails.last4 must contain exactly 4 digits for card payments');
+            }
+        }
+
+        if (value.paymentMethod === 'bank_transfer') {
+            const transfer = value.bankTransfer || {};
+            if (!transfer.bankName || String(transfer.bankName).trim().length < 2) {
+                throw new Error('bankTransfer.bankName is required for bank transfer payments');
+            }
+            if (!transfer.accountHolder || String(transfer.accountHolder).trim().length < 2) {
+                throw new Error('bankTransfer.accountHolder is required for bank transfer payments');
+            }
+            if (!/^\d{8,20}$/.test(String(transfer.accountNumber || ''))) {
+                throw new Error('bankTransfer.accountNumber must be 8 to 20 digits');
+            }
+            if (!transfer.transferReference || String(transfer.transferReference).trim().length < 6) {
+                throw new Error('bankTransfer.transferReference is required and must be at least 6 characters');
+            }
+            if (!transfer.transferDate) {
+                throw new Error('bankTransfer.transferDate is required for bank transfer payments');
+            }
+        }
+
+        return true;
+    }),
+];
+
 const favoriteAccommodationValidator = [
     param('accommodationId').isMongoId().withMessage('Invalid accommodation id'),
 ];
@@ -116,6 +163,7 @@ export {
     rejectBookingValidator,
     cancelBookingValidator,
     updateBookingValidator,
+    createBookingPaymentValidator,
     favoriteAccommodationValidator,
     createInquiryValidator,
     inquiryMessageValidator,

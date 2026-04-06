@@ -4,6 +4,7 @@ import {
     createBooking,
     getBookings,
     getBookingById,
+    createBookingPayment,
     updateBooking,
     acceptBooking,
     rejectBooking,
@@ -20,6 +21,7 @@ import {
     updateBookingValidator,
     rejectBookingValidator,
     cancelBookingValidator,
+    createBookingPaymentValidator,
 } from '../validators/booking.validator.js';
 
 const router = express.Router();
@@ -38,6 +40,15 @@ router.patch(
 );
 
 router.get('/:id', protect, authorize('student', 'owner', 'admin'), bookingIdValidator, validate, getBookingById);
+
+router.patch(
+    '/:id/pay',
+    protect,
+    authorize('student', 'admin'),
+    createBookingPaymentValidator,
+    validate,
+    createBookingPayment
+);
 
 router.patch('/:id', protect, authorize('student'), updateBookingValidator, validate, updateBooking);
 

@@ -37,7 +37,7 @@ const BookingDetailPage = () => {
             <BookingDetail
                 booking={selectedBooking}
                 onCancel={onCancel}
-                onPayNow={() => window.alert('Payment module is Phase 5.')}
+                onPayNow={() => navigate(`/student/bookings/${id}/payment`)}
                 onWriteReview={() => window.alert('Review module is Phase 4.')}
             />
 
