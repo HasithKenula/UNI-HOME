@@ -1,6 +1,6 @@
 import { body, param, query } from 'express-validator';
 
-const CATEGORY_ENUM = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
+const CATEGORY_ENUM = ['plumbing', 'electrical', 'ac', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
 const serviceProvidersFilterValidator = [
   query('category')
@@ -31,8 +31,7 @@ const updateServiceProviderProfileValidator = [
 const createServiceBookingValidator = [
   body('providerId').isMongoId().withMessage('providerId must be a valid id'),
   body('category').isIn(CATEGORY_ENUM).withMessage('Invalid category'),
-  body('district').trim().notEmpty().withMessage('district is required'),
-  body('area').trim().notEmpty().withMessage('area is required'),
+  body('accommodationLocation').trim().notEmpty().withMessage('accommodationLocation is required'),
   body('note').optional().isString().withMessage('note must be text'),
   body('preferredDate').optional().isISO8601().withMessage('preferredDate must be a valid date'),
 ];
@@ -46,6 +45,7 @@ const updateServiceBookingStatusValidator = [
 const updateMyServiceBookingValidator = [
   param('id').isMongoId().withMessage('Invalid service booking id'),
   body('category').optional().isIn(CATEGORY_ENUM).withMessage('Invalid category'),
+  body('accommodationLocation').optional().trim().notEmpty().withMessage('accommodationLocation cannot be empty'),
   body('district').optional().trim().notEmpty().withMessage('district cannot be empty'),
   body('area').optional().trim().notEmpty().withMessage('area cannot be empty'),
   body('note').optional().isString().withMessage('note must be text'),
@@ -57,6 +57,18 @@ const cancelMyServiceBookingValidator = [
   body('reason').optional().isString().withMessage('reason must be text'),
 ];
 
+const providerIdParamValidator = [
+  param('providerId').isMongoId().withMessage('Invalid service provider id'),
+];
+
+const createServiceProviderReviewValidator = [
+  ...providerIdParamValidator,
+  body('reviewerName').optional().trim().notEmpty().withMessage('reviewerName cannot be empty'),
+  body('reviewerEmail').optional().isEmail().withMessage('reviewerEmail must be a valid email'),
+  body('comment').trim().notEmpty().withMessage('comment is required'),
+  body('rating').isFloat({ min: 1, max: 5 }).withMessage('rating must be between 1 and 5'),
+];
+
 export {
   serviceProvidersFilterValidator,
   updateServiceProviderProfileValidator,
@@ -64,4 +76,6 @@ export {
   updateServiceBookingStatusValidator,
   updateMyServiceBookingValidator,
   cancelMyServiceBookingValidator,
+  providerIdParamValidator,
+  createServiceProviderReviewValidator,
 };

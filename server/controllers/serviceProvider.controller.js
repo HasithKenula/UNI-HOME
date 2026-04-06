@@ -1,11 +1,13 @@
 import ServiceProvider from '../models/ServiceProvider.js';
 import ServiceBooking from '../models/ServiceBooking.js';
+import ServiceProviderReview from '../models/ServiceProviderReview.js';
 
-const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
+const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'ac', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
 const CATEGORY_LABELS = {
   plumbing: 'Plumbing',
   electrical: 'Electrical',
+  ac: 'AC',
   cleaning: 'Cleaning',
   painting: 'Painting',
   carpentry: 'Carpentry',
@@ -55,6 +57,42 @@ const mapProviderForList = (provider) => ({
   totalTasksCompleted: provider.totalTasksCompleted || 0,
   isAvailable: provider.isAvailable,
 });
+
+const mapProviderReview = (review) => ({
+  _id: review._id,
+  reviewerName: review.reviewerName,
+  reviewerEmail: review.reviewerEmail,
+  comment: review.comment,
+  rating: review.rating,
+  createdAt: review.createdAt,
+});
+
+const mapProviderForDetails = (provider, reviews = []) => {
+  const displayLocation = provider.areasOfOperation?.[0] || {};
+  const district = displayLocation.district || '';
+  const city = displayLocation.cities?.[0] || '';
+
+  return {
+    _id: provider._id,
+    firstName: provider.firstName,
+    lastName: provider.lastName,
+    profileImage: provider.profileImage || '',
+    phone: provider.phone,
+    email: provider.email,
+    profileNote: provider.profileNote || '',
+    yearsOfExperience: provider.yearsOfExperience || 0,
+    averageRating: provider.averageRating || 0,
+    totalTasksCompleted: provider.totalTasksCompleted || 0,
+    serviceCategories: provider.serviceCategories || [],
+    areasOfOperation: provider.areasOfOperation || [],
+    primaryDistrict: district,
+    primaryCity: city,
+    workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    workingTime: '8.00 am - 5.00 pm',
+    bestTimeToCall: '6.00 pm - 9.00 pm',
+    reviews: reviews.map((review) => mapProviderReview(review)),
+  };
+};
 
 const refreshProviderAvailability = async (providerId) => {
   const activeBookingsCount = await ServiceBooking.countDocuments({
@@ -243,16 +281,110 @@ const getProviderBookedDates = async (req, res) => {
   }
 };
 
+const getServiceProviderDetails = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+
+    const provider = await ServiceProvider.findOne({
+      _id: providerId,
+      accountStatus: { $ne: 'deleted' },
+      $or: APPROVED_PROVIDER_FILTER,
+    }).select('firstName lastName profileImage phone email profileNote yearsOfExperience serviceCategories areasOfOperation averageRating totalTasksCompleted');
+
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Service provider not found' });
+    }
+
+    const reviews = await ServiceProviderReview.find({ provider: provider._id })
+      .sort({ createdAt: -1 })
+      .limit(30);
+
+    return res.status(200).json({
+      success: true,
+      data: mapProviderForDetails(provider, reviews),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to fetch provider details', error: error.message });
+  }
+};
+
+const createServiceProviderReview = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const { reviewerName, reviewerEmail, comment, rating } = req.body;
+
+    const provider = await ServiceProvider.findOne({
+      _id: providerId,
+      accountStatus: { $ne: 'deleted' },
+      $or: APPROVED_PROVIDER_FILTER,
+    }).select('_id averageRating totalTasksCompleted');
+
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Service provider not found' });
+    }
+
+    const cleanComment = String(comment || '').trim();
+    if (!cleanComment) {
+      return res.status(400).json({ success: false, message: 'Review comment is required' });
+    }
+
+    const numericRating = Math.max(1, Math.min(5, Number(rating) || 0));
+    if (!numericRating) {
+      return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
+    }
+
+    const review = await ServiceProviderReview.create({
+      provider: provider._id,
+      reviewer: req.user._id,
+      reviewerName: String(reviewerName || `${req.user.firstName || ''} ${req.user.lastName || ''}`).trim() || 'Anonymous',
+      reviewerEmail: String(reviewerEmail || req.user.email || '').trim().toLowerCase(),
+      comment: cleanComment,
+      rating: numericRating,
+    });
+
+    const stats = await ServiceProviderReview.aggregate([
+      { $match: { provider: provider._id } },
+      {
+        $group: {
+          _id: '$provider',
+          averageRating: { $avg: '$rating' },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const averageRating = Number(stats?.[0]?.averageRating || 0);
+
+    await ServiceProvider.findByIdAndUpdate(provider._id, {
+      averageRating: Math.round(averageRating * 10) / 10,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Provider review added successfully',
+      data: mapProviderReview(review),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to create provider review', error: error.message });
+  }
+};
+
 const createServiceProviderBooking = async (req, res) => {
   try {
     const {
       providerId,
       category,
+      accommodationLocation,
       district,
       area,
+      city,
       note,
       preferredDate,
     } = req.body;
+
+    const resolvedAccommodationLocation = String(accommodationLocation || '').trim();
+    const resolvedArea = String(area || city || '').trim() || resolvedAccommodationLocation;
+    const resolvedDistrict = String(district || '').trim() || resolvedAccommodationLocation;
 
     const normalizedCategory = normalizeCategory(category);
 
@@ -307,8 +439,9 @@ const createServiceProviderBooking = async (req, res) => {
       owner: req.user._id,
       provider: provider._id,
       category: normalizedCategory,
-      district: String(district || '').trim(),
-      area: String(area || '').trim(),
+      accommodationLocation: resolvedAccommodationLocation,
+      district: resolvedDistrict,
+      area: resolvedArea,
       note: String(note || '').trim(),
       preferredDate: preferredDate ? new Date(preferredDate) : undefined,
       status: 'pending',
@@ -350,6 +483,7 @@ const updateMyServiceProviderBooking = async (req, res) => {
 
     const {
       category,
+      accommodationLocation,
       district,
       area,
       note,
@@ -370,6 +504,14 @@ const updateMyServiceProviderBooking = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Selected provider does not offer this category' });
       }
       booking.category = normalizedCategory;
+    }
+
+    if (accommodationLocation !== undefined) {
+      const normalizedAccommodationLocation = String(accommodationLocation || '').trim();
+      booking.accommodationLocation = normalizedAccommodationLocation;
+
+      if (!booking.district) booking.district = normalizedAccommodationLocation;
+      if (!booking.area) booking.area = normalizedAccommodationLocation;
     }
 
     if (district !== undefined) booking.district = String(district || '').trim();
@@ -529,4 +671,6 @@ export {
   cancelMyServiceProviderBooking,
   updateServiceProviderBookingStatus,
   getProviderBookedDates,
+  getServiceProviderDetails,
+  createServiceProviderReview,
 };

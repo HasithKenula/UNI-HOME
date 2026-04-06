@@ -9,11 +9,12 @@ const serviceBookingSchema = new Schema(
     category: {
       type: String,
       required: true,
-      enum: ['plumbing', 'electrical', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'],
+      enum: ['plumbing', 'electrical', 'ac', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'],
       index: true,
     },
-    district: { type: String, required: true, trim: true },
-    area: { type: String, required: true, trim: true },
+    accommodationLocation: { type: String, trim: true, default: '' },
+    district: { type: String, trim: true, default: '' },
+    area: { type: String, trim: true, default: '' },
     note: { type: String, default: '' },
     preferredDate: { type: Date },
     status: {

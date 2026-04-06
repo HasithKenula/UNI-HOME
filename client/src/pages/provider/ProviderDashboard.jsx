@@ -108,7 +108,7 @@ const ProviderDashboard = () => {
                     )}
                 </div>
 
-                <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
+                {/* <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
                     <h2 className="text-xl font-bold text-gray-900">Recent Task Notifications</h2>
                     {recentNotifications.length === 0 ? (
                         <p className="mt-3 text-gray-600">No task updates yet.</p>
@@ -121,7 +121,7 @@ const ProviderDashboard = () => {
                             ))}
                         </ul>
                     )}
-                </div>
+                </div> */}
             </div>
 
             <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">

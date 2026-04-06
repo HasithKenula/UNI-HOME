@@ -14,10 +14,14 @@ import {
 	updateMyServiceProviderProfile,
 	updateServiceProviderBookingStatus,
 	getProviderBookedDates,
+	getServiceProviderDetails,
+	createServiceProviderReview,
 } from '../controllers/serviceProvider.controller.js';
 import {
 	cancelMyServiceBookingValidator,
+	createServiceProviderReviewValidator,
 	createServiceBookingValidator,
+	providerIdParamValidator,
 	serviceProvidersFilterValidator,
 	updateMyServiceBookingValidator,
 	updateServiceBookingStatusValidator,
@@ -30,6 +34,8 @@ router.get('/categories', protect, authorize('owner', 'admin'), getServiceProvid
 router.get('/', protect, authorize('owner', 'admin'), serviceProvidersFilterValidator, validate, getServiceProviders);
 
 router.get('/:providerId/booked-dates', protect, authorize('owner', 'admin'), getProviderBookedDates);
+router.get('/:providerId/details', protect, authorize('owner', 'admin'), providerIdParamValidator, validate, getServiceProviderDetails);
+router.post('/:providerId/reviews', protect, authorize('owner', 'admin'), createServiceProviderReviewValidator, validate, createServiceProviderReview);
 
 router.get('/me', protect, authorize('service_provider', 'admin'), getMyServiceProviderProfile);
 router.put('/me', protect, authorize('service_provider', 'admin'), updateServiceProviderProfileValidator, validate, updateMyServiceProviderProfile);

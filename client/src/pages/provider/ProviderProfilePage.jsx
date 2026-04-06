@@ -14,6 +14,7 @@ import {
 const CATEGORY_OPTIONS = [
   { value: 'plumbing', label: 'Plumbing' },
   { value: 'electrical', label: 'Electrical' },
+  { value: 'ac', label: 'AC' },
   { value: 'cleaning', label: 'Cleaning' },
   { value: 'painting', label: 'Painting' },
   { value: 'carpentry', label: 'Carpentry' },

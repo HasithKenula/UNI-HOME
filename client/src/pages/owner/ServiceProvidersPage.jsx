@@ -3,10 +3,14 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
-import { getServiceProviderCategories, getProviderBookedDates } from '../../features/providers/providerAPI';
+import {
+  createServiceProviderReview,
+  getProviderBookedDates,
+  getServiceProviderCategories,
+  getServiceProviderDetails,
+} from '../../features/providers/providerAPI';
 import {
   createServiceProviderBookingAsync,
   fetchAvailableProvidersAsync,
@@ -15,6 +19,7 @@ import {
 const CATEGORY_OPTIONS = [
   { value: 'plumbing', label: 'Plumbing' },
   { value: 'electrical', label: 'Electrical' },
+  { value: 'ac', label: 'AC' },
   { value: 'cleaning', label: 'Cleaning' },
   { value: 'painting', label: 'Painting' },
   { value: 'carpentry', label: 'Carpentry' },
@@ -52,6 +57,26 @@ const DISTRICT_OPTIONS = [
   { value: 'Kegalle', label: 'Kegalle' },
 ];
 
+const CATEGORY_ICONS = {
+  plumbing: '🚰',
+  electrical: '🔌',
+  ac: '❄️',
+  cleaning: '🧹',
+  painting: '🖌️',
+  carpentry: '🪚',
+  masons: '🧱',
+  welding: '⚒️',
+  cctv: '📹',
+  other: '🛠️',
+};
+
+const formatDate = (value) => {
+  if (!value) return 'Recently';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Recently';
+  return parsed.toLocaleDateString();
+};
+
 const toDateKey = (dateInput) => {
   if (!dateInput) return '';
 
@@ -66,32 +91,39 @@ const toDateKey = (dateInput) => {
 
 const fromDateKey = (dateKey) => {
   if (!dateKey) return null;
+
   const [year, month, day] = dateKey.split('-').map(Number);
   if (!year || !month || !day) return null;
+
   return new Date(year, month - 1, day);
 };
 
-const isDatePast = (dateString) => {
-  if (!dateString) return false;
-  const todayKey = toDateKey(new Date());
-  const selectedKey = toDateKey(dateString);
-  return Boolean(selectedKey) && selectedKey < todayKey;
+const formatWorkingAreaLabel = (area = {}) => {
+  const district = String(area.district || '').trim();
+  const city = String(area.cities?.[0] || '').trim();
+
+  if (city && district && city.toLowerCase() === district.toLowerCase()) {
+    return city;
+  }
+
+  return [city, district].filter(Boolean).join(', ') || '-';
 };
 
-const isDateBooked = (dateString, bookedDates) => {
-  if (!dateString) return false;
-  const dateKey = toDateKey(dateString);
-  return bookedDates.some((booking) => {
-    return toDateKey(booking.date) === dateKey;
-  });
-};
+const getUniqueWorkingAreas = (areas = []) => {
+  const seen = new Set();
+  const labels = [];
 
-const isDateBookedByOther = (dateString, bookedDates) => {
-  if (!dateString) return false;
-  const dateKey = toDateKey(dateString);
-  return bookedDates.some((booking) => {
-    return toDateKey(booking.date) === dateKey && booking.bookedBy === 'other';
+  areas.forEach((area) => {
+    const label = formatWorkingAreaLabel(area);
+    const key = label.toLowerCase();
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      labels.push(label);
+    }
   });
+
+  return labels;
 };
 
 const ServiceProvidersPage = () => {
@@ -103,20 +135,33 @@ const ServiceProvidersPage = () => {
   const ticketAssignment = location.state?.ticketAssignment || null;
 
   const [categoryOptions, setCategoryOptions] = useState(CATEGORY_OPTIONS);
-
   const [filters, setFilters] = useState({ category: '', district: '', city: '' });
+
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const [providerDetails, setProviderDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState('');
+  const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState({
-    open: false,
     providerId: '',
     category: '',
-    district: '',
-    city: '',
+    accommodationLocation: '',
     note: '',
     preferredDate: '',
   });
-  const [bookedDates, setBookedDates] = useState([]);
   const [bookingError, setBookingError] = useState('');
+  const [bookedDates, setBookedDates] = useState([]);
   const [loadingBookedDates, setLoadingBookedDates] = useState(false);
+
+  const [reviewForm, setReviewForm] = useState({
+    reviewerName: '',
+    reviewerEmail: '',
+    comment: '',
+    rating: 5,
+  });
+  const [reviewState, setReviewState] = useState({ loading: false, error: '' });
 
   const loadProviders = () => {
     if (!filters.category) return;
@@ -153,29 +198,37 @@ const ServiceProvidersPage = () => {
     loadProviders();
   }, [dispatch, filters.category, filters.district, filters.city]);
 
-  const openBookingModal = async (provider) => {
-    const firstArea = provider?.areasOfOperation?.[0];
+  const openProviderQuickView = (provider) => {
+    setSelectedProvider(provider);
+    setModalOpen(true);
+  };
 
+  const closeQuickView = () => {
+    setModalOpen(false);
+  };
+
+  const openBookNow = async (provider) => {
+    const firstArea = provider?.areasOfOperation?.[0];
+    const fallbackLocation = [filters.city || firstArea?.cities?.[0] || '', filters.district || firstArea?.district || '']
+      .filter(Boolean)
+      .join(', ');
+
+    setBookingError('');
     setBookingForm({
-      open: true,
       providerId: provider._id,
       category: filters.category,
-      district: filters.district || firstArea?.district || '',
-      city: filters.city || firstArea?.cities?.[0] || '',
+      accommodationLocation: ticketAssignment?.accommodationLocation || fallbackLocation,
       note: provider.profileNote || '',
       preferredDate: '',
     });
-    setBookingError('');
+    setModalOpen(false);
+    setBookingOpen(true);
 
-    // Fetch booked dates for this provider
     setLoadingBookedDates(true);
     try {
       const response = await getProviderBookedDates(provider._id);
-      if (response.success) {
-        setBookedDates(response.data);
-      }
+      setBookedDates(Array.isArray(response?.data) ? response.data : []);
     } catch (error) {
-      console.error('Failed to fetch booked dates:', error);
       setBookedDates([]);
     } finally {
       setLoadingBookedDates(false);
@@ -183,26 +236,98 @@ const ServiceProvidersPage = () => {
   };
 
   const closeBookingModal = () => {
-    setBookingForm({
-      open: false,
-      providerId: '',
-      category: '',
-      district: '',
-      city: '',
-      note: '',
-      preferredDate: '',
-    });
-    setBookedDates([]);
+    setBookingOpen(false);
     setBookingError('');
+    setBookedDates([]);
   };
 
-  const selectedProvider = useMemo(
-    () => providers.find((provider) => provider._id === bookingForm.providerId),
-    [providers, bookingForm.providerId]
+  const openProviderDetails = async (provider) => {
+    setModalOpen(false);
+    setDetailsLoading(true);
+    setDetailsError('');
+
+    try {
+      const response = await getServiceProviderDetails(provider._id);
+      if (response.success) {
+        setProviderDetails(response.data);
+      }
+    } catch (error) {
+      setDetailsError(error?.response?.data?.message || 'Failed to load provider details');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const resetToList = () => {
+    setProviderDetails(null);
+    setDetailsError('');
+  };
+
+  const submitProviderReview = async (event) => {
+    event.preventDefault();
+    if (!providerDetails?._id) return;
+
+    setReviewState({ loading: true, error: '' });
+    try {
+      await createServiceProviderReview(providerDetails._id, {
+        reviewerName: reviewForm.reviewerName,
+        reviewerEmail: reviewForm.reviewerEmail,
+        comment: reviewForm.comment,
+        rating: Number(reviewForm.rating),
+      });
+
+      setReviewForm((prev) => ({ ...prev, comment: '', rating: 5 }));
+      await openProviderDetails(providerDetails);
+      setReviewState({ loading: false, error: '' });
+    } catch (error) {
+      setReviewState({ loading: false, error: error?.response?.data?.message || 'Failed to submit review' });
+    }
+  };
+
+  const submitBooking = async (event) => {
+    event.preventDefault();
+
+    if (!bookingForm.providerId || !bookingForm.category || !bookingForm.accommodationLocation) {
+      setBookingError('Please fill all required booking fields.');
+      return;
+    }
+
+    setBookingError('');
+    const result = await dispatch(createServiceProviderBookingAsync({
+      providerId: bookingForm.providerId,
+      category: bookingForm.category,
+      accommodationLocation: bookingForm.accommodationLocation,
+      note: bookingForm.note,
+      preferredDate: bookingForm.preferredDate || undefined,
+    }));
+
+    if (result.type === 'providers/createServiceBooking/fulfilled') {
+      closeBookingModal();
+      loadProviders();
+      return;
+    }
+
+    setBookingError(result.payload?.message || 'Failed to create booking.');
+  };
+
+  const selectedCategory = useMemo(
+    () => categoryOptions.find((item) => item.value === filters.category),
+    [categoryOptions, filters.category]
+  );
+
+  const selectedProviderAreas = useMemo(
+    () => getUniqueWorkingAreas(selectedProvider?.areasOfOperation || []),
+    [selectedProvider]
+  );
+
+  const providerDetailsAreas = useMemo(
+    () => getUniqueWorkingAreas(providerDetails?.areasOfOperation || []),
+    [providerDetails]
   );
 
   const bookedDateStates = useMemo(() => {
     const states = new Map();
+
     bookedDates.forEach((booking) => {
       const key = toDateKey(booking.date);
       if (!key) return;
@@ -216,6 +341,7 @@ const ServiceProvidersPage = () => {
         states.set(key, 'self');
       }
     });
+
     return states;
   }, [bookedDates]);
 
@@ -228,6 +354,7 @@ const ServiceProvidersPage = () => {
     const state = bookedDateStates.get(key);
     if (state === 'other') return 'provider-date-day provider-date-day--booked-other';
     if (state === 'self') return 'provider-date-day provider-date-day--booked-self';
+
     return 'provider-date-day provider-date-day--available';
   };
 
@@ -238,58 +365,183 @@ const ServiceProvidersPage = () => {
     return bookedDateStates.get(key) !== 'other';
   };
 
-  const handleCreateBooking = async () => {
-    if (!bookingForm.providerId || !bookingForm.category || !bookingForm.district || !bookingForm.city) {
-      setBookingError('Please fill in all required fields');
-      return;
-    }
+  if (providerDetails) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-6 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={resetToList}
+            className="rounded bg-gray-800 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-700"
+          >
+            ← Back to Provider List
+          </button>
+          <p className="text-sm text-gray-500">Profile details and public reviews</p>
+        </div>
 
-    if (bookingForm.preferredDate) {
-      if (isDatePast(bookingForm.preferredDate)) {
-        setBookingError('Cannot book service for past dates. Please select a future date.');
-        return;
-      }
+        {detailsError && (
+          <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {detailsError}
+          </div>
+        )}
 
-      if (isDateBookedByOther(bookingForm.preferredDate, bookedDates)) {
-        setBookingError('This date is already booked by someone else. Please select another date.');
-        return;
-      }
-    }
+        <div className="relative overflow-hidden rounded border border-gray-200 bg-white shadow-sm">
+          <div className="h-16 bg-emerald-500" />
+          <div className="grid gap-6 px-6 pb-6 pt-4 md:grid-cols-[240px,1fr]">
+            <aside className="border-r border-gray-200 pr-4 text-center">
+              <img
+                src={providerDetails.profileImage || 'https://via.placeholder.com/140x140?text=Photo'}
+                alt={`${providerDetails.firstName} ${providerDetails.lastName}`}
+                className="mx-auto h-28 w-28 rounded-full border-4 border-white object-cover shadow"
+              />
+              <div className="mt-2 inline-block rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white">
+                {providerDetails._id?.slice(-5).toUpperCase()}
+              </div>
+              <p className="mt-3 text-sm font-semibold text-gray-700">User Rating {Number(providerDetails.averageRating || 0).toFixed(1)}/5</p>
+              <p className="text-emerald-600">
+                {'★'.repeat(Math.round(providerDetails.averageRating || 0))}
+                {'☆'.repeat(5 - Math.round(providerDetails.averageRating || 0))}
+              </p>
+              <p className="mt-3 text-sm font-semibold text-gray-700">Experience</p>
+              <p className="text-xs text-gray-500">{providerDetails.yearsOfExperience || 0} Years Experience</p>
+            </aside>
 
-    setBookingError('');
+            <section>
+              <h2 className="text-3xl font-semibold text-gray-900">{providerDetails.firstName} {providerDetails.lastName}</h2>
+              <p className="text-gray-500">{providerDetailsAreas.join(' | ') || '-'}</p>
 
-    const result = await dispatch(createServiceProviderBookingAsync({
-      providerId: bookingForm.providerId,
-      category: bookingForm.category,
-      district: bookingForm.district,
-      area: bookingForm.city,
-      note: bookingForm.note,
-      preferredDate: bookingForm.preferredDate || undefined,
-    }));
+              <div className="mt-5 space-y-4 border-t border-gray-200 pt-4">
+                <div>
+                  <p className="text-xs font-bold uppercase text-gray-500">Working Areas</p>
+                  <p className="text-sm text-gray-800">{providerDetailsAreas[0] || providerDetails.primaryDistrict || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-gray-500">Category</p>
+                  <p className="text-sm font-semibold text-gray-900 capitalize">{selectedCategory?.label || providerDetails.serviceCategories?.[0] || 'General Services'}</p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <a href={`tel:${providerDetails.phone}`} className="rounded bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200">
+                    {providerDetails.phone || 'No phone'}
+                  </a>
+                  <a href={`mailto:${providerDetails.email}`} className="rounded bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200">
+                    {providerDetails.email || 'No email'}
+                  </a>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-gray-500">Working Days</p>
+                  <p className="text-sm text-gray-800">{providerDetails.workingDays?.join(' / ')}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-gray-500">Working Time</p>
+                  <p className="text-sm text-gray-800">{providerDetails.workingTime}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-gray-500">Best Time to Call</p>
+                  <p className="text-sm text-gray-800">{providerDetails.bestTimeToCall}</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
 
-    if (result.type === 'providers/createServiceBooking/fulfilled') {
-      closeBookingModal();
-      loadProviders();
-    } else if (result.payload?.message) {
-      setBookingError(result.payload.message);
-    }
-  };
+        <div className="mt-8 grid gap-8 md:grid-cols-2">
+          <section>
+            <h3 className="text-2xl font-semibold text-gray-900">User Reviews</h3>
+            <div className="mt-4 space-y-3">
+              {providerDetails.reviews?.length ? providerDetails.reviews.map((review) => (
+                <div key={review._id} className="rounded border border-gray-200 bg-white px-4 py-3">
+                  <p className="text-sm font-semibold text-gray-900">Posted By {review.reviewerName} · {formatDate(review.createdAt)}</p>
+                  <p className="text-yellow-500">
+                    {'★'.repeat(Math.round(review.rating || 0))}
+                    {'☆'.repeat(5 - Math.round(review.rating || 0))}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-700">{review.comment}</p>
+                </div>
+              )) : (
+                <p className="rounded border border-dashed border-gray-300 px-4 py-5 text-sm text-gray-500">No reviews yet.</p>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-2xl font-semibold text-gray-900">Write a Review</h3>
+            {reviewState.error && (
+              <div className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {reviewState.error}
+              </div>
+            )}
+            <form onSubmit={submitProviderReview} className="mt-4 space-y-3 rounded border border-gray-200 bg-white p-4">
+              <Input
+                label="Name"
+                name="reviewerName"
+                value={reviewForm.reviewerName}
+                onChange={(event) => setReviewForm((prev) => ({ ...prev, reviewerName: event.target.value }))}
+                required
+              />
+              <Input
+                label="Email"
+                name="reviewerEmail"
+                type="email"
+                value={reviewForm.reviewerEmail}
+                onChange={(event) => setReviewForm((prev) => ({ ...prev, reviewerEmail: event.target.value }))}
+                required
+              />
+              <div>
+                <label htmlFor="provider-rating" className="mb-1 block text-sm font-semibold text-gray-700">Rating</label>
+                <select
+                  id="provider-rating"
+                  value={reviewForm.rating}
+                  onChange={(event) => setReviewForm((prev) => ({ ...prev, rating: Number(event.target.value) }))}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  <option value={5}>5 - Excellent</option>
+                  <option value={4}>4 - Good</option>
+                  <option value={3}>3 - Average</option>
+                  <option value={2}>2 - Poor</option>
+                  <option value={1}>1 - Very Poor</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="provider-comment" className="mb-1 block text-sm font-semibold text-gray-700">Review</label>
+                <textarea
+                  id="provider-comment"
+                  rows={4}
+                  value={reviewForm.comment}
+                  onChange={(event) => setReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                  placeholder="Share your experience"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="rounded-full bg-emerald-600 px-6 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={reviewState.loading}
+              >
+                {reviewState.loading ? 'Submitting...' : 'Submit'}
+              </button>
+            </form>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
-      <h1 className="text-3xl font-bold text-gray-900">Find Service Providers</h1>
-      <p className="mt-2 text-gray-600">Select a maintenance category to view providers under that category.</p>
+      <h1 className="text-5xl font-bold text-gray-900">Find Service Providers</h1>
+      <p className="mt-2 text-lg text-gray-600">Select a maintenance category to view providers under that category.</p>
 
       {ticketAssignment && (
-        <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        <div className="mt-4 rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
           Assigning provider for ticket <span className="font-semibold">{ticketAssignment.ticketNumber || ticketAssignment.ticketId}</span>.
           Review and choose a provider from this list.
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[300px,1fr]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[260px,1fr]">
         <aside className="space-y-6">
-          <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded border border-gray-300 bg-white p-4 shadow-sm">
             <Select
               label="District"
               name="district"
@@ -302,12 +554,12 @@ const ServiceProvidersPage = () => {
               name="city"
               value={filters.city}
               onChange={(event) => setFilters((prev) => ({ ...prev, city: event.target.value }))}
-              placeholder="Select / enter city"
+              placeholder="Select City"
             />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border-2 border-gray-200 bg-white shadow-sm">
-            <div className="bg-gray-800 px-5 py-3 text-sm font-bold uppercase tracking-wide text-white">
+          <div className="overflow-hidden rounded border border-gray-300 bg-white shadow-sm">
+            <div className="bg-gray-800 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white">
               All Categories
             </div>
             <div className="divide-y divide-gray-200">
@@ -319,13 +571,13 @@ const ServiceProvidersPage = () => {
                     setFilters((prev) => ({ ...prev, category: category.value }));
                     navigate(`/owner/service-providers/${category.value}`);
                   }}
-                  className={`flex w-full items-center justify-between px-5 py-3 text-left font-medium transition-colors ${
+                  className={`flex w-full items-center justify-between px-4 py-3 text-left font-medium transition-colors ${
                     filters.category === category.value
                       ? 'bg-amber-100 text-amber-900'
                       : 'bg-white text-gray-800 hover:bg-gray-50'
                   }`}
                 >
-                  <span>{category.label}</span>
+                  <span className="flex items-center gap-2"><span>{CATEGORY_ICONS[category.value] || '🛠️'}</span>{category.label}</span>
                   {filters.category === category.value && <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />}
                 </button>
               ))}
@@ -334,6 +586,11 @@ const ServiceProvidersPage = () => {
         </aside>
 
         <section>
+          <div className="mb-3 flex items-center justify-between rounded bg-gray-800 px-4 py-3 text-white">
+            <span className="text-sm">All Ads</span>
+            <span className="text-sm">Showing 1-{Math.min(providers.length, 30)} of {providers.length} ads</span>
+          </div>
+
           <div className="mb-3">
             <Link to="/owner/service-categories" className="text-sm font-semibold text-blue-700 hover:text-blue-800">
               ← Back to Category Page
@@ -358,7 +615,12 @@ const ServiceProvidersPage = () => {
                   </div>
                 ) : (
                   providers.map((provider) => (
-                    <div key={provider._id} className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
+                    <button
+                      key={provider._id}
+                      type="button"
+                      onClick={() => openProviderQuickView(provider)}
+                      className="rounded border border-gray-300 bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+                    >
                       <div className="flex items-start gap-4">
                         <img
                           src={provider.profileImage || 'https://via.placeholder.com/96x96?text=Photo'}
@@ -366,36 +628,18 @@ const ServiceProvidersPage = () => {
                           className="h-24 w-24 rounded border object-cover"
                         />
                         <div className="flex-1">
-                          <h3 className="text-2xl font-semibold text-gray-900">
+                          <h3 className="text-3xl font-semibold text-gray-900">
                             {provider.firstName} {provider.lastName}
                           </h3>
-                          <p className="text-sm text-gray-600">{provider.email} • {provider.phone}</p>
-                          <p className="mt-1 text-sm text-gray-700 font-medium capitalize">{filters.category}</p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {(provider.areasOfOperation || [])
-                              .map((location) => `${location.cities?.[0] || '-'}, ${location.district}`)
-                              .join(' | ') || '-'}
+                          <p className="text-sm text-gray-600">
+                            {getUniqueWorkingAreas(provider.areasOfOperation || []).join(' | ') || '-'}
                           </p>
+                          <p className="mt-2 text-sm font-medium capitalize text-gray-700">{selectedCategory?.label || filters.category}</p>
+                          <p className="text-sm text-gray-600 mt-1">{provider.profileNote || 'No note added yet.'}</p>
                         </div>
+                        <div className="self-center rounded-full bg-gray-800 p-3 text-white">☎</div>
                       </div>
-
-                      <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm text-gray-700">
-                        <p className="font-semibold text-gray-900">Provider Details</p>
-                        <p className="mt-1">{provider.profileNote || 'No note added yet.'}</p>
-                        <p className="mt-1">Rating: {Number(provider.averageRating || 0).toFixed(1)} • Completed: {provider.totalTasksCompleted || 0}</p>
-                        <p className="mt-1 text-xs text-gray-600">Date-based booking applies: this provider stays listed, but already-booked dates cannot be selected.</p>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <a href={`tel:${provider.phone}`}>
-                          <Button size="sm" variant="secondary">Contact by Phone</Button>
-                        </a>
-                        <a href={`mailto:${provider.email}`}>
-                          <Button size="sm" variant="secondary">Contact by Email</Button>
-                        </a>
-                        <Button size="sm" onClick={() => openBookingModal(provider)}>Book Provider</Button>
-                      </div>
-                    </div>
+                    </button>
                   ))
                 )}
               </div>
@@ -404,39 +648,80 @@ const ServiceProvidersPage = () => {
         </section>
       </div>
 
-      <div className="mt-10 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900">My Provider Bookings</h2>
-        <p className="mt-2 text-sm text-gray-600">
-          View, edit, and cancel your provider bookings from a dedicated page.
-        </p>
-        <div className="mt-4">
-          <Link to="/owner/provider-bookings">
-            <Button>My Provider Bookings</Button>
-          </Link>
-        </div>
-      </div>
-
-      {bookingForm.open && (
+      {modalOpen && selectedProvider && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-gray-900">Book Service Provider</h3>
-            <p className="mt-1 text-sm text-gray-600">
-              {selectedProvider ? `${selectedProvider.firstName} ${selectedProvider.lastName}` : 'Selected provider'}
-            </p>
+          <div className="w-full max-w-2xl overflow-hidden rounded bg-white shadow-2xl">
+            <div className="flex items-center justify-between bg-emerald-500 px-5 py-3">
+              <p className="font-semibold text-gray-900">Quick Provider View</p>
+              <button type="button" onClick={closeQuickView} className="text-2xl font-bold text-gray-700 hover:text-gray-900">×</button>
+            </div>
+            <div className="p-6 text-center">
+              <img
+                src={selectedProvider.profileImage || 'https://via.placeholder.com/120x120?text=Photo'}
+                alt={`${selectedProvider.firstName} ${selectedProvider.lastName}`}
+                className="mx-auto h-36 w-36 rounded-full object-cover"
+              />
+              <h3 className="mt-3 text-4xl font-semibold text-gray-900">{selectedProvider.firstName} {selectedProvider.lastName}</h3>
+              <p className="text-gray-500">
+                {selectedProviderAreas.join(' | ') || '-'}
+              </p>
 
-            {bookingError && (
-              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 border border-red-200">
-                {bookingError}
+              <div className="mx-auto mt-6 max-w-md border-t border-gray-200 pt-5 text-left">
+                <p className="text-2xl font-semibold text-gray-900 capitalize">{selectedCategory?.label || filters.category || 'Service Provider'}</p>
+                <p className="mt-2 text-sm text-gray-700">Working Areas</p>
+                <p className="text-sm text-gray-500">{selectedProviderAreas[0] || '-'}</p>
+                <div className="mt-4 flex gap-2">
+                  <a href={`tel:${selectedProvider.phone}`} className="bg-gray-700 px-3 py-2 text-sm font-semibold text-white">{selectedProvider.phone || 'No phone'}</a>
+                  <button
+                    type="button"
+                    onClick={() => openBookNow(selectedProvider)}
+                    className="bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                  >
+                    Book Now
+                  </button>
+                </div>
               </div>
-            )}
+            </div>
+            <div className="bg-emerald-500 px-6 py-3 text-center">
+              <button
+                type="button"
+                onClick={() => openProviderDetails(selectedProvider)}
+                className="text-sm font-bold uppercase tracking-wide text-gray-900"
+              >
+                View More Details »
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {loadingBookedDates && (
-              <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-800 border border-blue-200">
-                Loading availability information...
-              </div>
-            )}
+      {detailsLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="rounded bg-white px-4 py-3 text-sm font-semibold text-gray-700">Loading provider details...</div>
+        </div>
+      )}
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      {bookingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-xl overflow-hidden rounded bg-white shadow-2xl">
+            <div className="flex items-center justify-between bg-emerald-500 px-5 py-3">
+              <p className="font-semibold text-white">Book Service Provider</p>
+              <button type="button" onClick={closeBookingModal} className="text-2xl font-bold text-white hover:text-gray-100">×</button>
+            </div>
+
+            <form onSubmit={submitBooking} className="space-y-3 p-5">
+              {bookingError && (
+                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {bookingError}
+                </div>
+              )}
+
+              {loadingBookedDates && (
+                <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  Loading booked dates...
+                </div>
+              )}
+
               <Select
                 label="Category"
                 name="category"
@@ -445,95 +730,62 @@ const ServiceProvidersPage = () => {
                 onChange={(event) => setBookingForm((prev) => ({ ...prev, category: event.target.value }))}
                 required
               />
+              <Input
+                label="Accommodation Location"
+                name="accommodationLocation"
+                value={bookingForm.accommodationLocation}
+                onChange={(event) => setBookingForm((prev) => ({ ...prev, accommodationLocation: event.target.value }))}
+                placeholder="Enter accommodation location"
+                required
+              />
               <div>
-                <label htmlFor="preferredDate" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Preferred Date
-                </label>
+                <label htmlFor="preferredDate" className="mb-1 block text-sm font-semibold text-gray-700">Preferred Date</label>
                 <DatePicker
                   id="preferredDate"
                   selected={fromDateKey(bookingForm.preferredDate)}
-                  onChange={(date) => {
-                    setBookingForm((prev) => ({ ...prev, preferredDate: date ? toDateKey(date) : '' }));
-                    setBookingError('');
-                  }}
-                  placeholderText="Select a booking date"
+                  onChange={(date) => setBookingForm((prev) => ({ ...prev, preferredDate: date ? toDateKey(date) : '' }))}
+                  placeholderText="Select booking date"
                   dateFormat="yyyy-MM-dd"
                   minDate={new Date()}
                   filterDate={canSelectDate}
                   dayClassName={datePickerDayClassName}
                   calendarClassName="provider-date-calendar"
-                  className={`w-full rounded-lg border-2 px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-200 ${
-                    bookingForm.preferredDate && isDateBookedByOther(bookingForm.preferredDate, bookedDates)
-                      ? 'border-red-400 bg-red-50'
-                      : bookingForm.preferredDate && isDateBooked(bookingForm.preferredDate, bookedDates)
-                        ? 'border-yellow-400 bg-yellow-50'
-                        : 'border-gray-300'
-                  }`}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
                 />
-                {bookingForm.preferredDate && (
-                  <div className="mt-2 space-y-1 text-xs">
-                    {isDateBookedByOther(bookingForm.preferredDate, bookedDates) && (
-                      <p className="text-red-600 font-medium">🔴 Booked by another person - not available</p>
-                    )}
-                    {isDateBooked(bookingForm.preferredDate, bookedDates) && !isDateBookedByOther(bookingForm.preferredDate, bookedDates) && (
-                      <p className="text-yellow-600 font-medium">🟡 Your own booking on this date</p>
-                    )}
-                    {!isDateBooked(bookingForm.preferredDate, bookedDates) && (
-                      <p className="text-green-600 font-medium">✓ Available</p>
-                    )}
-                  </div>
-                )}
+                <div className="mt-2 space-y-1 text-xs text-gray-500">
+                  <p><span className="font-semibold text-amber-700">Yellow</span> means your own booked date</p>
+                  <p><span className="font-semibold text-red-700">Red</span> means booked by another owner</p>
+                  <p><span className="font-semibold text-emerald-700">Green</span> means available</p>
+                </div>
               </div>
-              <Select
-                label="District"
-                name="district"
-                value={bookingForm.district}
-                options={DISTRICT_OPTIONS}
-                onChange={(event) => setBookingForm((prev) => ({ ...prev, district: event.target.value }))}
-                required
-              />
-              <Input
-                label="City"
-                name="city"
-                value={bookingForm.city}
-                onChange={(event) => setBookingForm((prev) => ({ ...prev, city: event.target.value }))}
-                required
-              />
-            </div>
-
-            <div className="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
-              <p className="font-semibold mb-2">Date Availability Legend:</p>
-              <div className="space-y-1">
-                <p>🟡 <span className="font-medium">Yellow border:</span> Booked by you or already in your selection</p>
-                <p>🔴 <span className="font-medium">Red border:</span> Booked by another person - cannot be selected</p>
-                <p>✓ <span className="font-medium">Normal border:</span> Available for booking</p>
+              <div>
+                <label htmlFor="bookingNote" className="mb-1 block text-sm font-semibold text-gray-700">Booking Note</label>
+                <textarea
+                  id="bookingNote"
+                  rows={4}
+                  value={bookingForm.note}
+                  onChange={(event) => setBookingForm((prev) => ({ ...prev, note: event.target.value }))}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
               </div>
-            </div>
 
-            <div className="mb-5">
-              <label htmlFor="note" className="mb-2 block text-sm font-semibold text-gray-700">
-                Booking Note
-              </label>
-              <textarea
-                id="note"
-                rows={4}
-                value={bookingForm.note}
-                onChange={(event) => setBookingForm((prev) => ({ ...prev, note: event.target.value }))}
-                className="w-full rounded-xl border-2 border-gray-300 px-4 py-3"
-                placeholder="Describe required work, access instructions, and preferred contact details"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={closeBookingModal}>Cancel</Button>
-              <Button 
-                loading={actionLoading || loadingBookedDates} 
-                onClick={handleCreateBooking}
-                disabled={Boolean(bookingForm.preferredDate && isDateBookedByOther(bookingForm.preferredDate, bookedDates))}
-              >
-                Create Booking
-              </Button>
-            </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={closeBookingModal}
+                  className="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {actionLoading ? 'Creating...' : 'Book Now'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

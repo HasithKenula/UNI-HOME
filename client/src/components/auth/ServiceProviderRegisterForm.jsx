@@ -36,6 +36,7 @@ const ServiceProviderRegisterForm = ({ onSuccess }) => {
     { value: 'general', label: 'General Maintenance' },
     { value: 'electrical', label: 'Electrical Services' },
     { value: 'plumbing', label: 'Plumbing Services' },
+    { value: 'ac', label: 'AC Services' },
     { value: 'carpentry', label: 'Carpentry' },
     { value: 'painting', label: 'Painting' },
     { value: 'cleaning', label: 'Cleaning Services' },

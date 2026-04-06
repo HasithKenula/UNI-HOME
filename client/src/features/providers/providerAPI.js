@@ -16,6 +16,16 @@ export const getProviderBookedDates = async (providerId) => {
     return response.data;
 };
 
+export const getServiceProviderDetails = async (providerId) => {
+    const response = await axios.get(`/service-providers/${providerId}/details`);
+    return response.data;
+};
+
+export const createServiceProviderReview = async (providerId, payload) => {
+    const response = await axios.post(`/service-providers/${providerId}/reviews`, payload);
+    return response.data;
+};
+
 export const createServiceProviderBooking = async (payload) => {
     const response = await axios.post('/service-providers/bookings', payload);
     return response.data;
