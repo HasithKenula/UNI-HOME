@@ -54,8 +54,8 @@ const Navbar = () => {
     <nav
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'backdrop-blur-xl bg-white/90 border-b border-primary-100 shadow-sm'
-          : 'bg-white shadow-sm border-b border-gray-100'
+          ? 'backdrop-blur-xl bg-emerald-50/90 border-b border-emerald-100 shadow-sm'
+          : 'bg-gradient-to-b from-emerald-50 via-green-50 to-emerald-100/70 shadow-sm border-b border-emerald-100/80'
       }`}
     >
       <div className="container mx-auto px-4">
@@ -67,7 +67,7 @@ const Navbar = () => {
               alt="UNIHOME logo"
               className="h-9 w-9 rounded-md object-cover transform group-hover:scale-110 transition-transform duration-300"
             />
-            <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-gradient-to-r from-emerald-700 to-emerald-500 bg-clip-text text-transparent">
               UNIHOME
             </span>
           </Link>
@@ -77,7 +77,7 @@ const Navbar = () => {
             <Link
               to="/"
               className={`relative font-medium transition-colors duration-300 ${
-                isActive('/') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
+                isActive('/') ? 'text-emerald-700' : 'text-slate-700 hover:text-emerald-700'
               } group`}
             >
               Home
@@ -90,7 +90,7 @@ const Navbar = () => {
             <Link
               to="/search"
               className={`relative font-medium transition-colors duration-300 ${
-                isActive('/search') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
+                isActive('/search') ? 'text-emerald-700' : 'text-slate-700 hover:text-emerald-700'
               } group`}
             >
               Accommodations
@@ -103,7 +103,7 @@ const Navbar = () => {
             <Link
               to="/about"
               className={`relative font-medium transition-colors duration-300 ${
-                isActive('/about') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
+                isActive('/about') ? 'text-emerald-700' : 'text-slate-700 hover:text-emerald-700'
               } group`}
             >
               About
@@ -116,7 +116,7 @@ const Navbar = () => {
             <Link
               to="/contact"
               className={`relative font-medium transition-colors duration-300 ${
-                isActive('/contact') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
+                isActive('/contact') ? 'text-emerald-700' : 'text-slate-700 hover:text-emerald-700'
               } group`}
             >
               Contact
@@ -131,22 +131,22 @@ const Navbar = () => {
               <>
                 <Link
                   to={getDashboardLink()}
-                  className="relative font-medium text-gray-700 hover:text-primary-600 transition-colors group"
+                  className="relative font-medium text-slate-700 hover:text-emerald-700 transition-colors group"
                 >
                   Dashboard
                   <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary-500 to-accent-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                 </Link>
-                <div className="flex items-center space-x-4 pl-4 border-l border-gray-200">
+                <div className="flex items-center space-x-4 pl-4 border-l border-emerald-200">
                   <NotificationBell
                     notifications={notifications}
                     unreadCount={unreadCount}
                     loading={notificationsLoading}
                   />
-                  <div className="flex items-center space-x-2 bg-gradient-to-r from-primary-50 to-accent-50 px-3 py-2 rounded-lg border border-primary-100">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 flex items-center justify-center text-white font-semibold">
+                  <div className="flex items-center space-x-2 bg-white/70 px-3 py-2 rounded-lg border border-emerald-100 shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 flex items-center justify-center text-white font-semibold">
                       {user?.firstName?.charAt(0) || 'U'}
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">
+                    <span className="text-sm font-semibold text-slate-700">
                       {user?.firstName || 'User'}
                     </span>
                   </div>
@@ -156,7 +156,7 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
+              <div className="flex items-center space-x-3 pl-4 border-l border-emerald-200">
                 <Link to="/login">
                   <Button variant="outline" size="sm">
                     Login
@@ -173,11 +173,11 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
+            className="md:hidden p-2 rounded-xl hover:bg-emerald-100 transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <svg
-              className="w-6 h-6 text-gray-700"
+              className="w-6 h-6 text-slate-700"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -207,13 +207,13 @@ const Navbar = () => {
             mobileMenuOpen ? 'max-h-96 opacity-100 py-4' : 'max-h-0 opacity-0'
           }`}
         >
-          <div className="flex flex-col space-y-2 border-t pt-4">
+          <div className="flex flex-col space-y-2 border-t border-emerald-100 pt-4">
             <Link
               to="/"
               className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                 isActive('/')
-                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700'
+                  : 'text-slate-700 hover:bg-emerald-50'
               }`}
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -223,8 +223,8 @@ const Navbar = () => {
               to="/search"
               className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                 isActive('/search')
-                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700'
+                  : 'text-slate-700 hover:bg-emerald-50'
               }`}
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -234,8 +234,8 @@ const Navbar = () => {
               to="/about"
               className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                 isActive('/about')
-                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700'
+                  : 'text-slate-700 hover:bg-emerald-50'
               }`}
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -245,8 +245,8 @@ const Navbar = () => {
               to="/contact"
               className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                 isActive('/contact')
-                  ? 'bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700'
+                  : 'text-slate-700 hover:bg-emerald-50'
               }`}
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -257,21 +257,21 @@ const Navbar = () => {
               <>
                 <Link
                   to={getDashboardLink()}
-                  className="px-4 py-3 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-3 rounded-xl font-medium text-slate-700 hover:bg-emerald-50 transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
-                <div className="pt-3 border-t mt-3">
-                  <div className="flex items-center space-x-3 px-4 py-2 mb-3 bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl border border-primary-100">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold">
+                <div className="pt-3 border-t mt-3 border-emerald-100">
+                  <div className="flex items-center space-x-3 px-4 py-2 mb-3 bg-white/80 rounded-xl border border-emerald-100 shadow-sm">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 flex items-center justify-center text-white font-bold">
                       {user?.firstName?.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-slate-900">
                         {user?.firstName || 'User'}
                       </p>
-                      <p className="text-xs text-gray-600">{user?.email}</p>
+                      <p className="text-xs text-slate-600">{user?.email}</p>
                     </div>
                   </div>
                   <Button
@@ -288,7 +288,7 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <div className="pt-3 border-t mt-3 space-y-2">
+              <div className="pt-3 border-t mt-3 space-y-2 border-emerald-100">
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="outline" size="sm" fullWidth>
                     Login

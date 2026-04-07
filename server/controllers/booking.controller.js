@@ -39,6 +39,18 @@ const generateInvoiceNumber = async () => {
     return `INV-${year}-${String(count + 1).padStart(5, '0')}`;
 };
 
+const generatePaymentNumber = async () => {
+    const year = new Date().getFullYear();
+    const count = await Payment.countDocuments({
+        createdAt: {
+            $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+            $lte: new Date(`${year}-12-31T23:59:59.999Z`),
+        },
+    });
+
+    return `PAY-${year}-${String(count + 1).padStart(5, '0')}`;
+};
+
 const addMonths = (dateValue, months) => {
     const date = new Date(dateValue);
     date.setMonth(date.getMonth() + months);
@@ -403,6 +415,121 @@ const getBookingById = async (req, res) => {
     }
 };
 
+const createBookingPayment = async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id).populate('accommodation', 'title');
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const isStudentOwner = booking.student?.toString() === req.user._id.toString();
+        const isAdmin = req.user.role === 'admin';
+        if (!isStudentOwner && !isAdmin) {
+            return res.status(403).json({ success: false, message: 'Not authorized to pay for this booking' });
+        }
+
+        if (booking.status !== 'confirmed') {
+            return res.status(400).json({
+                success: false,
+                message: 'Payments are only accepted for confirmed bookings',
+            });
+        }
+
+        const {
+            paymentMethod,
+            paymentType = 'booking_fee',
+            amount,
+            cardDetails,
+            bankTransfer,
+            billingContact,
+            notes,
+        } = req.body;
+
+        const amountToPay = Number(amount || booking.costSummary?.totalInitialPayment || 0);
+        if (!Number.isFinite(amountToPay) || amountToPay <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid payment amount' });
+        }
+
+        const gatewayMethod = paymentMethod === 'card' ? 'stripe' : 'bank_transfer';
+        const isCardPayment = paymentMethod === 'card';
+        const nextOutstanding = Math.max(0, Number(booking.paymentStatus?.outstandingAmount || 0) - amountToPay);
+
+        const payment = await Payment.create({
+            paymentNumber: await generatePaymentNumber(),
+            booking: booking._id,
+            paidBy: booking.student,
+            paidTo: booking.owner,
+            paymentType,
+            amount: amountToPay,
+            paymentMethod: gatewayMethod,
+            status: isCardPayment ? 'completed' : 'processing',
+            paidAt: isCardPayment ? new Date() : undefined,
+            gatewayTransactionId: isCardPayment ? `CARD-${Date.now()}` : undefined,
+            gatewayResponse: {
+                channel: paymentMethod,
+                card: isCardPayment
+                    ? {
+                          last4: cardDetails?.last4,
+                          brand: cardDetails?.brand || 'card',
+                      }
+                    : undefined,
+                bankTransfer: !isCardPayment
+                    ? {
+                          bankName: bankTransfer?.bankName,
+                          accountHolder: bankTransfer?.accountHolder,
+                          accountNumberMasked: String(bankTransfer?.accountNumber || '').replace(/\d(?=\d{4})/g, '*'),
+                          transferReference: bankTransfer?.transferReference,
+                          transferDate: bankTransfer?.transferDate,
+                      }
+                    : undefined,
+                billingContact: billingContact || undefined,
+                notes: notes || undefined,
+            },
+        });
+
+        if (isCardPayment) {
+            booking.paymentStatus = {
+                ...(booking.paymentStatus || {}),
+                depositPaid: true,
+                keyMoneyPaid: true,
+                currentMonthPaid: true,
+                lastPaymentDate: new Date(),
+                outstandingAmount: nextOutstanding,
+            };
+            await booking.save();
+        }
+
+        await Notification.create({
+            recipient: booking.owner,
+            title: isCardPayment ? 'Payment received' : 'Bank transfer submitted',
+            message: isCardPayment
+                ? `Payment received for booking ${booking.bookingNumber}.`
+                : `Bank transfer proof submitted for booking ${booking.bookingNumber}.`,
+            type: isCardPayment ? 'payment_successful' : 'payment_pending',
+            category: 'payment',
+            channel: 'in_app',
+            relatedEntity: { entityType: 'booking', entityId: booking._id },
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: isCardPayment
+                ? 'Payment completed successfully'
+                : 'Bank transfer submitted and pending owner verification',
+            data: {
+                payment,
+                paymentStatus: booking.paymentStatus,
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to process payment',
+            error: error.message,
+        });
+    }
+};
+
 const updateBooking = async (req, res) => {
     try {
         const { roomType, checkInDate, contractPeriod, specialRequests, emergencyContact } = req.body;
@@ -723,6 +850,7 @@ export {
     createBooking,
     getBookings,
     getBookingById,
+    createBookingPayment,
     updateBooking,
     acceptBooking,
     rejectBooking,
