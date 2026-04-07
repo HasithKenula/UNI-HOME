@@ -2,6 +2,38 @@ import express from 'express';
 import { protect } from '../middleware/auth.middleware.js';
 import Notification from '../models/Notification.js';
 
+const getMonthEndExpiry = (baseDate = new Date()) => new Date(
+  baseDate.getFullYear(),
+  baseDate.getMonth() + 1,
+  0,
+  23,
+  59,
+  59,
+  999
+);
+
+const isExpiredNotification = (item, now = new Date()) => {
+  if (!item) return true;
+
+  if (item.expiresAt && new Date(item.expiresAt) <= now) {
+    return true;
+  }
+
+  const isOwnerNotice = item.type === 'general'
+    && item.category === 'system'
+    && item?.relatedEntity?.entityType === 'accommodation';
+
+  if (!isOwnerNotice) {
+    return false;
+  }
+
+  const effectiveExpiry = item.expiresAt
+    ? new Date(item.expiresAt)
+    : getMonthEndExpiry(new Date(item.createdAt || now));
+
+  return effectiveExpiry <= now;
+};
+
 const router = express.Router();
 
 const toActionUrl = (relatedEntity, role) => {
@@ -46,24 +78,23 @@ router.get('/', protect, async (req, res) => {
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
     const unreadOnly = String(req.query.unreadOnly || '').toLowerCase() === 'true';
-    const skip = (page - 1) * limit;
 
     const filter = { recipient: req.user.id };
     if (unreadOnly) {
       filter.isRead = false;
     }
 
-    const [rows, total, unreadCount] = await Promise.all([
-      Notification.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Notification.countDocuments(filter),
-      Notification.countDocuments({ recipient: req.user.id, isRead: false }),
-    ]);
+    const rows = await Notification.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const data = rows.map((item) => ({
+    const now = new Date();
+    const activeRows = rows.filter((item) => !isExpiredNotification(item, now));
+    const skip = (page - 1) * limit;
+    const paginatedRows = activeRows.slice(skip, skip + limit);
+    const unreadCount = activeRows.filter((item) => !item.isRead).length;
+
+    const data = paginatedRows.map((item) => ({
       _id: item._id,
       title: item.title,
       message: item.message,
@@ -84,8 +115,8 @@ router.get('/', protect, async (req, res) => {
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit) || 1,
+        total: activeRows.length,
+        totalPages: Math.ceil(activeRows.length / limit) || 1,
       },
     });
   } catch (error) {

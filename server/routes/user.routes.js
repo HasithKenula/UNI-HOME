@@ -6,6 +6,34 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import Accommodation from '../models/Accommodation.js';
 
+const getMonthEndExpiry = (baseDate = new Date()) => new Date(
+  baseDate.getFullYear(),
+  baseDate.getMonth() + 1,
+  0,
+  23,
+  59,
+  59,
+  999
+);
+
+const isAccommodationNoticeExpired = (notice, now = new Date()) => {
+  if (!notice) return true;
+
+  const isOwnerNotice = notice.type === 'general'
+    && notice.category === 'system'
+    && notice?.relatedEntity?.entityType === 'accommodation';
+
+  if (!isOwnerNotice) {
+    return Boolean(notice.expiresAt && new Date(notice.expiresAt) <= now);
+  }
+
+  const effectiveExpiry = notice.expiresAt
+    ? new Date(notice.expiresAt)
+    : getMonthEndExpiry(new Date(notice.createdAt || now));
+
+  return effectiveExpiry <= now;
+};
+
 const router = express.Router();
 
 const sanitizeUser = (user) => {
@@ -210,14 +238,17 @@ router.get('/tenant-notices', protect, authorize('student'), async (req, res) =>
     };
 
     const notices = await Notification.find(filter)
-      .select('title message isRead createdAt relatedEntity')
+      .select('title message isRead createdAt expiresAt type category relatedEntity')
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
 
+    const now = new Date();
+    const activeNotices = notices.filter((notice) => !isAccommodationNoticeExpired(notice, now));
+
     const accommodationIds = [
       ...new Set(
-        notices
+        activeNotices
           .map((item) => item?.relatedEntity?.entityId)
           .filter(Boolean)
           .map((id) => String(id))
@@ -234,7 +265,7 @@ router.get('/tenant-notices', protect, authorize('student'), async (req, res) =>
       accommodations.map((item) => [String(item._id), item.title])
     );
 
-    const data = notices.map((notice) => {
+    const data = activeNotices.map((notice) => {
       const accommodationId = notice?.relatedEntity?.entityId
         ? String(notice.relatedEntity.entityId)
         : null;
@@ -252,7 +283,7 @@ router.get('/tenant-notices', protect, authorize('student'), async (req, res) =>
       };
     });
 
-    const unreadCount = await Notification.countDocuments({ ...filter, isRead: false });
+    const unreadCount = activeNotices.filter((notice) => !notice.isRead).length;
 
     res.status(200).json({
       success: true,

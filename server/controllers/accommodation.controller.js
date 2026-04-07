@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import fs from 'fs';
 import path from 'path';
 import Accommodation from '../models/Accommodation.js';
 import Room from '../models/Room.js';
@@ -6,6 +7,12 @@ import Booking from '../models/Booking.js';
 import Review from '../models/Review.js';
 import AIReviewSummary from '../models/AIReviewSummary.js';
 import Notification from '../models/Notification.js';
+import Inquiry from '../models/Inquiry.js';
+import MaintenanceTicket from '../models/MaintenanceTicket.js';
+import ListingReport from '../models/ListingReport.js';
+import Payment from '../models/Payment.js';
+import Invoice from '../models/Invoice.js';
+import Student from '../models/Student.js';
 
 // Map to track IP and last view time to debounce view counts
 const viewCache = new Map();
@@ -23,6 +30,16 @@ const SLIIT_COORDINATES = {
     longitude: 79.9729,
     latitude: 6.9147,
 };
+
+const getMonthEndExpiry = (baseDate = new Date()) => new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+);
 
 const parseBoolean = (value) => {
     if (value === undefined) return undefined;
@@ -198,6 +215,37 @@ const getUploadRelativeUrl = (file) => {
 
     const fileName = path.basename(filePath.replace(/\\/g, '/'));
     return `/uploads/${fileName}`;
+};
+
+const deleteUploadedFileByUrl = (url) => {
+    if (!url) return;
+
+    const fileName = path.basename(String(url).split('?')[0]);
+    if (!fileName) return;
+
+    const configuredUploadPath = process.env.UPLOAD_PATH || './uploads';
+    const uploadDir = path.isAbsolute(configuredUploadPath)
+        ? configuredUploadPath
+        : path.resolve(process.cwd(), configuredUploadPath);
+    const filePath = path.resolve(uploadDir, fileName);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+};
+
+const deleteMediaEntries = (entries = []) => {
+    if (!Array.isArray(entries)) return;
+
+    entries.forEach((entry) => {
+        if (typeof entry === 'string') {
+            deleteUploadedFileByUrl(entry);
+            return;
+        }
+
+        if (entry?.url) {
+            deleteUploadedFileByUrl(entry.url);
+        }
+    });
 };
 
 const buildMediaPayload = (req) => {
@@ -745,7 +793,7 @@ const unpublishAccommodation = async (req, res) => {
     }
 };
 
-// @desc    Soft delete accommodation listing
+// @desc    Hard delete accommodation listing and related records
 // @route   DELETE /api/accommodations/:id
 // @access  Private (owner/admin)
 const deleteAccommodation = async (req, res) => {
@@ -769,21 +817,42 @@ const deleteAccommodation = async (req, res) => {
             });
         }
 
-        const updateDoc = {
-            $set: {
-                isDeleted: true,
-                deletedAt: new Date(),
-                status: 'unpublished',
-            },
-        };
+        const [rooms, bookings] = await Promise.all([
+            Room.find({ accommodation: accommodation._id }).select('_id media').lean(),
+            Booking.find({ accommodation: accommodation._id }).select('_id').lean(),
+        ]);
 
-        // Some legacy records have malformed GeoJSON ({ type: "Point" } without coordinates).
-        // Unset invalid location.coordinates so 2dsphere index extraction does not fail during delete.
-        if (!hasValidPointCoordinates(accommodation.location?.coordinates)) {
-            updateDoc.$unset = { 'location.coordinates': 1 };
-        }
+        const bookingIds = bookings.map((booking) => booking._id);
 
-        await Accommodation.updateOne({ _id: accommodation._id }, updateDoc);
+        deleteMediaEntries(accommodation.media?.photos);
+        deleteMediaEntries(accommodation.media?.videos);
+        rooms.forEach((room) => {
+            deleteMediaEntries(room?.media?.photos);
+            deleteMediaEntries(room?.media?.videos);
+        });
+
+        await Promise.all([
+            Student.updateMany(
+                { favorites: accommodation._id },
+                { $pull: { favorites: accommodation._id } }
+            ),
+            Notification.deleteMany({
+                'relatedEntity.entityType': 'accommodation',
+                'relatedEntity.entityId': accommodation._id,
+            }),
+            AIReviewSummary.deleteMany({ accommodation: accommodation._id }),
+            Review.deleteMany({ accommodation: accommodation._id }),
+            Inquiry.deleteMany({ accommodation: accommodation._id }),
+            MaintenanceTicket.deleteMany({ accommodation: accommodation._id }),
+            ListingReport.deleteMany({ accommodation: accommodation._id }),
+            Payment.deleteMany({ booking: { $in: bookingIds } }),
+            Invoice.deleteMany({ booking: { $in: bookingIds } }),
+            Booking.deleteMany({ accommodation: accommodation._id }),
+            Room.deleteMany({ accommodation: accommodation._id }),
+        ]);
+
+        // Remove the accommodation record itself from the database.
+        await Accommodation.findByIdAndDelete(accommodation._id);
 
         res.status(200).json({
             success: true,
@@ -928,11 +997,35 @@ const updateRoom = async (req, res) => {
         }
 
         const roomMedia = buildRoomMediaPayload(req);
+        const normalizedBody = normalizeBodyValue(expandBracketNotationBody(req.body));
+        const { removeRoomPhotos, removeRoomVideos, ...roomUpdates } = normalizedBody;
 
-        Object.assign(room, req.body);
+        Object.assign(room, roomUpdates);
 
         if (!room.media) {
             room.media = { photos: [], videos: [] };
+        }
+
+        if (removeRoomPhotos && Array.isArray(removeRoomPhotos)) {
+            const removeSet = new Set(removeRoomPhotos);
+            const currentPhotos = room.media.photos || [];
+            currentPhotos.forEach((photo) => {
+                if (removeSet.has(photo.url)) {
+                    deleteUploadedFileByUrl(photo.url);
+                }
+            });
+            room.media.photos = currentPhotos.filter((photo) => !removeSet.has(photo.url));
+        }
+
+        if (removeRoomVideos && Array.isArray(removeRoomVideos)) {
+            const removeSet = new Set(removeRoomVideos);
+            const currentVideos = room.media.videos || [];
+            currentVideos.forEach((video) => {
+                if (removeSet.has(video.url)) {
+                    deleteUploadedFileByUrl(video.url);
+                }
+            });
+            room.media.videos = currentVideos.filter((video) => !removeSet.has(video.url));
         }
 
         if (roomMedia.photos.length > 0) {
@@ -1133,7 +1226,15 @@ const sendTenantNotice = async (req, res) => {
             return res.status(ownedResult.status).json({ success: false, message: ownedResult.error });
         }
 
-        const { title, message } = req.body;
+        const title = String(req.body?.title || '').trim();
+        const message = String(req.body?.message || '').trim();
+
+        if (!title || !message) {
+            return res.status(400).json({
+                success: false,
+                message: 'Notice title and message are required',
+            });
+        }
 
         const activeBookings = await Booking.find({
             accommodation: req.params.id,
@@ -1148,8 +1249,36 @@ const sendTenantNotice = async (req, res) => {
             });
         }
 
-        const notifications = activeBookings.map((booking) => ({
-            recipient: booking.student,
+        // A tenant can have multiple confirmed bookings over time; send at most one notice per student.
+        const uniqueStudentIds = [
+            ...new Set(activeBookings.map((booking) => String(booking.student)).filter(Boolean)),
+        ];
+
+        // Guard against accidental double-submit (same content sent within a short window).
+        const duplicateWindowStart = new Date(Date.now() - 30 * 1000);
+        const recentlyNotifiedRecipients = await Notification.distinct('recipient', {
+            recipient: { $in: uniqueStudentIds },
+            title,
+            message,
+            channel: 'in_app',
+            'relatedEntity.entityType': 'accommodation',
+            'relatedEntity.entityId': req.params.id,
+            createdAt: { $gte: duplicateWindowStart },
+        });
+
+        const recentlyNotifiedSet = new Set(recentlyNotifiedRecipients.map((id) => String(id)));
+        const recipientsToNotify = uniqueStudentIds.filter((id) => !recentlyNotifiedSet.has(id));
+
+        if (recipientsToNotify.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'Duplicate notice ignored',
+                recipients: 0,
+            });
+        }
+
+        const notifications = recipientsToNotify.map((studentId) => ({
+            recipient: studentId,
             title,
             message,
             type: 'general',
@@ -1159,6 +1288,7 @@ const sendTenantNotice = async (req, res) => {
                 entityType: 'accommodation',
                 entityId: req.params.id,
             },
+            expiresAt: getMonthEndExpiry(),
         }));
 
         await Notification.insertMany(notifications);
