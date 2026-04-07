@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { BellRing, CalendarClock, Clock3, Heart, Wrench } from 'lucide-react';
+import { BellRing, CalendarClock, ChevronLeft, ChevronRight, Clock3, Heart, Wrench } from 'lucide-react';
 import { fetchBookingsAsync } from '../../features/bookings/bookingSlice';
 import Button from '../../components/common/Button';
 import { getTenantNotices } from '../../features/notifications/notificationAPI';
@@ -46,6 +46,48 @@ const StudentDashboard = () => {
     const { list, loading } = useSelector((state) => state.bookings);
     const [tenantNotices, setTenantNotices] = useState([]);
     const [noticesLoading, setNoticesLoading] = useState(false);
+    const noticesScrollerRef = useRef(null);
+    const noticeCardRefs = useRef([]);
+    const [activeNoticeIndex, setActiveNoticeIndex] = useState(0);
+
+    const scrollToNotice = useCallback((index, behavior = 'smooth') => {
+        if (tenantNotices.length === 0) return;
+
+        const normalized = (index + tenantNotices.length) % tenantNotices.length;
+        const scroller = noticesScrollerRef.current;
+        const targetCard = noticeCardRefs.current[normalized];
+
+        setActiveNoticeIndex(normalized);
+
+        if (!scroller || !targetCard) return;
+
+        const cardLeft = targetCard.offsetLeft - scroller.offsetLeft + scroller.scrollLeft;
+        const centeredScrollLeft = Math.max(
+            0,
+            cardLeft - (scroller.clientWidth - targetCard.offsetWidth) / 2
+        );
+
+        scroller.scrollTo({
+            left: centeredScrollLeft,
+            behavior,
+        });
+    }, [tenantNotices.length]);
+
+    const scrollNotices = useCallback((direction = 1) => {
+        if (tenantNotices.length === 0) return;
+        scrollToNotice(activeNoticeIndex + direction);
+    }, [activeNoticeIndex, scrollToNotice, tenantNotices.length]);
+
+    useEffect(() => {
+        if (tenantNotices.length === 0) {
+            setActiveNoticeIndex(0);
+            return;
+        }
+
+        if (activeNoticeIndex >= tenantNotices.length) {
+            setActiveNoticeIndex(0);
+        }
+    }, [tenantNotices.length, activeNoticeIndex]);
 
     useEffect(() => {
         dispatch(fetchBookingsAsync({ page: 1, limit: 20 }));
@@ -66,6 +108,38 @@ const StudentDashboard = () => {
 
         fetchTenantNotices();
     }, []);
+
+    useEffect(() => {
+        if (tenantNotices.length < 2) return undefined;
+
+        const intervalId = window.setInterval(() => {
+            scrollToNotice(activeNoticeIndex + 1);
+        }, 4000);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [activeNoticeIndex, scrollToNotice, tenantNotices.length]);
+
+    useEffect(() => {
+        if (tenantNotices.length === 0) return;
+
+        const scroller = noticesScrollerRef.current;
+        const targetCard = noticeCardRefs.current[activeNoticeIndex];
+
+        if (!scroller || !targetCard) return;
+
+        const cardLeft = targetCard.offsetLeft - scroller.offsetLeft + scroller.scrollLeft;
+        const centeredScrollLeft = Math.max(
+            0,
+            cardLeft - (scroller.clientWidth - targetCard.offsetWidth) / 2
+        );
+
+        scroller.scrollTo({
+            left: centeredScrollLeft,
+            behavior: 'smooth',
+        });
+    }, [activeNoticeIndex, tenantNotices.length]);
 
     const stats = useMemo(() => {
         const total = list.length;
@@ -105,10 +179,11 @@ const StudentDashboard = () => {
             </div>
 
             <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                         <BellRing className="h-5 w-5 text-emerald-600" /> Owner Notices
                     </h2>
+
                 </div>
 
                 {noticesLoading ? (
@@ -118,19 +193,68 @@ const StudentDashboard = () => {
                         No tenant notices yet.
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {tenantNotices.map((notice) => (
-                            <div key={notice._id} className="rounded-xl border-2 border-emerald-100 bg-emerald-50 p-4">
-                                <div className="flex items-center justify-between gap-2">
-                                    <p className="font-semibold text-gray-900">{notice.title}</p>
-                                    <span className="text-xs text-gray-500">
-                                        {notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : ''}
-                                    </span>
-                                </div>
-                                <p className="mt-1 text-sm text-emerald-800">{notice.accommodationTitle}</p>
-                                <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{notice.message}</p>
+                    <div
+                        className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 shadow-inner"
+                    >
+                        <div className="flex items-center justify-between gap-3 pb-3">
+                            <p className="text-sm text-gray-500">Scroll sideways to view more notices</p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => scrollNotices(-1)}
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md"
+                                    aria-label="Scroll notices left"
+                                >
+                                    <ChevronLeft className="h-5 w-5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => scrollNotices(1)}
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md"
+                                    aria-label="Scroll notices right"
+                                >
+                                    <ChevronRight className="h-5 w-5" />
+                                </button>
                             </div>
-                        ))}
+                        </div>
+
+                        <div
+                            ref={noticesScrollerRef}
+                            className="overflow-x-auto pb-3 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                        >
+                            <div className="flex min-w-max gap-4 pr-2 snap-x snap-mandatory">
+                                {tenantNotices.map((notice, index) => (
+                                    <div
+                                        key={notice._id}
+                                        ref={(element) => {
+                                            noticeCardRefs.current[index] = element;
+                                        }}
+                                        className={`w-[340px] shrink-0 snap-start rounded-xl border-2 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${activeNoticeIndex === index ? 'border-emerald-400 ring-2 ring-emerald-100' : 'border-emerald-100'}`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="font-semibold text-gray-900">{notice.title}</p>
+                                            <span className="shrink-0 text-xs text-gray-500">
+                                                {notice.createdAt ? new Date(notice.createdAt).toLocaleDateString() : ''}
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 text-sm font-medium text-emerald-800">{notice.accommodationTitle}</p>
+                                        <p className="mt-2 text-sm leading-6 text-gray-700 whitespace-pre-wrap">{notice.message}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap justify-center gap-2">
+                            {tenantNotices.map((notice, index) => (
+                                <button
+                                    key={notice._id}
+                                    type="button"
+                                    onClick={() => scrollToNotice(index)}
+                                    className={`h-3 rounded-full transition-all ${activeNoticeIndex === index ? 'w-8 bg-emerald-600' : 'w-3 bg-emerald-200 hover:bg-emerald-300'}`}
+                                    aria-label={`Jump to notice ${index + 1}`}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

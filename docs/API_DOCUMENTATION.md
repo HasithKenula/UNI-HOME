@@ -427,6 +427,8 @@ Response: 200 OK
 }
 ```
 
+This permanently removes the accommodation record and its related rooms, bookings, reviews, reports, tickets, notifications, and favorites references once there are no active bookings.
+
 ### Search Nearby Accommodations
 ```http
 GET /api/accommodations/nearby
@@ -794,6 +796,9 @@ Response: 200 OK
   "unreadCount": 0
 }
 ```
+
+### Owner-Sent Tenant Notices
+Owner notice posts to accommodation tenants are stored as in-app notifications and are auto-expired at the end of the current month. After expiry, they are removed from the student notice panel and notifications feed.
 
 ---
 

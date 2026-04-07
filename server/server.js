@@ -91,13 +91,24 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Rate limiting
-const limiter = rateLimit({
+const apiLimiter = rateLimit({
   windowMs: 50 * 60 * 1000, // 50 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
-  skip: (req) => req.originalUrl.startsWith('/api/auth/logout')
+  skip: (req) => (
+    req.originalUrl.startsWith('/api/auth/logout')
+    || req.originalUrl.startsWith('/api/notifications')
+  ),
 });
-app.use('/api/', limiter);
+
+const notificationsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // Higher cap for polling-heavy notifications endpoint
+  message: 'Too many notification requests. Please try again shortly.',
+});
+
+app.use('/api/', apiLimiter);
+app.use('/api/notifications', notificationsLimiter);
 
 // Static files (for uploaded files)
 app.use('/uploads', express.static(uploadsDirectory));

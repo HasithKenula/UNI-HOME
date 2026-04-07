@@ -53,6 +53,8 @@ const RoomManager = ({ accommodationId }) => {
     const [formData, setFormData] = useState(defaultForm);
     const [roomPhotos, setRoomPhotos] = useState([]);
     const [roomVideos, setRoomVideos] = useState([]);
+    const [existingRoomPhotos, setExistingRoomPhotos] = useState([]);
+    const [existingRoomVideos, setExistingRoomVideos] = useState([]);
 
     const statusClass = useMemo(
         () => ({
@@ -92,6 +94,8 @@ const RoomManager = ({ accommodationId }) => {
         setEditingRoomId(room._id);
         setRoomPhotos([]);
         setRoomVideos([]);
+        setExistingRoomPhotos((room.media?.photos || []).map((photo) => ({ ...photo, markedForRemoval: false })));
+        setExistingRoomVideos((room.media?.videos || []).map((video) => ({ ...video, markedForRemoval: false })));
         setFormData({
             roomNumber: room.roomNumber || '',
             roomType: room.roomType || '',
@@ -109,6 +113,8 @@ const RoomManager = ({ accommodationId }) => {
         setFormData(defaultForm);
         setRoomPhotos([]);
         setRoomVideos([]);
+        setExistingRoomPhotos([]);
+        setExistingRoomVideos([]);
         setEditingRoomId('');
     };
 
@@ -124,6 +130,8 @@ const RoomManager = ({ accommodationId }) => {
                 monthlyRent: formData.monthlyRent ? Number(formData.monthlyRent) : undefined,
                 roomPhotos,
                 roomVideos,
+                removeRoomPhotos: existingRoomPhotos.filter((photo) => photo?.markedForRemoval).map((photo) => photo.url),
+                removeRoomVideos: existingRoomVideos.filter((video) => video?.markedForRemoval).map((video) => video.url),
             };
 
             if (editingRoomId) {
@@ -163,6 +171,22 @@ const RoomManager = ({ accommodationId }) => {
 
     const removeSelectedRoomVideo = (indexToRemove) => {
         setRoomVideos((prev) => prev.filter((_, index) => index !== indexToRemove));
+    };
+
+    const toggleExistingRoomPhotoRemoval = (photoUrl) => {
+        setExistingRoomPhotos((prev) =>
+            prev.map((photo) =>
+                photo.url === photoUrl ? { ...photo, markedForRemoval: !photo.markedForRemoval } : photo
+            )
+        );
+    };
+
+    const toggleExistingRoomVideoRemoval = (videoUrl) => {
+        setExistingRoomVideos((prev) =>
+            prev.map((video) =>
+                video.url === videoUrl ? { ...video, markedForRemoval: !video.markedForRemoval } : video
+            )
+        );
     };
 
     const handleDelete = async (roomId) => {
@@ -259,6 +283,37 @@ const RoomManager = ({ accommodationId }) => {
                 <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
                     <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">Room Photos</label>
+                        {editingRoomId && existingRoomPhotos.length > 0 && (
+                            <div className="mb-3">
+                                <p className="mb-2 text-xs font-semibold text-gray-500">Existing photos</p>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {existingRoomPhotos.map((photo) => (
+                                        <div
+                                            key={photo.url}
+                                            className={`rounded border p-2 text-xs ${photo.markedForRemoval ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}
+                                        >
+                                            <img
+                                                src={getMediaUrl(photo.url)}
+                                                alt="Room"
+                                                className={`h-24 w-full rounded object-cover ${photo.markedForRemoval ? 'opacity-50' : ''}`}
+                                            />
+                                            <div className="mt-1 flex items-center justify-between gap-2">
+                                                <span className="truncate pr-2">
+                                                    {photo.markedForRemoval ? 'Will be removed' : 'Keep'}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className={photo.markedForRemoval ? 'text-green-600' : 'text-red-600'}
+                                                    onClick={() => toggleExistingRoomPhotoRemoval(photo.url)}
+                                                >
+                                                    {photo.markedForRemoval ? 'Undo' : 'Remove'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         <input
                             type="file"
                             accept="image/*"
@@ -298,6 +353,37 @@ const RoomManager = ({ accommodationId }) => {
                     </div>
                     <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">Room Videos</label>
+                        {editingRoomId && existingRoomVideos.length > 0 && (
+                            <div className="mb-3">
+                                <p className="mb-2 text-xs font-semibold text-gray-500">Existing videos</p>
+                                <div className="space-y-2">
+                                    {existingRoomVideos.map((video) => (
+                                        <div
+                                            key={video.url}
+                                            className={`rounded border p-2 text-xs ${video.markedForRemoval ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}
+                                        >
+                                            <video
+                                                controls
+                                                className={`h-24 w-full rounded bg-black object-cover ${video.markedForRemoval ? 'opacity-50' : ''}`}
+                                                src={getMediaUrl(video.url)}
+                                            />
+                                            <div className="mt-1 flex items-center justify-between gap-2">
+                                                <span className="truncate pr-2">
+                                                    {video.markedForRemoval ? 'Will be removed' : 'Keep'}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className={video.markedForRemoval ? 'text-green-600' : 'text-red-600'}
+                                                    onClick={() => toggleExistingRoomVideoRemoval(video.url)}
+                                                >
+                                                    {video.markedForRemoval ? 'Undo' : 'Remove'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         <input
                             type="file"
                             accept="video/*"

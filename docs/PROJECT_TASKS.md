@@ -593,6 +593,7 @@
 
 - [x] Route (protected: owner)
 - [x] Controller: find all active tenants, create notification for each
+- [x] Owner notices auto-expire at the end of the current month and are hidden after expiry
 - [x] Test → 200
 
 ### `GET /api/users/tenant-notices`

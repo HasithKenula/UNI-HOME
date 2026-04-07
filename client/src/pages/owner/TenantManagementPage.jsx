@@ -19,6 +19,7 @@ const TenantManagementPage = () => {
     const [loading, setLoading] = useState(false);
     const [showNotice, setShowNotice] = useState(false);
     const [notice, setNotice] = useState({ title: '', message: '' });
+    const [sendingNotice, setSendingNotice] = useState(false);
 
     const roomOptions = useMemo(
         () =>
@@ -84,15 +85,19 @@ const TenantManagementPage = () => {
     };
 
     const handleSendNotice = async () => {
+        if (sendingNotice) return;
         if (!notice.title || !notice.message) return toast.error('Enter notice title and message');
 
         try {
+            setSendingNotice(true);
             const response = await sendNoticeToTenants(selectedAccommodation, notice);
             toast.success(response.message || 'Notice sent');
             setShowNotice(false);
             setNotice({ title: '', message: '' });
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to send notice');
+        } finally {
+            setSendingNotice(false);
         }
     };
 
@@ -180,10 +185,12 @@ const TenantManagementPage = () => {
                             onChange={(e) => setNotice((prev) => ({ ...prev, message: e.target.value }))}
                         />
                         <div className="mt-4 flex justify-end gap-2">
-                            <Button variant="secondary" onClick={() => setShowNotice(false)}>
+                            <Button variant="secondary" onClick={() => setShowNotice(false)} disabled={sendingNotice}>
                                 Cancel
                             </Button>
-                            <Button onClick={handleSendNotice}>Send</Button>
+                            <Button onClick={handleSendNotice} loading={sendingNotice}>
+                                Send
+                            </Button>
                         </div>
                     </div>
                 </div>

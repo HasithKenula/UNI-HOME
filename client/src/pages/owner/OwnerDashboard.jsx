@@ -1,16 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { ClipboardList, Clock, CheckCircle2, XCircle, Home } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { fetchBookingsAsync } from '../../features/bookings/bookingSlice';
 import { getMyListings } from '../../features/accommodations/accommodationAPI';
 
 const OwnerDashboard = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const { list: bookings, loading } = useSelector((state) => state.bookings);
   const [listingStats, setListingStats] = useState({ total: 0, active: 0, draft: 0, pending: 0 });
+
+  const isActivePath = (path) => location.pathname.startsWith(path);
 
   useEffect(() => {
     dispatch(fetchBookingsAsync({ page: 1, limit: 100 }));
@@ -41,83 +44,151 @@ const OwnerDashboard = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
-      <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
-      <p className="mt-2 text-gray-600">Welcome back, {user?.firstName || 'Owner'}.</p>
+      <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
+        <aside className="rounded-2xl border-2 border-emerald-100 bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:h-fit">
+          <h2 className="text-2xl font-bold text-gray-900">Quick Actions</h2>
+          <p className="mt-1 text-sm text-gray-600">Most-used owner tasks in one place.</p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-5">
-          <p className="text-sm text-blue-700">Total Requests</p>
-          <p className="mt-1 text-3xl font-bold text-blue-700">{bookingStats.total}</p>
-        </div>
-        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-5">
-          <p className="text-sm text-amber-700">Pending Requests</p>
-          <p className="mt-1 text-3xl font-bold text-amber-700">{bookingStats.pending}</p>
-        </div>
-        <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-5">
-          <p className="text-sm text-green-700">Confirmed</p>
-          <p className="mt-1 text-3xl font-bold text-green-700">{bookingStats.confirmed}</p>
-        </div>
-        <div className="rounded-2xl border-2 border-gray-200 bg-gray-50 p-5">
-          <p className="text-sm text-gray-700">Total Listings</p>
-          <p className="mt-1 text-3xl font-bold text-gray-700">{listingStats.total}</p>
-        </div>
-      </div>
+          <div className="mt-5 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Primary</p>
+            <div className="mt-2 space-y-3">
+              <Link to="/owner/listings/create" className="block">
+                <Button fullWidth>Create Listing</Button>
+              </Link>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr,1fr]">
-        <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-blue-600" /> Recent Booking Requests
-            </h2>
-            <Link to="/owner/booking-requests">
-              <Button size="sm" variant="outline">View All</Button>
+              <div className="mx-1 h-px bg-emerald-200/80" />
+
+              <Link to="/owner/my-listings" className="block">
+                <Button fullWidth variant="outline">Manage Listings</Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Workspace</p>
+
+            <Link
+              to="/owner/booking-requests"
+              className={`block rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                isActivePath('/owner/booking-requests')
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'
+              }`}
+            >
+              Review Booking Requests
+            </Link>
+
+            <Link
+              to="/owner/reviews"
+              className={`block rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                isActivePath('/owner/reviews')
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'
+              }`}
+            >
+              Moderate Reviews
+            </Link>
+
+            <Link
+              to="/owner/tickets"
+              className={`block rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                isActivePath('/owner/tickets')
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'
+              }`}
+            >
+              View Tickets
+            </Link>
+
+            <Link
+              to="/owner/service-categories"
+              className={`block rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                isActivePath('/owner/service-categories')
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'
+              }`}
+            >
+              Find Service Providers
+            </Link>
+
+            <Link
+              to="/owner/tenants"
+              className={`block rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                isActivePath('/owner/tenants')
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'
+              }`}
+            >
+              Tenant Management
             </Link>
           </div>
+        </aside>
 
-          {loading ? (
-            <p className="text-gray-600">Loading booking requests...</p>
-          ) : recentRequests.length === 0 ? (
-            <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center text-gray-500">
-              No booking requests yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentRequests.map((booking) => (
-                <Link
-                  key={booking._id}
-                  to={`/owner/booking-requests?accommodationId=${booking.accommodation?._id || ''}`}
-                  className="block rounded-xl border-2 border-gray-100 p-4 transition-all hover:border-blue-200 hover:bg-blue-50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs text-gray-500">{booking.bookingNumber}</p>
-                      <p className="font-semibold text-gray-900">{booking.accommodation?.title || 'Accommodation'}</p>
-                      <p className="text-sm text-gray-600">
-                        {booking.student?.firstName} {booking.student?.lastName}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 capitalize">
-                      {booking.status}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+        <section>
+          <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
+          <p className="mt-2 text-gray-600">Welcome back, {user?.firstName || 'Owner'}.</p>
 
-        <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
-          <div className="mt-4 space-y-2">
-            <Link to="/owner/listings/create"><Button fullWidth>Create Listing</Button></Link>
-            <Link to="/owner/my-listings"><Button fullWidth variant="outline">Manage Listings</Button></Link>
-            <Link to="/owner/booking-requests"><Button fullWidth variant="secondary">Review Booking Requests</Button></Link>
-            <Link to="/owner/reviews"><Button fullWidth variant="secondary">Moderate Reviews</Button></Link>
-            <Link to="/owner/tickets"><Button fullWidth variant="secondary">View Tickets</Button></Link>
-            <Link to="/owner/service-categories"><Button fullWidth variant="secondary">Find Service Providers</Button></Link>
-            <Link to="/owner/tenants"><Button fullWidth variant="secondary">Tenant Management</Button></Link>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-5">
+              <p className="text-sm text-emerald-700">Total Requests</p>
+              <p className="mt-1 text-3xl font-bold text-emerald-700">{bookingStats.total}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-5">
+              <p className="text-sm text-amber-700">Pending Requests</p>
+              <p className="mt-1 text-3xl font-bold text-amber-700">{bookingStats.pending}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-5">
+              <p className="text-sm text-green-700">Confirmed</p>
+              <p className="mt-1 text-3xl font-bold text-green-700">{bookingStats.confirmed}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-gray-200 bg-gray-50 p-5">
+              <p className="text-sm text-gray-700">Total Listings</p>
+              <p className="mt-1 text-3xl font-bold text-gray-700">{listingStats.total}</p>
+            </div>
           </div>
-        </div>
+
+          <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-emerald-600" /> Recent Booking Requests
+              </h2>
+              <Link to="/owner/booking-requests">
+                <Button size="sm" variant="outline">View All</Button>
+              </Link>
+            </div>
+
+            {loading ? (
+              <p className="text-gray-600">Loading booking requests...</p>
+            ) : recentRequests.length === 0 ? (
+              <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center text-gray-500">
+                No booking requests yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentRequests.map((booking) => (
+                  <Link
+                    key={booking._id}
+                    to={`/owner/booking-requests?accommodationId=${booking.accommodation?._id || ''}`}
+                    className="block rounded-xl border-2 border-gray-100 p-4 transition-all hover:border-emerald-200 hover:bg-emerald-50"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500">{booking.bookingNumber}</p>
+                        <p className="font-semibold text-gray-900">{booking.accommodation?.title || 'Accommodation'}</p>
+                        <p className="text-sm text-gray-600">
+                          {booking.student?.firstName} {booking.student?.lastName}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 capitalize">
+                        {booking.status}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

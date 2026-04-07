@@ -98,6 +98,16 @@ const updateRoomValidator = [
         .optional()
         .isFloat({ min: 0 })
         .withMessage('monthlyRent must be a positive number'),
+    body('removeRoomPhotos')
+        .optional()
+        .isArray()
+        .withMessage('removeRoomPhotos must be an array of media URLs'),
+    body('removeRoomPhotos.*').optional().isString().withMessage('Invalid room photo URL'),
+    body('removeRoomVideos')
+        .optional()
+        .isArray()
+        .withMessage('removeRoomVideos must be an array of media URLs'),
+    body('removeRoomVideos.*').optional().isString().withMessage('Invalid room video URL'),
 ];
 
 const assignRoomValidator = [
