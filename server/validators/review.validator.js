@@ -12,7 +12,7 @@ const createReviewValidator = [
     body('accommodationId').isMongoId().withMessage('Valid accommodationId is required'),
     body('bookingId').isMongoId().withMessage('Valid bookingId is required'),
     body('overallRating')
-        .isInt({ min: 1, max: 5 })
+        .isFloat({ min: 1, max: 5 })
         .withMessage('overallRating must be between 1 and 5'),
     body('title').optional().isString().isLength({ max: 120 }).withMessage('title must be at most 120 characters'),
     body('content')
@@ -31,7 +31,7 @@ const updateReviewValidator = [
     ...reviewIdValidator,
     body('overallRating')
         .optional()
-        .isInt({ min: 1, max: 5 })
+        .isFloat({ min: 1, max: 5 })
         .withMessage('overallRating must be between 1 and 5'),
     body('title').optional().isString().isLength({ max: 120 }).withMessage('title must be at most 120 characters'),
     body('content')
