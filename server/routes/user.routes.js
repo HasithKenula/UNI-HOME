@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { protect } from '../middleware/auth.middleware.js';
 import { authorize } from '../middleware/role.middleware.js';
 import User from '../models/User.js';
+import Student from '../models/Student.js';
 import Notification from '../models/Notification.js';
 import Accommodation from '../models/Accommodation.js';
 
@@ -69,7 +70,7 @@ const getCurrentUser = async (req, res) => {
 
 const updateCurrentUser = async (req, res) => {
   try {
-    const { firstName, lastName, phone, address } = req.body;
+    const { firstName, lastName, phone, address, profileImage, batch, faculty } = req.body;
 
     const user = await User.findById(req.user.id);
 
@@ -83,6 +84,7 @@ const updateCurrentUser = async (req, res) => {
     if (typeof firstName === 'string') user.firstName = firstName;
     if (typeof lastName === 'string') user.lastName = lastName;
     if (typeof phone === 'string') user.phone = phone;
+    if (typeof profileImage === 'string') user.profileImage = profileImage;
     if (address && typeof address === 'object') {
       user.address = {
         ...user.address,
@@ -92,16 +94,55 @@ const updateCurrentUser = async (req, res) => {
 
     await user.save();
 
+    if (user.role === 'student') {
+      const student = await Student.findById(req.user.id);
+      if (student) {
+        if (typeof batch === 'string') student.batch = batch;
+        if (typeof faculty === 'string') student.faculty = faculty;
+        await student.save();
+      }
+    }
+
+    const refreshedUser = await User.findById(req.user.id).select('-password');
+
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      data: sanitizeUser(user),
+      data: refreshedUser,
     });
   } catch (error) {
     console.error('Update user error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update profile',
+      error: error.message,
+    });
+  }
+};
+
+const removeCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    user.accountStatus = 'deleted';
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile removed successfully',
+    });
+  } catch (error) {
+    console.error('Remove user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove profile',
       error: error.message,
     });
   }
@@ -120,6 +161,7 @@ router.get('/profile', protect, getCurrentUser);
 // @access  Private
 router.put('/me', protect, updateCurrentUser);
 router.put('/profile', protect, updateCurrentUser);
+router.delete('/me', protect, removeCurrentUser);
 
 // @desc    Change current user password
 // @route   PUT /api/users/change-password

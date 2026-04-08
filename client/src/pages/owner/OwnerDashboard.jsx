@@ -10,13 +10,13 @@ const OwnerDashboard = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
-  const { list: bookings, loading } = useSelector((state) => state.bookings);
+  const { list: bookings, ownerPayments, loading } = useSelector((state) => state.bookings);
   const [listingStats, setListingStats] = useState({ total: 0, active: 0, draft: 0, pending: 0 });
 
   const isActivePath = (path) => location.pathname.startsWith(path);
 
   useEffect(() => {
-    dispatch(fetchBookingsAsync({ page: 1, limit: 100 }));
+    dispatch(fetchBookingsAsync({ page: 1, limit: 500, includePayments: true, includeOwnerPayments: true }));
   }, [dispatch]);
 
   useEffect(() => {
@@ -184,6 +184,39 @@ const OwnerDashboard = () => {
                       </span>
                     </div>
                   </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">All Payments Received</h2>
+            </div>
+
+            {loading ? (
+              <p className="text-gray-600">Loading payments...</p>
+            ) : ownerPayments.length === 0 ? (
+              <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center text-gray-500">
+                No payments received yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {ownerPayments.map((payment) => (
+                  <div key={payment._id} className="rounded-xl border border-gray-200 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{payment.paymentNumber}</p>
+                        <p className="text-xs text-gray-600">
+                          Booking: {payment.booking?.bookingNumber || '-'} • {payment.paymentType?.replace('_', ' ')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-emerald-700">LKR {(payment.amount || 0).toLocaleString()}</p>
+                        <p className="text-xs text-gray-600 capitalize">{payment.status}</p>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

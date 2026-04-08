@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -124,6 +124,7 @@ const withFallbackMedia = (url = '') => {
 
 const ListingDetailPage = () => {
     const dispatch = useDispatch();
+    const location = useLocation();
     const { favoriteIds } = useSelector((state) => state.favorites);
     const {
         reviews,
@@ -187,6 +188,17 @@ const ListingDetailPage = () => {
             dispatch(fetchFavoritesAsync());
         }
     }, [dispatch, isAuthenticated, isStudent]);
+
+    useEffect(() => {
+        if (location.hash !== '#reviews') return;
+
+        const timeoutId = window.setTimeout(() => {
+            const element = document.getElementById('reviews');
+            element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [location.hash]);
 
     const photos = listing?.media?.photos || [];
     const videos = listing?.media?.videos || [];
@@ -993,7 +1005,7 @@ const ListingDetailPage = () => {
                     </section>
 
                     {/* Reviews Section */}
-                    <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
+                    <section id="reviews" className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                                 <Star className="w-6 h-6 text-amber-500 fill-current" />
@@ -1014,6 +1026,7 @@ const ListingDetailPage = () => {
                             ratingsSummary={ratingsSummary || listing.ratingsSummary}
                             aiSummary={aiSummary || listing.aiSummary}
                             distribution={distribution}
+                            reviews={reviews}
                         />
 
                         <ReviewList

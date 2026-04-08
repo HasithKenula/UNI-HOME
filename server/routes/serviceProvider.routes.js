@@ -16,13 +16,19 @@ import {
 	getProviderBookedDates,
 	getServiceProviderDetails,
 	createServiceProviderReview,
+	updateServiceProviderReview,
+	deleteServiceProviderReview,
+	markServiceProviderReviewHelpful,
 } from '../controllers/serviceProvider.controller.js';
 import {
 	cancelMyServiceBookingValidator,
 	createServiceProviderReviewValidator,
 	createServiceBookingValidator,
+	markServiceProviderReviewHelpfulValidator,
 	providerIdParamValidator,
+	providerReviewIdParamValidator,
 	serviceProvidersFilterValidator,
+	updateServiceProviderReviewValidator,
 	updateMyServiceBookingValidator,
 	updateServiceBookingStatusValidator,
 	updateServiceProviderProfileValidator,
@@ -36,6 +42,9 @@ router.get('/', protect, authorize('owner', 'admin'), serviceProvidersFilterVali
 router.get('/:providerId/booked-dates', protect, authorize('owner', 'admin'), getProviderBookedDates);
 router.get('/:providerId/details', protect, authorize('owner', 'admin'), providerIdParamValidator, validate, getServiceProviderDetails);
 router.post('/:providerId/reviews', protect, authorize('owner', 'admin'), createServiceProviderReviewValidator, validate, createServiceProviderReview);
+router.patch('/:providerId/reviews/:reviewId', protect, authorize('owner', 'admin'), updateServiceProviderReviewValidator, validate, updateServiceProviderReview);
+router.delete('/:providerId/reviews/:reviewId', protect, authorize('owner', 'admin'), providerReviewIdParamValidator, validate, deleteServiceProviderReview);
+router.patch('/:providerId/reviews/:reviewId/helpful', protect, authorize('owner', 'admin'), markServiceProviderReviewHelpfulValidator, validate, markServiceProviderReviewHelpful);
 
 router.get('/me', protect, authorize('service_provider', 'admin'), getMyServiceProviderProfile);
 router.put('/me', protect, authorize('service_provider', 'admin'), updateServiceProviderProfileValidator, validate, updateMyServiceProviderProfile);

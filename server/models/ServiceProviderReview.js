@@ -18,13 +18,11 @@ const serviceProviderReviewSchema = new Schema(
     },
     reviewerName: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 120,
     },
     reviewerEmail: {
       type: String,
-      required: true,
       trim: true,
       lowercase: true,
       maxlength: 160,
@@ -35,12 +33,30 @@ const serviceProviderReviewSchema = new Schema(
       trim: true,
       maxlength: 1500,
     },
-    rating: {
+    overallRating: {
       type: Number,
       required: true,
       min: 1,
       max: 5,
     },
+    categoryRatings: {
+      responsiveness: { type: Number, min: 1, max: 5 },
+      professionalism: { type: Number, min: 1, max: 5 },
+      punctuality: { type: Number, min: 1, max: 5 },
+      quality: { type: Number, min: 1, max: 5 },
+      valueForMoney: { type: Number, min: 1, max: 5 },
+    },
+    helpfulVotes: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    helpfulBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,

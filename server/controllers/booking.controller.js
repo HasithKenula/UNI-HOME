@@ -152,6 +152,18 @@ const createBooking = async (req, res) => {
             emergencyContact,
         } = req.body;
 
+        const existingCompletedBooking = await Booking.exists({
+            student: req.user._id,
+            status: 'completed',
+        });
+
+        if (existingCompletedBooking) {
+            return res.status(409).json({
+                success: false,
+                message: 'You cannot create a new booking after completing a previous booking',
+            });
+        }
+
         const accommodation = await Accommodation.findOne({
             _id: accommodationId,
             isDeleted: false,
@@ -330,7 +342,15 @@ const createBooking = async (req, res) => {
 
 const getBookings = async (req, res) => {
     try {
-        const { status, accommodationId, page = 1, limit = 10 } = req.query;
+        const {
+            status,
+            accommodationId,
+            page = 1,
+            limit = 10,
+            includeDashboard = 'false',
+            includePayments = 'false',
+            includeOwnerPayments = 'false',
+        } = req.query;
         const query = {};
 
         if (accommodationId && !mongoose.Types.ObjectId.isValid(accommodationId)) {
@@ -347,10 +367,16 @@ const getBookings = async (req, res) => {
         if (accommodationId) query.accommodation = accommodationId;
 
         const pageNum = Math.max(1, Number(page));
-        const limitNum = Math.min(100, Math.max(1, Number(limit)));
+        const limitNum = Math.min(500, Math.max(1, Number(limit)));
         const skip = (pageNum - 1) * limitNum;
 
-        const [data, total] = await Promise.all([
+        const shouldIncludeDashboard =
+            req.user.role === 'student' && String(includeDashboard).toLowerCase() === 'true';
+        const shouldIncludePayments = String(includePayments).toLowerCase() === 'true';
+        const shouldIncludeOwnerPayments =
+            req.user.role === 'owner' && String(includeOwnerPayments).toLowerCase() === 'true';
+
+        const [data, total, completedRoomBookings] = await Promise.all([
             Booking.find(query)
                 .populate('accommodation', 'title location media.photos')
                 .populate('room', 'roomNumber roomType maxOccupants currentOccupants status monthlyRent media.photos media.videos')
@@ -360,17 +386,82 @@ const getBookings = async (req, res) => {
                 .skip(skip)
                 .limit(limitNum),
             Booking.countDocuments(query),
+            shouldIncludeDashboard
+                ? Booking.find({
+                      student: req.user._id,
+                      status: 'completed',
+                      bookingScope: 'room',
+                  })
+                      .populate('accommodation', 'title location media.photos')
+                      .populate('room', 'roomNumber roomType maxOccupants currentOccupants status monthlyRent media.photos media.videos')
+                      .sort({ completedAt: -1, updatedAt: -1, createdAt: -1 })
+                      .limit(5)
+                : Promise.resolve([]),
         ]);
+
+        let enrichedData = data;
+        if (shouldIncludePayments && data.length > 0) {
+            const bookingIds = data.map((booking) => booking._id);
+            const payments = await Payment.find({ booking: { $in: bookingIds } })
+                .sort({ createdAt: -1 })
+                .select('booking paymentNumber paymentType amount status paymentMethod paidAt createdAt');
+
+            const paymentsByBookingId = payments.reduce((acc, payment) => {
+                const key = payment.booking?.toString();
+                if (!key) return acc;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(payment);
+                return acc;
+            }, {});
+
+            enrichedData = data.map((bookingDoc) => {
+                const booking = bookingDoc.toObject();
+                const bookingPayments = paymentsByBookingId[booking._id.toString()] || [];
+                const totalPaid = bookingPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+                return {
+                    ...booking,
+                    payments: bookingPayments,
+                    paymentSummary: {
+                        totalPaid,
+                        totalTransactions: bookingPayments.length,
+                        lastPaidAt: bookingPayments[0]?.paidAt || bookingPayments[0]?.createdAt || null,
+                    },
+                };
+            });
+        }
+
+        const ownerPayments = shouldIncludeOwnerPayments
+            ? await Payment.find({ paidTo: req.user._id })
+                  .populate('booking', 'bookingNumber status accommodation student')
+                  .sort({ createdAt: -1 })
+                  .select('paymentNumber paymentType amount status paymentMethod paidAt createdAt booking')
+            : [];
+
+        const completedRoomCount = shouldIncludeDashboard
+            ? await Booking.countDocuments({
+                  student: req.user._id,
+                  status: 'completed',
+                  bookingScope: 'room',
+              })
+            : 0;
 
         res.status(200).json({
             success: true,
-            data,
+            data: enrichedData,
             pagination: {
                 total,
                 page: pageNum,
                 limit: limitNum,
                 totalPages: Math.ceil(total / limitNum),
             },
+            ownerPayments: shouldIncludeOwnerPayments ? ownerPayments : undefined,
+            dashboardSummary: shouldIncludeDashboard
+                ? {
+                      completedRoomCount,
+                      completedRooms: completedRoomBookings,
+                  }
+                : undefined,
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch bookings', error: error.message });
@@ -406,6 +497,7 @@ const getBookingById = async (req, res) => {
             success: true,
             data: {
                 ...booking.toObject(),
+                reviewPath: booking.accommodation?._id ? `/listings/${booking.accommodation._id}#reviews` : null,
                 payments,
                 invoices,
             },
@@ -428,13 +520,6 @@ const createBookingPayment = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Not authorized to pay for this booking' });
         }
 
-        if (booking.status !== 'confirmed') {
-            return res.status(400).json({
-                success: false,
-                message: 'Payments are only accepted for confirmed bookings',
-            });
-        }
-
         const {
             paymentMethod,
             paymentType = 'booking_fee',
@@ -445,14 +530,42 @@ const createBookingPayment = async (req, res) => {
             notes,
         } = req.body;
 
-        const amountToPay = Number(amount || booking.costSummary?.totalInitialPayment || 0);
+        const isMonthlyRentPayment = paymentType === 'monthly_rent';
+        const isEligibleStatus =
+            booking.status === 'confirmed' || (isMonthlyRentPayment && booking.status === 'completed');
+        if (!isEligibleStatus) {
+            return res.status(400).json({
+                success: false,
+                message: isMonthlyRentPayment
+                    ? 'Monthly rent payments are accepted for confirmed or completed bookings'
+                    : 'Payments are only accepted for confirmed bookings',
+            });
+        }
+
+        const defaultAmount = isMonthlyRentPayment
+            ? Number(booking.costSummary?.monthlyRent || 0)
+            : Number(booking.costSummary?.totalInitialPayment || 0);
+        const amountToPay = Number(amount || defaultAmount);
         if (!Number.isFinite(amountToPay) || amountToPay <= 0) {
             return res.status(400).json({ success: false, message: 'Invalid payment amount' });
         }
 
+        const maxAllowedAmount = isMonthlyRentPayment
+            ? Number(booking.costSummary?.monthlyRent || 0)
+            : Number(booking.costSummary?.totalInitialPayment || 0);
+        if (Number.isFinite(maxAllowedAmount) && maxAllowedAmount > 0 && amountToPay > maxAllowedAmount) {
+            return res.status(400).json({
+                success: false,
+                message: `Amount cannot exceed LKR ${maxAllowedAmount.toLocaleString()}`,
+            });
+        }
+
         const gatewayMethod = paymentMethod === 'card' ? 'stripe' : 'bank_transfer';
         const isCardPayment = paymentMethod === 'card';
-        const nextOutstanding = Math.max(0, Number(booking.paymentStatus?.outstandingAmount || 0) - amountToPay);
+        const currentOutstanding = Number(booking.paymentStatus?.outstandingAmount || 0);
+        const nextOutstanding = isMonthlyRentPayment
+            ? currentOutstanding
+            : Math.max(0, currentOutstanding - amountToPay);
 
         const payment = await Payment.create({
             paymentNumber: await generatePaymentNumber(),
@@ -488,14 +601,28 @@ const createBookingPayment = async (req, res) => {
         });
 
         if (isCardPayment) {
-            booking.paymentStatus = {
-                ...(booking.paymentStatus || {}),
-                depositPaid: true,
-                keyMoneyPaid: true,
-                currentMonthPaid: true,
-                lastPaymentDate: new Date(),
-                outstandingAmount: nextOutstanding,
-            };
+            const shouldMarkCompleted = !isMonthlyRentPayment && booking.status === 'confirmed' && nextOutstanding <= 0;
+
+            booking.paymentStatus = isMonthlyRentPayment
+                ? {
+                      ...(booking.paymentStatus || {}),
+                      currentMonthPaid: true,
+                      lastPaymentDate: new Date(),
+                  }
+                : {
+                      ...(booking.paymentStatus || {}),
+                      depositPaid: true,
+                      keyMoneyPaid: true,
+                      currentMonthPaid: true,
+                      lastPaymentDate: new Date(),
+                      outstandingAmount: nextOutstanding,
+                  };
+
+            if (shouldMarkCompleted) {
+                booking.status = 'completed';
+                booking.completedAt = new Date();
+            }
+
             await booking.save();
         }
 

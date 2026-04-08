@@ -5,7 +5,12 @@ import * as bookingAPI from './bookingAPI';
 const initialState = {
     list: [],
     selectedBooking: null,
+    ownerPayments: [],
     pagination: { page: 1, limit: 10, total: 0, totalPages: 1 },
+    dashboardSummary: {
+        completedRoomCount: 0,
+        completedRooms: [],
+    },
     loading: false,
     actionLoading: false,
     error: null,
@@ -105,7 +110,9 @@ const bookingSlice = createSlice({
             .addCase(fetchBookingsAsync.fulfilled, (state, action) => {
                 state.loading = false;
                 state.list = action.payload.data || [];
+                state.ownerPayments = action.payload.ownerPayments || [];
                 state.pagination = action.payload.pagination || initialState.pagination;
+                state.dashboardSummary = action.payload.dashboardSummary || initialState.dashboardSummary;
             })
             .addCase(fetchBookingsAsync.rejected, (state, action) => {
                 state.loading = false;

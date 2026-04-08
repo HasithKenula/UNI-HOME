@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import CreateTicketForm from '../../components/ticket/CreateTicketForm';
 import { fetchBookingsAsync } from '../../features/bookings/bookingSlice';
@@ -9,6 +9,8 @@ const tabs = ['all', 'open', 'approved', 'assigned', 'in_progress', 'completed',
 
 const MyTicketsPage = () => {
     const dispatch = useDispatch();
+    const [searchParams] = useSearchParams();
+    const selectedBookingId = searchParams.get('bookingId') || '';
     const { list: bookingList } = useSelector((state) => state.bookings);
     const { list: ticketList, loading } = useSelector((state) => state.tickets);
     const [activeTab, setActiveTab] = useState('all');
@@ -22,7 +24,9 @@ const MyTicketsPage = () => {
     }, [dispatch, activeTab]);
 
     const completedBookings = useMemo(() => {
-        return (bookingList || []).filter((booking) => booking.status === 'completed');
+        return (bookingList || []).filter(
+            (booking) => booking.status === 'completed' && booking.bookingScope === 'room'
+        );
     }, [bookingList]);
 
     const tickets = useMemo(() => {
@@ -38,7 +42,11 @@ const MyTicketsPage = () => {
         <div className="mx-auto max-w-6xl space-y-6 px-4 py-10">
             <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
 
-            <CreateTicketForm bookings={completedBookings} onCreated={handleCreated} />
+            <CreateTicketForm
+                bookings={completedBookings}
+                onCreated={handleCreated}
+                initialBookingId={selectedBookingId}
+            />
 
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-md">
                 <div className="flex flex-wrap gap-2">

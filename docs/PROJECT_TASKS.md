@@ -54,6 +54,28 @@
 - [x] Removed district/city inputs from owner service-provider booking forms and replaced them with a single accommodation location field.
 - [x] Updated service booking backend model, validators, and controller logic to accept and persist accommodation location for create/edit booking flows.
 
+## Recent Updates (2026-04-08)
+
+- [x] Added booking detail media gallery for students to view room/accommodation photos directly in booking details.
+- [x] Updated booking payment completion flow so confirmed bookings automatically move to completed when full card payment is received.
+- [x] Added backend restriction preventing students from creating new accommodation bookings after a completed booking exists.
+- [x] Added frontend pre-check and disabled booking form state for students who already have a completed booking.
+- [x] Replaced completed-booking review action with a clearer "View Accommodation & Reviews" link to the accommodation review section.
+- [x] Added service provider detail review summary, review list, and direct submission form matching the accommodation review pattern without any approval step.
+- [x] Restyled the service provider review section into a single-column accommodation-like layout with a full-width write-review card.
+- [x] Removed manual name/email inputs from service provider reviews and added AI-generated summary output to provider details.
+- [x] Added provider review category ratings with auto-calculated overall score, matching the accommodation review pattern.
+- [x] Expanded the bookings page to show accommodation and room photos together in each booking card.
+- [x] Fixed provider review submission conflicts from legacy unique indexes and added owner/admin edit-delete actions for provider reviews.
+- [x] Added owner-helpful voting for provider reviews with duplicate/self-vote protection and surfaced helpful counts to prioritize useful feedback for other owners.
+- [x] Added student dashboard support for completed room bookings with backend dashboard summary data and a dedicated Completed Rooms section/card in the UI.
+- [x] Removed "View All" button from Completed Rooms card to reduce UI clutter.
+- [x] Removed generic "Create Ticket" button from dashboard footer to reduce redundant actions.
+- [x] Moved "Create Ticket" and "Pay Monthly Rent" actions into completed booking detail view next to "View Accommodation & Reviews".
+- [x] Updated PaymentPage to support monthly_rent payment type via query parameter with auto-populated monthly rent amount from costSummary.
+- [x] Extended backend booking payment handling to accept monthly_rent payments for completed bookings while keeping booking-fee rules for confirmed bookings.
+- [x] Extended payment form to handle both booking_fee and monthly_rent payment types with appropriate amount validation.
+
 ---
 
 ## 📌 Table of Contents

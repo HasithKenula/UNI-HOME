@@ -61,12 +61,38 @@ const providerIdParamValidator = [
   param('providerId').isMongoId().withMessage('Invalid service provider id'),
 ];
 
+const providerReviewIdParamValidator = [
+  param('providerId').isMongoId().withMessage('Invalid service provider id'),
+  param('reviewId').isMongoId().withMessage('Invalid service provider review id'),
+];
+
 const createServiceProviderReviewValidator = [
   ...providerIdParamValidator,
-  body('reviewerName').optional().trim().notEmpty().withMessage('reviewerName cannot be empty'),
-  body('reviewerEmail').optional().isEmail().withMessage('reviewerEmail must be a valid email'),
   body('comment').trim().notEmpty().withMessage('comment is required'),
-  body('rating').isFloat({ min: 1, max: 5 }).withMessage('rating must be between 1 and 5'),
+  body('categoryRatings').optional().isObject().withMessage('categoryRatings must be an object'),
+  body('categoryRatings.responsiveness').optional().isInt({ min: 1, max: 5 }).withMessage('responsiveness must be 1-5'),
+  body('categoryRatings.professionalism').optional().isInt({ min: 1, max: 5 }).withMessage('professionalism must be 1-5'),
+  body('categoryRatings.punctuality').optional().isInt({ min: 1, max: 5 }).withMessage('punctuality must be 1-5'),
+  body('categoryRatings.quality').optional().isInt({ min: 1, max: 5 }).withMessage('quality must be 1-5'),
+  body('categoryRatings.valueForMoney').optional().isInt({ min: 1, max: 5 }).withMessage('valueForMoney must be 1-5'),
+  body('overallRating').optional().isFloat({ min: 1, max: 5 }).withMessage('overallRating must be between 1 and 5'),
+];
+
+const updateServiceProviderReviewValidator = [
+  ...providerReviewIdParamValidator,
+  body('comment').optional().trim().notEmpty().withMessage('comment cannot be empty'),
+  body('categoryRatings').optional().isObject().withMessage('categoryRatings must be an object'),
+  body('categoryRatings.responsiveness').optional().isInt({ min: 1, max: 5 }).withMessage('responsiveness must be 1-5'),
+  body('categoryRatings.professionalism').optional().isInt({ min: 1, max: 5 }).withMessage('professionalism must be 1-5'),
+  body('categoryRatings.punctuality').optional().isInt({ min: 1, max: 5 }).withMessage('punctuality must be 1-5'),
+  body('categoryRatings.quality').optional().isInt({ min: 1, max: 5 }).withMessage('quality must be 1-5'),
+  body('categoryRatings.valueForMoney').optional().isInt({ min: 1, max: 5 }).withMessage('valueForMoney must be 1-5'),
+  body('overallRating').optional().isFloat({ min: 1, max: 5 }).withMessage('overallRating must be between 1 and 5'),
+];
+
+const markServiceProviderReviewHelpfulValidator = [
+  ...providerReviewIdParamValidator,
+  body('helpful').optional().isBoolean().withMessage('helpful must be a boolean'),
 ];
 
 export {
@@ -77,5 +103,8 @@ export {
   updateMyServiceBookingValidator,
   cancelMyServiceBookingValidator,
   providerIdParamValidator,
+  providerReviewIdParamValidator,
   createServiceProviderReviewValidator,
+  updateServiceProviderReviewValidator,
+  markServiceProviderReviewHelpfulValidator,
 };

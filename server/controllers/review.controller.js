@@ -78,6 +78,7 @@ export const getReviewsByAccommodation = async (req, res) => {
         const skip = (page - 1) * limit;
 
         const publicFilter = { accommodation: accommodationId, status: 'approved' };
+        const summaryFilter = { accommodation: accommodationId, status: { $ne: 'rejected' } };
         const filter = req.user?.role === 'student'
             ? {
                 accommodation: accommodationId,
@@ -98,13 +99,15 @@ export const getReviewsByAccommodation = async (req, res) => {
         ]);
 
         const distributionBase = await Review.aggregate([
-            { $match: publicFilter },
+            { $match: summaryFilter },
             { $group: { _id: '$overallRating', count: { $sum: 1 } } },
         ]);
 
         const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
         distributionBase.forEach((item) => {
-            distribution[item._id] = item.count;
+            // overallRating can be decimal (e.g., 4.2), so bucket it into 1-5 stars.
+            const bucket = Math.max(1, Math.min(5, Math.round(Number(item._id) || 0)));
+            distribution[bucket] += Number(item.count || 0);
         });
 
         res.status(200).json({

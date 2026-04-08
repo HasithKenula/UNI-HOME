@@ -5,11 +5,17 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
+import ServiceProviderReviewCard from '../../components/provider/ServiceProviderReviewCard';
+import ServiceProviderReviewForm from '../../components/provider/ServiceProviderReviewForm';
+import ServiceProviderReviewSummaryCard from '../../components/provider/ServiceProviderReviewSummaryCard';
 import {
   createServiceProviderReview,
+  deleteServiceProviderReview,
   getProviderBookedDates,
   getServiceProviderCategories,
   getServiceProviderDetails,
+  markServiceProviderReviewHelpful,
+  updateServiceProviderReview,
 } from '../../features/providers/providerAPI';
 import {
   createServiceProviderBookingAsync,
@@ -132,6 +138,7 @@ const ServiceProvidersPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { providers, loading, actionLoading } = useSelector((state) => state.providers);
+  const { user } = useSelector((state) => state.auth);
   const ticketAssignment = location.state?.ticketAssignment || null;
 
   const [categoryOptions, setCategoryOptions] = useState(CATEGORY_OPTIONS);
@@ -155,13 +162,16 @@ const ServiceProvidersPage = () => {
   const [bookedDates, setBookedDates] = useState([]);
   const [loadingBookedDates, setLoadingBookedDates] = useState(false);
 
-  const [reviewForm, setReviewForm] = useState({
-    reviewerName: '',
-    reviewerEmail: '',
-    comment: '',
-    rating: 5,
-  });
   const [reviewState, setReviewState] = useState({ loading: false, error: '' });
+  const [editingReviewId, setEditingReviewId] = useState('');
+  const [reviewActionState, setReviewActionState] = useState({ loading: false, mode: '', reviewId: '', error: '' });
+  const providerReviews = providerDetails?.reviews || [];
+  const providerRatingsSummary = providerDetails?.ratingsSummary || {
+    averageRating: 0,
+    totalReviews: 0,
+  };
+  const providerDistribution = providerDetails?.distribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const providerAiSummary = providerDetails?.aiSummary || null;
 
   const loadProviders = () => {
     if (!filters.category) return;
@@ -249,7 +259,12 @@ const ServiceProvidersPage = () => {
     try {
       const response = await getServiceProviderDetails(provider._id);
       if (response.success) {
-        setProviderDetails(response.data);
+        setProviderDetails({
+          ...(response.data || {}),
+          ratingsSummary: response.ratingsSummary || response.data?.ratingsSummary,
+          distribution: response.distribution || response.data?.distribution,
+          aiSummary: response.aiSummary || response.data?.aiSummary,
+        });
       }
     } catch (error) {
       setDetailsError(error?.response?.data?.message || 'Failed to load provider details');
@@ -263,24 +278,125 @@ const ServiceProvidersPage = () => {
     setDetailsError('');
   };
 
-  const submitProviderReview = async (event) => {
-    event.preventDefault();
+  const submitProviderReview = async (payload) => {
     if (!providerDetails?._id) return;
 
     setReviewState({ loading: true, error: '' });
     try {
       await createServiceProviderReview(providerDetails._id, {
-        reviewerName: reviewForm.reviewerName,
-        reviewerEmail: reviewForm.reviewerEmail,
-        comment: reviewForm.comment,
-        rating: Number(reviewForm.rating),
+        comment: payload.comment,
+        overallRating: Number(payload.overallRating),
+        categoryRatings: payload.categoryRatings,
       });
 
-      setReviewForm((prev) => ({ ...prev, comment: '', rating: 5 }));
       await openProviderDetails(providerDetails);
+      window.setTimeout(() => {
+        document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
       setReviewState({ loading: false, error: '' });
+      return true;
     } catch (error) {
       setReviewState({ loading: false, error: error?.response?.data?.message || 'Failed to submit review' });
+      return false;
+    }
+  };
+
+  const canManageReview = (review) => {
+    if (!user || !review) return false;
+    if (user.role === 'admin') return true;
+
+    const reviewerId = String(review?.reviewer?._id || '');
+    return reviewerId && reviewerId === String(user._id);
+  };
+
+  const canVoteReviewHelpful = (review) => {
+    if (!user || !review) return false;
+
+    const reviewerId = String(review?.reviewer?._id || '');
+    if (reviewerId && reviewerId === String(user._id)) return false;
+
+    return user.role === 'owner' || user.role === 'admin';
+  };
+
+  const startEditingReview = (review) => {
+    if (!canManageReview(review)) return;
+    setEditingReviewId(review._id);
+    setReviewActionState((prev) => ({ ...prev, error: '' }));
+  };
+
+  const cancelEditingReview = () => {
+    setEditingReviewId('');
+  };
+
+  const submitReviewUpdate = async (reviewId, payload) => {
+    if (!providerDetails?._id) return false;
+
+    setReviewActionState({ loading: true, mode: 'edit', reviewId, error: '' });
+    try {
+      await updateServiceProviderReview(providerDetails._id, reviewId, {
+        comment: payload.comment,
+        overallRating: Number(payload.overallRating),
+        categoryRatings: payload.categoryRatings,
+      });
+
+      await openProviderDetails(providerDetails);
+      setEditingReviewId('');
+      setReviewActionState({ loading: false, mode: '', reviewId: '', error: '' });
+      return true;
+    } catch (error) {
+      setReviewActionState({
+        loading: false,
+        mode: 'edit',
+        reviewId,
+        error: error?.response?.data?.message || 'Failed to update review',
+      });
+      return false;
+    }
+  };
+
+  const removeReview = async (review) => {
+    if (!providerDetails?._id || !review?._id) return;
+    if (!canManageReview(review)) return;
+
+    const confirmed = window.confirm('Delete this review? This action cannot be undone.');
+    if (!confirmed) return;
+
+    setReviewActionState({ loading: true, mode: 'delete', reviewId: review._id, error: '' });
+    try {
+      await deleteServiceProviderReview(providerDetails._id, review._id);
+      await openProviderDetails(providerDetails);
+      if (editingReviewId === review._id) {
+        setEditingReviewId('');
+      }
+      setReviewActionState({ loading: false, mode: '', reviewId: '', error: '' });
+    } catch (error) {
+      setReviewActionState({
+        loading: false,
+        mode: 'delete',
+        reviewId: review._id,
+        error: error?.response?.data?.message || 'Failed to delete review',
+      });
+    }
+  };
+
+  const toggleHelpfulVote = async (review) => {
+    if (!providerDetails?._id || !review?._id) return;
+    if (!canVoteReviewHelpful(review)) return;
+
+    setReviewActionState({ loading: true, mode: 'helpful', reviewId: review._id, error: '' });
+    try {
+      await markServiceProviderReviewHelpful(providerDetails._id, review._id, {
+        helpful: !Boolean(review?.isHelpfulByCurrentUser),
+      });
+      await openProviderDetails(providerDetails);
+      setReviewActionState({ loading: false, mode: '', reviewId: '', error: '' });
+    } catch (error) {
+      setReviewActionState({
+        loading: false,
+        mode: 'helpful',
+        reviewId: review._id,
+        error: error?.response?.data?.message || 'Failed to update helpful vote',
+      });
     }
   };
 
@@ -444,85 +560,79 @@ const ServiceProvidersPage = () => {
           </div>
         </div>
 
-        <div className="mt-8 grid gap-8 md:grid-cols-2">
-          <section>
-            <h3 className="text-2xl font-semibold text-gray-900">User Reviews</h3>
-            <div className="mt-4 space-y-3">
-              {providerDetails.reviews?.length ? providerDetails.reviews.map((review) => (
-                <div key={review._id} className="rounded border border-gray-200 bg-white px-4 py-3">
-                  <p className="text-sm font-semibold text-gray-900">Posted By {review.reviewerName} · {formatDate(review.createdAt)}</p>
-                  <p className="text-yellow-500">
-                    {'★'.repeat(Math.round(review.rating || 0))}
-                    {'☆'.repeat(5 - Math.round(review.rating || 0))}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-700">{review.comment}</p>
-                </div>
-              )) : (
-                <p className="rounded border border-dashed border-gray-300 px-4 py-5 text-sm text-gray-500">No reviews yet.</p>
-              )}
+        <section id="reviews" className="mt-8 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
+          <div className="mx-auto w-full max-w-4xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                <span className="text-amber-500">★</span>
+                Reviews & Ratings
+              </h3>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                {providerReviews.length} review(s)
+              </span>
             </div>
-          </section>
 
-          <section>
-            <h3 className="text-2xl font-semibold text-gray-900">Write a Review</h3>
+            <ServiceProviderReviewForm loading={reviewState.loading} onSubmit={submitProviderReview} />
+
             {reviewState.error && (
-              <div className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {reviewState.error}
               </div>
             )}
-            <form onSubmit={submitProviderReview} className="mt-4 space-y-3 rounded border border-gray-200 bg-white p-4">
-              <Input
-                label="Name"
-                name="reviewerName"
-                value={reviewForm.reviewerName}
-                onChange={(event) => setReviewForm((prev) => ({ ...prev, reviewerName: event.target.value }))}
-                required
-              />
-              <Input
-                label="Email"
-                name="reviewerEmail"
-                type="email"
-                value={reviewForm.reviewerEmail}
-                onChange={(event) => setReviewForm((prev) => ({ ...prev, reviewerEmail: event.target.value }))}
-                required
-              />
-              <div>
-                <label htmlFor="provider-rating" className="mb-1 block text-sm font-semibold text-gray-700">Rating</label>
-                <select
-                  id="provider-rating"
-                  value={reviewForm.rating}
-                  onChange={(event) => setReviewForm((prev) => ({ ...prev, rating: Number(event.target.value) }))}
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                >
-                  <option value={5}>5 - Excellent</option>
-                  <option value={4}>4 - Good</option>
-                  <option value={3}>3 - Average</option>
-                  <option value={2}>2 - Poor</option>
-                  <option value={1}>1 - Very Poor</option>
-                </select>
+
+            <ServiceProviderReviewSummaryCard
+              ratingsSummary={providerRatingsSummary}
+              distribution={providerDistribution}
+              aiSummary={providerAiSummary}
+            />
+
+            {reviewActionState.error && (
+              <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {reviewActionState.error}
               </div>
-              <div>
-                <label htmlFor="provider-comment" className="mb-1 block text-sm font-semibold text-gray-700">Review</label>
-                <textarea
-                  id="provider-comment"
-                  rows={4}
-                  value={reviewForm.comment}
-                  onChange={(event) => setReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                  placeholder="Share your experience"
-                  required
-                />
+            )}
+
+            <section>
+              <h4 className="text-lg font-semibold text-gray-900">User Reviews</h4>
+              <div className="mt-4 space-y-3">
+                {providerReviews.length ? providerReviews.map((review) => (
+                  <div key={review._id}>
+                    <ServiceProviderReviewCard
+                      review={review}
+                      canManage={canManageReview(review)}
+                      canVoteHelpful={canVoteReviewHelpful(review)}
+                      onEdit={startEditingReview}
+                      onDelete={removeReview}
+                      onToggleHelpful={toggleHelpfulVote}
+                      deleting={reviewActionState.loading && reviewActionState.mode === 'delete' && reviewActionState.reviewId === review._id}
+                      helpfulLoading={reviewActionState.loading && reviewActionState.mode === 'helpful' && reviewActionState.reviewId === review._id}
+                    />
+
+                    {editingReviewId === review._id && (
+                      <ServiceProviderReviewForm
+                        key={`edit-${review._id}`}
+                        loading={reviewActionState.loading && reviewActionState.mode === 'edit' && reviewActionState.reviewId === review._id}
+                        onSubmit={(payload) => submitReviewUpdate(review._id, payload)}
+                        initialValues={{
+                          comment: review.comment,
+                          categoryRatings: review.categoryRatings,
+                        }}
+                        title="Edit Your Review"
+                        hint="Update your comment or ratings. Overall score is auto-calculated."
+                        submitLabel="Save Changes"
+                        showCancel
+                        onCancel={cancelEditingReview}
+                        resetOnSuccess={false}
+                      />
+                    )}
+                  </div>
+                )) : (
+                  <p className="rounded border border-dashed border-gray-300 px-4 py-5 text-sm text-gray-500">No reviews yet.</p>
+                )}
               </div>
-              <button
-                type="submit"
-                className="rounded-full bg-emerald-600 px-6 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={reviewState.loading}
-              >
-                {reviewState.loading ? 'Submitting...' : 'Submit'}
-              </button>
-            </form>
-          </section>
-        </div>
+            </section>
+          </div>
+        </section>
       </div>
     );
   }
