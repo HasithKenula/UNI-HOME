@@ -26,6 +26,21 @@ export const createServiceProviderReview = async (providerId, payload) => {
     return response.data;
 };
 
+export const updateServiceProviderReview = async (providerId, reviewId, payload) => {
+    const response = await axios.patch(`/service-providers/${providerId}/reviews/${reviewId}`, payload);
+    return response.data;
+};
+
+export const deleteServiceProviderReview = async (providerId, reviewId) => {
+    const response = await axios.delete(`/service-providers/${providerId}/reviews/${reviewId}`);
+    return response.data;
+};
+
+export const markServiceProviderReviewHelpful = async (providerId, reviewId, payload = {}) => {
+    const response = await axios.patch(`/service-providers/${providerId}/reviews/${reviewId}/helpful`, payload);
+    return response.data;
+};
+
 export const createServiceProviderBooking = async (payload) => {
     const response = await axios.post('/service-providers/bookings', payload);
     return response.data;

@@ -93,6 +93,30 @@ export const loadUserAsync = createAsyncThunk(
   }
 );
 
+export const updateCurrentUserAsync = createAsyncThunk(
+  'auth/updateCurrentUser',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const data = await authAPI.updateCurrentUser(payload);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to update profile' });
+    }
+  }
+);
+
+export const removeCurrentUserAsync = createAsyncThunk(
+  'auth/removeCurrentUser',
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await authAPI.removeCurrentUser();
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to remove profile' });
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -214,6 +238,39 @@ const authSlice = createSlice({
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+      })
+      .addCase(updateCurrentUserAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateCurrentUserAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.data;
+        localStorage.setItem('user', JSON.stringify(action.payload.data));
+        toast.success(action.payload?.message || 'Profile updated successfully');
+      })
+      .addCase(updateCurrentUserAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.message || 'Failed to update profile';
+        toast.error(state.error);
+      })
+      .addCase(removeCurrentUserAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(removeCurrentUserAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+        localStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        toast.success(action.payload?.message || 'Profile removed successfully');
+      })
+      .addCase(removeCurrentUserAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.message || 'Failed to remove profile';
+        toast.error(state.error);
       });
   },
 });

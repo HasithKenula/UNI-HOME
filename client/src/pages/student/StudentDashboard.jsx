@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { BellRing, CalendarClock, ChevronLeft, ChevronRight, Clock3, Heart, Wrench } from 'lucide-react';
+import { BellRing, CalendarClock, ChevronLeft, ChevronRight, Clock3, Heart } from 'lucide-react';
 import { fetchBookingsAsync } from '../../features/bookings/bookingSlice';
 import Button from '../../components/common/Button';
 import { getTenantNotices } from '../../features/notifications/notificationAPI';
@@ -43,7 +43,7 @@ const getBookingPhotoPath = (booking) => {
 const StudentDashboard = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { list, loading } = useSelector((state) => state.bookings);
+    const { list, loading, dashboardSummary } = useSelector((state) => state.bookings);
     const [tenantNotices, setTenantNotices] = useState([]);
     const [noticesLoading, setNoticesLoading] = useState(false);
     const noticesScrollerRef = useRef(null);
@@ -90,7 +90,7 @@ const StudentDashboard = () => {
     }, [tenantNotices.length, activeNoticeIndex]);
 
     useEffect(() => {
-        dispatch(fetchBookingsAsync({ page: 1, limit: 20 }));
+        dispatch(fetchBookingsAsync({ page: 1, limit: 20, includeDashboard: true }));
     }, [dispatch]);
 
     useEffect(() => {
@@ -146,11 +146,13 @@ const StudentDashboard = () => {
         const pending = list.filter((booking) => booking.status === 'pending').length;
         const confirmed = list.filter((booking) => booking.status === 'confirmed').length;
         const cancelled = list.filter((booking) => booking.status === 'cancelled').length;
+        const completedRooms = Number(dashboardSummary?.completedRoomCount || 0);
 
-        return { total, pending, confirmed, cancelled };
-    }, [list]);
+        return { total, pending, confirmed, cancelled, completedRooms };
+    }, [list, dashboardSummary]);
 
     const recentBookings = useMemo(() => list.slice(0, 4), [list]);
+    const completedRooms = useMemo(() => dashboardSummary?.completedRooms || [], [dashboardSummary]);
 
     return (
         <div className="mx-auto max-w-6xl px-4 py-10">
@@ -159,7 +161,7 @@ const StudentDashboard = () => {
                 Welcome back, {user?.firstName || 'Student'}. Here is your booking activity.
             </p>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm">
                     <p className="text-sm text-gray-500">Total Bookings</p>
                     <p className="mt-1 text-3xl font-bold text-gray-900">{stats.total}</p>
@@ -176,6 +178,72 @@ const StudentDashboard = () => {
                     <p className="text-sm text-gray-700">Cancelled</p>
                     <p className="mt-1 text-3xl font-bold text-gray-700">{stats.cancelled}</p>
                 </div>
+                <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50 p-4 shadow-sm">
+                    <p className="text-sm text-indigo-700">Completed Rooms</p>
+                    <p className="mt-1 text-3xl font-bold text-indigo-700">{stats.completedRooms}</p>
+                </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border-2 border-indigo-200 bg-white p-5 shadow-md">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <CalendarClock className="h-5 w-5 text-indigo-600" /> Completed Rooms
+                    </h2>
+                </div>
+
+                {loading ? (
+                    <p className="text-gray-600">Loading completed rooms...</p>
+                ) : completedRooms.length === 0 ? (
+                    <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center text-gray-500">
+                        No completed room bookings yet.
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {completedRooms.map((booking) => (
+                            <Link
+                                key={`completed-${booking._id}`}
+                                to={`/student/bookings/${booking._id}`}
+                                className="block rounded-xl border-2 border-indigo-100 p-4 transition-all hover:border-indigo-300 hover:bg-indigo-50"
+                            >
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={(() => {
+                                                const mediaPath = getBookingPhotoPath(booking);
+                                                return mediaPath
+                                                    ? getMediaUrlWithFallback(mediaPath).primary
+                                                    : 'https://placehold.co/180x120?text=Room';
+                                            })()}
+                                            alt={booking.accommodation?.title || 'Completed room'}
+                                            className="h-16 w-24 rounded-lg object-cover"
+                                            onError={(event) => {
+                                                const mediaUrl = getBookingPhotoPath(booking);
+                                                if (!mediaUrl) return;
+                                                const { fallback } = getMediaUrlWithFallback(mediaUrl);
+                                                if (event.currentTarget.src !== fallback) {
+                                                    event.currentTarget.src = fallback;
+                                                } else {
+                                                    event.currentTarget.src = 'https://placehold.co/180x120?text=Room';
+                                                }
+                                            }}
+                                        />
+
+                                        <div>
+                                            <p className="text-xs text-gray-500">{booking.bookingNumber}</p>
+                                            <p className="font-semibold text-gray-900">{booking.accommodation?.title || 'Accommodation'}</p>
+                                            <p className="text-sm text-gray-600">
+                                                Room: {booking.room?.roomNumber || '-'} ({booking.room?.roomType || booking.roomType || '-'})
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 capitalize w-fit">
+                                        completed
+                                    </span>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
@@ -324,10 +392,10 @@ const StudentDashboard = () => {
                 )}
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <Link to="/search"><Button fullWidth variant="primary"><Clock3 className="h-4 w-4 mr-2" />Find Accommodation</Button></Link>
                 <Link to="/student/favorites"><Button fullWidth variant="secondary"><Heart className="h-4 w-4 mr-2" />My Favorites</Button></Link>
-                <Link to="/student/tickets"><Button fullWidth variant="success"><Wrench className="h-4 w-4 mr-2" />Create Ticket</Button></Link>
+                <Link to="/student/profile"><Button fullWidth variant="outline">Manage Profile</Button></Link>
             </div>
         </div>
     );

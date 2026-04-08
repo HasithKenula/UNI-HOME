@@ -24,42 +24,24 @@ const sentimentConfig = {
     },
 };
 
-const ReviewSummaryCard = ({ ratingsSummary, aiSummary, distribution, reviews = [] }) => {
-    const avgRating = Number(ratingsSummary?.averageRating || 0);
+const ServiceProviderReviewSummaryCard = ({ ratingsSummary, distribution, aiSummary }) => {
+    const averageRating = Number(ratingsSummary?.averageRating || 0);
     const totalReviews = Number(ratingsSummary?.totalReviews || 0);
     const sentiment = ratingsSummary?.sentimentLabel || 'no_reviews';
     const config = sentimentConfig[sentiment] || sentimentConfig.no_reviews;
     const SentimentIcon = config.icon;
-
-    const distributionTotal = [1, 2, 3, 4, 5].reduce(
-        (sum, rating) => sum + Number(distribution?.[rating] || 0),
-        0
-    );
-
-    const fallbackDistribution = reviews.reduce(
-        (acc, review) => {
-            const bucket = Math.max(1, Math.min(5, Math.round(Number(review?.overallRating || 0))));
-            if (Number(review?.overallRating || 0) > 0) {
-                acc[bucket] += 1;
-            }
-            return acc;
-        },
-        { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-    );
-
-    const effectiveDistribution = distributionTotal > 0 ? distribution : fallbackDistribution;
 
     return (
         <div className="mb-4 rounded-xl border-2 border-gray-200 bg-white p-4">
             <div className="grid gap-4 md:grid-cols-[160px,1fr]">
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-center">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Average</p>
-                    <p className="mt-1 text-4xl font-extrabold text-amber-600">{avgRating.toFixed(1)}</p>
+                    <p className="mt-1 text-4xl font-extrabold text-amber-600">{averageRating.toFixed(1)}</p>
                     <div className="mt-1 flex items-center justify-center gap-1 text-amber-500">
                         {Array.from({ length: 5 }).map((_, index) => (
                             <Star
                                 key={index}
-                                className={`h-4 w-4 ${index < Math.round(avgRating) ? 'fill-current' : ''}`}
+                                className={`h-4 w-4 ${index < Math.round(averageRating) ? 'fill-current' : ''}`}
                             />
                         ))}
                     </div>
@@ -74,7 +56,7 @@ const ReviewSummaryCard = ({ ratingsSummary, aiSummary, distribution, reviews = 
 
                     <div className="space-y-2">
                         {[5, 4, 3, 2, 1].map((rating) => {
-                            const count = Number(effectiveDistribution?.[rating] || 0);
+                            const count = Number(distribution?.[rating] || 0);
                             const percentage = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
 
                             return (
@@ -102,4 +84,4 @@ const ReviewSummaryCard = ({ ratingsSummary, aiSummary, distribution, reviews = 
     );
 };
 
-export default ReviewSummaryCard;
+export default ServiceProviderReviewSummaryCard;

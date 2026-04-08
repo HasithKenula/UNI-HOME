@@ -76,6 +76,16 @@ export const getCurrentUser = async () => {
   return response.data;
 };
 
+export const updateCurrentUser = async (payload) => {
+  const response = await axios.put('/users/me', payload);
+  return response.data;
+};
+
+export const removeCurrentUser = async () => {
+  const response = await axios.delete('/users/me');
+  return response.data;
+};
+
 // Refresh access token
 export const refreshToken = async (refreshToken) => {
   const response = await axios.post('/auth/refresh', { refreshToken });

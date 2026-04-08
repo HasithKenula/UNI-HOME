@@ -2,6 +2,60 @@ import React from 'react';
 import { CalendarDays, Home, CreditCard } from 'lucide-react';
 import Button from '../common/Button';
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+
+const normalizeMediaPath = (url = '') => {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.startsWith('/') ? url : `/${url}`;
+};
+
+const getMediaUrlWithFallback = (url = '') => {
+    const normalizedUrl = normalizeMediaPath(url);
+    if (!normalizedUrl) {
+        return { primary: '', fallback: '' };
+    }
+
+    if (/^https?:\/\//i.test(normalizedUrl)) {
+        return { primary: normalizedUrl, fallback: normalizedUrl };
+    }
+
+    const primary = `${API_ORIGIN}${normalizedUrl}`;
+    const fallback = normalizedUrl.includes('/uploads/accommodations/')
+        ? `${API_ORIGIN}${normalizedUrl.replace('/uploads/accommodations/', '/uploads/')}`
+        : primary;
+
+    return { primary, fallback };
+};
+
+const mapPhotoListToUrls = (photos = []) => {
+    return Array.from(
+        new Set(
+            photos
+                .map((photo) => {
+                    if (typeof photo === 'string') return photo;
+                    if (photo?.url) return photo.url;
+                    return '';
+                })
+                .filter(Boolean)
+        )
+    );
+};
+
+const collectRoomPhotoPaths = (booking) => {
+    const roomPhotos = Array.isArray(booking?.room?.media?.photos) ? booking.room.media.photos : [];
+    return mapPhotoListToUrls(roomPhotos);
+};
+
+const collectAccommodationPhotoPaths = (booking) => {
+    const accommodationMediaPhotos = Array.isArray(booking?.accommodation?.media?.photos)
+        ? booking.accommodation.media.photos
+        : [];
+    const legacyPhotos = Array.isArray(booking?.accommodation?.photos) ? booking.accommodation.photos : [];
+
+    return mapPhotoListToUrls([...accommodationMediaPhotos, ...legacyPhotos]);
+};
+
 const statusColor = {
     pending: 'bg-amber-100 text-amber-700',
     confirmed: 'bg-green-100 text-green-700',
@@ -10,11 +64,13 @@ const statusColor = {
     completed: 'bg-blue-100 text-blue-700',
 };
 
-const BookingDetail = ({ booking, onCancel, onPayNow, onWriteReview }) => {
+const BookingDetail = ({ booking, onCancel, onPayNow, onWriteReview, onPayMonthlyRent, onCreateTicket }) => {
     if (!booking) return null;
 
     const timeline = ['pending', 'confirmed', 'completed'];
     const currentIndex = timeline.indexOf(booking.status);
+    const roomPhotoPaths = collectRoomPhotoPaths(booking);
+    const accommodationPhotoPaths = collectAccommodationPhotoPaths(booking);
 
     return (
         <div className="space-y-5 rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg">
@@ -71,6 +127,81 @@ const BookingDetail = ({ booking, onCancel, onPayNow, onWriteReview }) => {
                 </div>
             </div>
 
+            <div className="rounded-xl border-2 border-gray-100 p-4">
+                <h3 className="mb-3 text-lg font-semibold text-gray-900">Owner Details</h3>
+                <p className="text-sm text-gray-700">
+                    Name: <span className="font-semibold">{booking.owner?.firstName || '-'} {booking.owner?.lastName || ''}</span>
+                </p>
+                <p className="text-sm text-gray-700">
+                    Email: <span className="font-semibold">{booking.owner?.email || '-'}</span>
+                </p>
+                <p className="text-sm text-gray-700">
+                    Phone: <span className="font-semibold">{booking.owner?.phone || '-'}</span>
+                </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border-2 border-gray-100 p-4">
+                    <h3 className="mb-3 text-lg font-semibold text-gray-900">Room Images</h3>
+                    {roomPhotoPaths.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            {roomPhotoPaths.map((path, index) => {
+                                const { primary, fallback } = getMediaUrlWithFallback(path);
+
+                                return (
+                                    <img
+                                        key={`room-${path}-${index}`}
+                                        src={primary}
+                                        alt={`Room image ${index + 1}`}
+                                        className="h-28 w-full rounded-lg object-cover"
+                                        loading="lazy"
+                                        onError={(event) => {
+                                            if (event.currentTarget.src !== fallback && fallback) {
+                                                event.currentTarget.src = fallback;
+                                            } else {
+                                                event.currentTarget.src = 'https://placehold.co/400x260?text=Room';
+                                            }
+                                        }}
+                                    />
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500">No room images available for this booking.</p>
+                    )}
+                </div>
+
+                <div className="rounded-xl border-2 border-gray-100 p-4">
+                    <h3 className="mb-3 text-lg font-semibold text-gray-900">Accommodation Images</h3>
+                    {accommodationPhotoPaths.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            {accommodationPhotoPaths.map((path, index) => {
+                                const { primary, fallback } = getMediaUrlWithFallback(path);
+
+                                return (
+                                    <img
+                                        key={`accommodation-${path}-${index}`}
+                                        src={primary}
+                                        alt={`${booking.accommodation?.title || 'Accommodation'} image ${index + 1}`}
+                                        className="h-28 w-full rounded-lg object-cover"
+                                        loading="lazy"
+                                        onError={(event) => {
+                                            if (event.currentTarget.src !== fallback && fallback) {
+                                                event.currentTarget.src = fallback;
+                                            } else {
+                                                event.currentTarget.src = 'https://placehold.co/400x260?text=Accommodation';
+                                            }
+                                        }}
+                                    />
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500">No accommodation images available for this booking.</p>
+                    )}
+                </div>
+            </div>
+
             <div className="rounded-xl border-2 border-blue-100 bg-blue-50 p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
                     <CreditCard className="h-5 w-5 text-blue-600" /> Cost Breakdown
@@ -91,7 +222,13 @@ const BookingDetail = ({ booking, onCancel, onPayNow, onWriteReview }) => {
                     <Button variant="danger" onClick={onCancel}>Cancel Booking</Button>
                 )}
                 {booking.status === 'confirmed' && <Button onClick={onPayNow}>Pay Now</Button>}
-                {booking.status === 'completed' && <Button variant="outline" onClick={onWriteReview}>Write Review</Button>}
+                {booking.status === 'completed' && (
+                    <>
+                        <Button variant="outline" onClick={onWriteReview}>View Accommodation & Reviews</Button>
+                        <Button variant="success" onClick={onPayMonthlyRent}>Pay Monthly Rent</Button>
+                        <Button onClick={onCreateTicket}>Create Ticket</Button>
+                    </>
+                )}
             </div>
         </div>
     );

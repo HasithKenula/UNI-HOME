@@ -27,10 +27,14 @@ const BookingDetailPage = () => {
         return <div className="mx-auto max-w-5xl px-4 py-10">Loading booking details...</div>;
     }
 
+    const pageTitle = selectedBooking?.status === 'completed'
+        ? 'Room Details'
+        : 'Booking Detail';
+
     return (
         <div className="mx-auto max-w-5xl px-4 py-10">
             <div className="mb-4 flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-900">Booking Detail</h1>
+                <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
                 <Button variant="outline" onClick={() => navigate('/student/bookings')}>Back</Button>
             </div>
 
@@ -38,7 +42,20 @@ const BookingDetailPage = () => {
                 booking={selectedBooking}
                 onCancel={onCancel}
                 onPayNow={() => navigate(`/student/bookings/${id}/payment`)}
-                onWriteReview={() => window.alert('Review module is Phase 4.')}
+                onPayMonthlyRent={() => navigate(`/student/bookings/${id}/payment?paymentType=monthly_rent`)}
+                onCreateTicket={() => navigate(`/student/tickets?bookingId=${id}`)}
+                onWriteReview={() => {
+                    const reviewPath = selectedBooking?.reviewPath;
+                    if (reviewPath) {
+                        navigate(reviewPath);
+                        return;
+                    }
+
+                    const accommodationId = selectedBooking?.accommodation?._id;
+                    if (accommodationId) {
+                        navigate(`/listings/${accommodationId}#reviews`);
+                    }
+                }}
             />
 
             {selectedBooking?.payments?.length > 0 && (

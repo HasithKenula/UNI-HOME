@@ -2,6 +2,139 @@ import ServiceProvider from '../models/ServiceProvider.js';
 import ServiceBooking from '../models/ServiceBooking.js';
 import ServiceProviderReview from '../models/ServiceProviderReview.js';
 
+const HF_MODEL = 'sshleifer/distilbart-cnn-12-6';
+
+const STOP_WORDS = new Set([
+  'the', 'is', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'for', 'with', 'on', 'at', 'it', 'this', 'that',
+  'was', 'were', 'be', 'been', 'are', 'am', 'as', 'by', 'we', 'our', 'you', 'your', 'they', 'their', 'i',
+  'my', 'from', 'but', 'if', 'so', 'very', 'can', 'have', 'has', 'had', 'not', 'no', 'too', 'just', 'all',
+]);
+
+const POSITIVE_KEYWORDS = ['friendly', 'fast', 'clean', 'polite', 'professional', 'helpful', 'good', 'great'];
+const NEGATIVE_KEYWORDS = ['late', 'slow', 'rude', 'poor', 'expensive', 'messy', 'bad', 'noisy'];
+
+const extractKeywords = (texts = [], seeds = []) => {
+  const counts = new Map();
+
+  for (const text of texts) {
+    const words = String(text)
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word));
+
+    for (const word of words) {
+      counts.set(word, (counts.get(word) || 0) + 1);
+    }
+  }
+
+  const seedMatches = seeds
+    .map((seed) => [seed, counts.get(seed) || 0])
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([seed]) => seed);
+
+  const commonWords = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([word]) => word);
+
+  return Array.from(new Set([...seedMatches, ...commonWords])).slice(0, 8);
+};
+
+const getSentimentFromAverage = (averageRating) => {
+  if (averageRating >= 4) return 'mostly_positive';
+  if (averageRating >= 2.5) return 'mixed';
+  return 'mostly_negative';
+};
+
+const truncate = (value = '', max = 90) => {
+  const text = String(value || '').trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1)}...`;
+};
+
+const buildProviderLocalSummary = ({ count, averageRating, sentiment, positiveKeywords, negativeKeywords, texts }) => {
+  const sentimentText =
+    sentiment === 'mostly_positive'
+      ? 'overall feedback is mostly positive'
+      : sentiment === 'mostly_negative'
+      ? 'overall feedback is mostly negative'
+      : 'overall feedback is mixed';
+
+  const topPositives = positiveKeywords.slice(0, 3).join(', ');
+  const topNegatives = negativeKeywords.slice(0, 3).join(', ');
+
+  const strengthsLine = topPositives
+    ? `Common positives include ${topPositives}.`
+    : 'Reviewers mention several positive experiences with the provider.';
+
+  const concernsLine = topNegatives
+    ? `Frequent concerns include ${topNegatives}.`
+    : 'There are limited repeated concerns in the available reviews.';
+
+  const recentSnippets = texts
+    .slice(0, 2)
+    .map((text) => truncate(text, 85))
+    .filter(Boolean);
+
+  const snippetsLine = recentSnippets.length
+    ? `Recent comments: ${recentSnippets.join(' | ')}`
+    : '';
+
+  return [
+    `Based on ${count} review(s), average rating is ${averageRating.toFixed(1)}/5 and ${sentimentText}.`,
+    strengthsLine,
+    concernsLine,
+    snippetsLine,
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
+
+const summarizeProviderComments = async (combinedText, fallback) => {
+  if (!combinedText.trim()) return fallback;
+
+  const hfToken = process.env.HF_TOKEN;
+  if (!hfToken) return fallback;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(`https://router.huggingface.co/hf-inference/models/${HF_MODEL}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${hfToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: combinedText.slice(0, 2800),
+        parameters: {
+          max_length: 150,
+          min_length: 35,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return fallback;
+    }
+
+    const payload = await response.json();
+    const candidate = payload?.[0]?.summary_text || payload?.summary_text || payload?.generated_text || '';
+    const normalized = String(candidate || '').trim();
+    if (!normalized || normalized.length < 20) return fallback;
+
+    return normalized;
+  } catch (error) {
+    return fallback;
+  }
+};
+
 const SERVICE_PROVIDER_CATEGORIES = ['plumbing', 'electrical', 'ac', 'cleaning', 'painting', 'carpentry', 'masons', 'welding', 'cctv', 'general', 'other'];
 
 const CATEGORY_LABELS = {
@@ -58,16 +191,124 @@ const mapProviderForList = (provider) => ({
   isAvailable: provider.isAvailable,
 });
 
-const mapProviderReview = (review) => ({
+const mapProviderReview = (review, currentUserId = null) => {
+  const helpfulBy = Array.isArray(review?.helpfulBy) ? review.helpfulBy : [];
+  const helpfulByCurrentUser =
+    currentUserId && helpfulBy.some((userId) => String(userId) === String(currentUserId));
+
+  return {
   _id: review._id,
   reviewerName: review.reviewerName,
   reviewerEmail: review.reviewerEmail,
+  reviewer: review.reviewer
+    ? {
+        _id: review.reviewer._id,
+        firstName: review.reviewer.firstName,
+        lastName: review.reviewer.lastName,
+        email: review.reviewer.email,
+      }
+    : undefined,
   comment: review.comment,
-  rating: review.rating,
+  overallRating: Number(review.overallRating || review.rating || 0),
+  categoryRatings: review.categoryRatings || {},
+  helpfulVotes: Number(review.helpfulVotes || helpfulBy.length || 0),
+  isHelpfulByCurrentUser: Boolean(helpfulByCurrentUser),
   createdAt: review.createdAt,
-});
+  };
+};
 
-const mapProviderForDetails = (provider, reviews = []) => {
+const getProviderReviewOverallRating = (review) => Number(review.overallRating || review.rating || 0);
+
+let providerReviewIndexChecked = false;
+
+const shouldDropUniqueProviderReviewIndex = (index, keyPattern = null) => {
+  if (!index?.unique || index?.name === '_id_') return false;
+
+  const indexKeys = Object.keys(index.key || {});
+
+  if (keyPattern && typeof keyPattern === 'object') {
+    const keyPatternKeys = Object.keys(keyPattern);
+    if (keyPatternKeys.length) {
+      // If Mongo reports the conflicting key pattern, prioritize removing that exact unique index.
+      return keyPatternKeys.every((key) => indexKeys.includes(key));
+    }
+  }
+
+  if (!indexKeys.includes('provider') && !indexKeys.includes('serviceBooking')) return false;
+
+  // Legacy shapes observed in local environments.
+  const looksLikeLegacyProviderIndex =
+    (indexKeys.length === 1 && indexKeys[0] === 'provider') ||
+    (indexKeys.length === 2 && indexKeys.includes('provider') && indexKeys.includes('reviewer')) ||
+    (indexKeys.length === 1 && indexKeys[0] === 'serviceBooking');
+
+  return looksLikeLegacyProviderIndex;
+};
+
+const ensureProviderReviewIndexesSupportMultipleReviews = async ({ force = false, keyPattern = null } = {}) => {
+  if (providerReviewIndexChecked && !force) return;
+
+  const indexes = await ServiceProviderReview.collection.indexes();
+  const indexesToDrop = indexes.filter((index) => shouldDropUniqueProviderReviewIndex(index, keyPattern));
+
+  for (const index of indexesToDrop) {
+    await ServiceProviderReview.collection.dropIndex(index.name);
+  }
+
+  providerReviewIndexChecked = !keyPattern;
+};
+
+const refreshProviderAverageRating = async (providerId) => {
+  const stats = await ServiceProviderReview.aggregate([
+    { $match: { provider: providerId } },
+    {
+      $group: {
+        _id: '$provider',
+        averageRating: { $avg: { $ifNull: ['$overallRating', '$rating'] } },
+      },
+    },
+  ]);
+
+  const averageRating = Number(stats?.[0]?.averageRating || 0);
+  await ServiceProvider.findByIdAndUpdate(providerId, {
+    averageRating: Math.round(averageRating * 10) / 10,
+  });
+};
+
+const buildProviderReviewSummary = (reviews = []) => {
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+  reviews.forEach((review) => {
+    const numericRating = Number(getProviderReviewOverallRating(review) || 0);
+    const bucket = Math.max(1, Math.min(5, Math.round(numericRating)));
+    if (numericRating > 0) {
+      distribution[bucket] += 1;
+    }
+  });
+
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews
+    ? reviews.reduce((sum, review) => sum + getProviderReviewOverallRating(review), 0) / totalReviews
+    : 0;
+
+  const sentimentLabel =
+    totalReviews === 0
+      ? 'no_reviews'
+      : averageRating >= 4
+      ? 'mostly_positive'
+      : averageRating >= 2.5
+      ? 'mixed'
+      : 'mostly_negative';
+
+  return {
+    averageRating: Math.round(averageRating * 10) / 10,
+    totalReviews,
+    sentimentLabel,
+    distribution,
+  };
+};
+
+const mapProviderForDetails = (provider, reviews = [], currentUserId = null) => {
   const displayLocation = provider.areasOfOperation?.[0] || {};
   const district = displayLocation.district || '';
   const city = displayLocation.cities?.[0] || '';
@@ -90,7 +331,63 @@ const mapProviderForDetails = (provider, reviews = []) => {
     workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     workingTime: '8.00 am - 5.00 pm',
     bestTimeToCall: '6.00 pm - 9.00 pm',
-    reviews: reviews.map((review) => mapProviderReview(review)),
+    reviews: reviews.map((review) => mapProviderReview(review, currentUserId)),
+  };
+};
+
+const buildProviderAIReviewSummary = async (reviews = []) => {
+  if (!reviews.length) {
+    return {
+      summary: 'No reviews have been submitted for this service provider yet.',
+      sentiment: 'no_reviews',
+      sentimentScore: 0,
+      positiveKeywords: [],
+      negativeKeywords: [],
+      commonThemes: [],
+      reviewsAnalyzed: 0,
+      averageRating: 0,
+      generatedAt: new Date(),
+      modelVersion: HF_MODEL,
+    };
+  }
+
+  const averageRating = reviews.reduce((sum, review) => sum + getProviderReviewOverallRating(review), 0) / reviews.length;
+  const sentiment = getSentimentFromAverage(averageRating);
+  const sentimentScore = Number(((averageRating - 3) / 2).toFixed(2));
+
+  const allTexts = reviews
+    .map((review) => [review.comment].filter(Boolean).join('. '))
+    .filter(Boolean);
+
+  const positiveKeywords = extractKeywords(allTexts, POSITIVE_KEYWORDS);
+  const negativeKeywords = extractKeywords(allTexts, NEGATIVE_KEYWORDS);
+  const commonThemes = [
+    ...positiveKeywords.slice(0, 3).map((theme) => ({ theme, sentiment: 'positive', frequency: 1 })),
+    ...negativeKeywords.slice(0, 3).map((theme) => ({ theme, sentiment: 'negative', frequency: 1 })),
+  ];
+
+  const localSummary = buildProviderLocalSummary({
+    count: reviews.length,
+    averageRating,
+    sentiment,
+    positiveKeywords,
+    negativeKeywords,
+    texts: allTexts,
+  });
+
+  const summary = await summarizeProviderComments(allTexts.join('\n'), localSummary);
+
+  return {
+    summary,
+    sentiment,
+    sentimentScore,
+    positiveKeywords,
+    negativeKeywords,
+    commonThemes,
+    reviewsAnalyzed: reviews.length,
+    averageRating: Number(averageRating.toFixed(2)),
+    generatedAt: new Date(),
+    modelVersion: HF_MODEL,
   };
 };
 
@@ -296,12 +593,19 @@ const getServiceProviderDetails = async (req, res) => {
     }
 
     const reviews = await ServiceProviderReview.find({ provider: provider._id })
-      .sort({ createdAt: -1 })
+      .populate('reviewer', 'firstName lastName email')
+      .sort({ helpfulVotes: -1, createdAt: -1 })
       .limit(30);
+
+    const ratingsSummary = buildProviderReviewSummary(reviews);
+    const aiSummary = await buildProviderAIReviewSummary(reviews);
 
     return res.status(200).json({
       success: true,
-      data: mapProviderForDetails(provider, reviews),
+      data: mapProviderForDetails(provider, reviews, req.user?._id),
+      ratingsSummary,
+      aiSummary,
+      distribution: ratingsSummary.distribution,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to fetch provider details', error: error.message });
@@ -311,7 +615,7 @@ const getServiceProviderDetails = async (req, res) => {
 const createServiceProviderReview = async (req, res) => {
   try {
     const { providerId } = req.params;
-    const { reviewerName, reviewerEmail, comment, rating } = req.body;
+    const { comment, overallRating, categoryRatings } = req.body;
 
     const provider = await ServiceProvider.findOne({
       _id: providerId,
@@ -328,36 +632,76 @@ const createServiceProviderReview = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Review comment is required' });
     }
 
-    const numericRating = Math.max(1, Math.min(5, Number(rating) || 0));
-    if (!numericRating) {
+    const categoryKeys = ['responsiveness', 'professionalism', 'punctuality', 'quality', 'valueForMoney'];
+    const normalizedCategoryRatings = {};
+
+    categoryKeys.forEach((key) => {
+      const rawValue = categoryRatings?.[key];
+      const numericValue = Number(rawValue);
+      if (Number.isFinite(numericValue) && numericValue >= 1 && numericValue <= 5) {
+        normalizedCategoryRatings[key] = numericValue;
+      }
+    });
+
+    const normalizedOverallFromPayload = Number(overallRating);
+    if (!Object.keys(normalizedCategoryRatings).length && Number.isFinite(normalizedOverallFromPayload) && normalizedOverallFromPayload >= 1 && normalizedOverallFromPayload <= 5) {
+      categoryKeys.forEach((key) => {
+        normalizedCategoryRatings[key] = normalizedOverallFromPayload;
+      });
+    }
+
+    if (!Object.keys(normalizedCategoryRatings).length) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one valid category rating is required (1-5)',
+      });
+    }
+
+    const categoryValues = Object.values(normalizedCategoryRatings);
+    const calculatedOverallRating = categoryValues.length
+      ? categoryValues.reduce((sum, value) => sum + value, 0) / categoryValues.length
+      : Number(overallRating || 0);
+    const numericOverallRating = Math.max(1, Math.min(5, Number(calculatedOverallRating) || 0));
+
+    if (!numericOverallRating) {
       return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
     }
 
-    const review = await ServiceProviderReview.create({
-      provider: provider._id,
-      reviewer: req.user._id,
-      reviewerName: String(reviewerName || `${req.user.firstName || ''} ${req.user.lastName || ''}`).trim() || 'Anonymous',
-      reviewerEmail: String(reviewerEmail || req.user.email || '').trim().toLowerCase(),
+    const reviewPayload = {
+      reviewerName: String(`${req.user.firstName || ''} ${req.user.lastName || ''}`).trim() || 'Anonymous',
+      reviewerEmail: String(req.user.email || '').trim().toLowerCase() || undefined,
       comment: cleanComment,
-      rating: numericRating,
-    });
+      overallRating: Number(numericOverallRating.toFixed(1)),
+      rating: Number(numericOverallRating.toFixed(1)),
+      categoryRatings: normalizedCategoryRatings,
+    };
 
-    const stats = await ServiceProviderReview.aggregate([
-      { $match: { provider: provider._id } },
-      {
-        $group: {
-          _id: '$provider',
-          averageRating: { $avg: '$rating' },
-          totalReviews: { $sum: 1 },
-        },
-      },
-    ]);
+    let review;
+    try {
+      review = await ServiceProviderReview.create({
+        provider: provider._id,
+        reviewer: req.user._id,
+        ...reviewPayload,
+      });
+    } catch (createError) {
+      if (createError.code !== 11000) {
+        throw createError;
+      }
 
-    const averageRating = Number(stats?.[0]?.averageRating || 0);
+      // Legacy unique indexes may still exist in local DB; drop by key pattern and retry once.
+      await ensureProviderReviewIndexesSupportMultipleReviews({
+        force: true,
+        keyPattern: createError.keyPattern,
+      });
 
-    await ServiceProvider.findByIdAndUpdate(provider._id, {
-      averageRating: Math.round(averageRating * 10) / 10,
-    });
+      review = await ServiceProviderReview.create({
+        provider: provider._id,
+        reviewer: req.user._id,
+        ...reviewPayload,
+      });
+    }
+
+    await refreshProviderAverageRating(provider._id);
 
     return res.status(201).json({
       success: true,
@@ -365,7 +709,213 @@ const createServiceProviderReview = async (req, res) => {
       data: mapProviderReview(review),
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Duplicate key conflict while creating provider review',
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      const details = Object.values(error.errors || {}).map((item) => item.message);
+      return res.status(400).json({
+        success: false,
+        message: details[0] || 'Validation failed',
+        errors: details,
+      });
+    }
+
     return res.status(500).json({ success: false, message: 'Failed to create provider review', error: error.message });
+  }
+};
+
+const updateServiceProviderReview = async (req, res) => {
+  try {
+    const { providerId, reviewId } = req.params;
+    const { comment, overallRating, categoryRatings } = req.body;
+
+    const provider = await ServiceProvider.findOne({
+      _id: providerId,
+      accountStatus: { $ne: 'deleted' },
+      $or: APPROVED_PROVIDER_FILTER,
+    }).select('_id');
+
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Service provider not found' });
+    }
+
+    const review = await ServiceProviderReview.findById(reviewId);
+    if (!review || String(review.provider) !== String(provider._id)) {
+      return res.status(404).json({ success: false, message: 'Provider review not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && String(review.reviewer) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this review' });
+    }
+
+    const categoryKeys = ['responsiveness', 'professionalism', 'punctuality', 'quality', 'valueForMoney'];
+    const nextCategoryRatings = { ...(review.categoryRatings || {}) };
+
+    if (categoryRatings && typeof categoryRatings === 'object') {
+      categoryKeys.forEach((key) => {
+        const numericValue = Number(categoryRatings[key]);
+        if (Number.isFinite(numericValue) && numericValue >= 1 && numericValue <= 5) {
+          nextCategoryRatings[key] = numericValue;
+        }
+      });
+    }
+
+    const numericOverallFromPayload = Number(overallRating);
+    if (!Object.keys(nextCategoryRatings).length && Number.isFinite(numericOverallFromPayload) && numericOverallFromPayload >= 1 && numericOverallFromPayload <= 5) {
+      categoryKeys.forEach((key) => {
+        nextCategoryRatings[key] = numericOverallFromPayload;
+      });
+    }
+
+    if (!Object.keys(nextCategoryRatings).length) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one valid category rating is required (1-5)',
+      });
+    }
+
+    const ratingValues = Object.values(nextCategoryRatings);
+    const calculatedOverallRating = ratingValues.length
+      ? ratingValues.reduce((sum, value) => sum + value, 0) / ratingValues.length
+      : Number(review.overallRating || review.rating || 0);
+    const normalizedOverallRating = Math.max(1, Math.min(5, Number(calculatedOverallRating) || 0));
+
+    const cleanComment = comment !== undefined ? String(comment || '').trim() : review.comment;
+    if (!cleanComment) {
+      return res.status(400).json({ success: false, message: 'Review comment is required' });
+    }
+
+    review.comment = cleanComment;
+    review.categoryRatings = nextCategoryRatings;
+    review.overallRating = Number(normalizedOverallRating.toFixed(1));
+    review.rating = Number(normalizedOverallRating.toFixed(1));
+
+    await review.save();
+    await refreshProviderAverageRating(provider._id);
+
+    const populated = await ServiceProviderReview.findById(review._id)
+      .populate('reviewer', 'firstName lastName email');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Provider review updated successfully',
+      data: mapProviderReview(populated),
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const details = Object.values(error.errors || {}).map((item) => item.message);
+      return res.status(400).json({
+        success: false,
+        message: details[0] || 'Validation failed',
+        errors: details,
+      });
+    }
+
+    return res.status(500).json({ success: false, message: 'Failed to update provider review', error: error.message });
+  }
+};
+
+const deleteServiceProviderReview = async (req, res) => {
+  try {
+    const { providerId, reviewId } = req.params;
+
+    const provider = await ServiceProvider.findOne({
+      _id: providerId,
+      accountStatus: { $ne: 'deleted' },
+      $or: APPROVED_PROVIDER_FILTER,
+    }).select('_id');
+
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Service provider not found' });
+    }
+
+    const review = await ServiceProviderReview.findById(reviewId);
+    if (!review || String(review.provider) !== String(provider._id)) {
+      return res.status(404).json({ success: false, message: 'Provider review not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && String(review.reviewer) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this review' });
+    }
+
+    await review.deleteOne();
+    await refreshProviderAverageRating(provider._id);
+
+    return res.status(200).json({ success: true, message: 'Provider review deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to delete provider review', error: error.message });
+  }
+};
+
+const markServiceProviderReviewHelpful = async (req, res) => {
+  try {
+    const { providerId, reviewId } = req.params;
+    const explicitHelpful = req.body?.helpful;
+
+    const provider = await ServiceProvider.findOne({
+      _id: providerId,
+      accountStatus: { $ne: 'deleted' },
+      $or: APPROVED_PROVIDER_FILTER,
+    }).select('_id');
+
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Service provider not found' });
+    }
+
+    const review = await ServiceProviderReview.findById(reviewId)
+      .populate('reviewer', 'firstName lastName email');
+
+    if (!review || String(review.provider) !== String(provider._id)) {
+      return res.status(404).json({ success: false, message: 'Provider review not found' });
+    }
+
+    if (String(review.reviewer?._id || review.reviewer) === String(req.user._id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot mark your own review as helpful',
+      });
+    }
+
+    const currentUserId = String(req.user._id);
+    const currentHelpfulBy = Array.isArray(review.helpfulBy)
+      ? review.helpfulBy.map((userId) => String(userId))
+      : [];
+    const alreadyMarked = currentHelpfulBy.includes(currentUserId);
+    const shouldMarkHelpful =
+      typeof explicitHelpful === 'boolean' ? explicitHelpful : !alreadyMarked;
+
+    if (shouldMarkHelpful && !alreadyMarked) {
+      review.helpfulBy = [...new Set([...(review.helpfulBy || []), req.user._id])];
+    }
+
+    if (!shouldMarkHelpful && alreadyMarked) {
+      review.helpfulBy = (review.helpfulBy || []).filter(
+        (userId) => String(userId) !== currentUserId
+      );
+    }
+
+    review.helpfulVotes = Array.isArray(review.helpfulBy) ? review.helpfulBy.length : 0;
+    await review.save();
+
+    const populated = await ServiceProviderReview.findById(review._id)
+      .populate('reviewer', 'firstName lastName email');
+
+    return res.status(200).json({
+      success: true,
+      message: shouldMarkHelpful
+        ? 'Marked review as helpful'
+        : 'Removed helpful mark from review',
+      data: mapProviderReview(populated, req.user._id),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Failed to update helpful review vote', error: error.message });
   }
 };
 
@@ -673,4 +1223,7 @@ export {
   getProviderBookedDates,
   getServiceProviderDetails,
   createServiceProviderReview,
+  updateServiceProviderReview,
+  deleteServiceProviderReview,
+  markServiceProviderReviewHelpful,
 };

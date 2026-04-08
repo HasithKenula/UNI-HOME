@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Button from '../common/Button';
 import Input from '../common/Input';
@@ -22,7 +22,7 @@ const priorityOptions = [
     { value: 'urgent', label: 'Urgent' },
 ];
 
-const CreateTicketForm = ({ bookings = [], onCreated }) => {
+const CreateTicketForm = ({ bookings = [], onCreated, initialBookingId = '' }) => {
     const dispatch = useDispatch();
     const { actionLoading } = useSelector((state) => state.tickets);
 
@@ -49,6 +49,18 @@ const CreateTicketForm = ({ bookings = [], onCreated }) => {
         })),
         [bookings]
     );
+
+    useEffect(() => {
+        if (!initialBookingId || !bookings.length) return;
+
+        const hasMatch = bookings.some((item) => item._id === initialBookingId);
+        if (!hasMatch) return;
+
+        setFormData((prev) => {
+            if (prev.bookingId === initialBookingId) return prev;
+            return { ...prev, bookingId: initialBookingId };
+        });
+    }, [initialBookingId, bookings]);
 
     const accommodationLabel = useMemo(
         () => selectedBooking?.accommodation?.title || 'Select a completed booking',

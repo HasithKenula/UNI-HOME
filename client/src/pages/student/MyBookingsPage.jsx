@@ -48,6 +48,24 @@ const getBookingPhotoPath = (booking) => {
     return '';
 };
 
+const getBookingPhotoGallery = (booking) => {
+    const roomPhotos = Array.isArray(booking?.room?.media?.photos) ? booking.room.media.photos : [];
+    const accommodationPhotos = Array.isArray(booking?.accommodation?.media?.photos) ? booking.accommodation.media.photos : [];
+    const legacyPhotos = Array.isArray(booking?.accommodation?.photos) ? booking.accommodation.photos : [];
+
+    return Array.from(
+        new Set(
+            [...roomPhotos, ...accommodationPhotos, ...legacyPhotos]
+                .map((photo) => {
+                    if (typeof photo === 'string') return photo;
+                    if (photo?.url) return photo.url;
+                    return '';
+                })
+                .filter(Boolean)
+        )
+    ).slice(0, 5);
+};
+
 const MyBookingsPage = () => {
     const dispatch = useDispatch();
     const { list, loading, actionLoading } = useSelector((state) => state.bookings);
@@ -160,36 +178,38 @@ const MyBookingsPage = () => {
                     filtered.map((booking) => (
                         <div key={booking._id} className="rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex items-center gap-4">
-                                    <img
-                                        src={(() => {
-                                            const mediaPath = getBookingPhotoPath(booking);
-                                            return mediaPath
-                                                ? getMediaUrlWithFallback(mediaPath).primary
-                                                : 'https://placehold.co/200x140?text=Listing';
-                                        })()}
-                                        alt={booking.accommodation?.title || 'Accommodation'}
-                                        className="h-20 w-28 rounded-lg object-cover"
-                                        onError={(event) => {
-                                            const mediaUrl = getBookingPhotoPath(booking);
-                                            if (!mediaUrl) return;
-                                            const { fallback } = getMediaUrlWithFallback(mediaUrl);
-                                            if (event.currentTarget.src !== fallback) {
-                                                event.currentTarget.src = fallback;
-                                            } else {
-                                                event.currentTarget.src = 'https://placehold.co/200x140?text=Listing';
-                                            }
-                                        }}
-                                    />
+                                <div className="flex items-start gap-4">
+                                    <div className="w-28 shrink-0">
+                                        <img
+                                            src={(() => {
+                                                const mediaPath = getBookingPhotoPath(booking);
+                                                return mediaPath
+                                                    ? getMediaUrlWithFallback(mediaPath).primary
+                                                    : 'https://placehold.co/200x140?text=Listing';
+                                            })()}
+                                            alt={booking.accommodation?.title || 'Accommodation'}
+                                            className="h-20 w-28 rounded-lg object-cover"
+                                            onError={(event) => {
+                                                const mediaUrl = getBookingPhotoPath(booking);
+                                                if (!mediaUrl) return;
+                                                const { fallback } = getMediaUrlWithFallback(mediaUrl);
+                                                if (event.currentTarget.src !== fallback) {
+                                                    event.currentTarget.src = fallback;
+                                                } else {
+                                                    event.currentTarget.src = 'https://placehold.co/200x140?text=Listing';
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                     <div>
-                                    <p className="text-xs text-gray-500">{booking.bookingNumber}</p>
-                                    <h3 className="text-xl font-bold text-gray-900">{booking.accommodation?.title}</h3>
-                                    <p className="text-sm text-gray-600">
-                                        Check-in: {booking.checkInDate ? new Date(booking.checkInDate).toLocaleDateString() : '-'}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        Initial Cost: LKR {(booking.costSummary?.totalInitialPayment || 0).toLocaleString()}
-                                    </p>
+                                        <p className="text-xs text-gray-500">{booking.bookingNumber}</p>
+                                        <h3 className="text-xl font-bold text-gray-900">{booking.accommodation?.title}</h3>
+                                        <p className="text-sm text-gray-600">
+                                            Check-in: {booking.checkInDate ? new Date(booking.checkInDate).toLocaleDateString() : '-'}
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            Initial Cost: LKR {(booking.costSummary?.totalInitialPayment || 0).toLocaleString()}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -226,6 +246,29 @@ const MyBookingsPage = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {getBookingPhotoGallery(booking).length > 1 && (
+                                <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                                    {getBookingPhotoGallery(booking).slice(1).map((mediaUrl, index) => {
+                                        const { primary, fallback } = getMediaUrlWithFallback(mediaUrl);
+                                        return (
+                                            <img
+                                                key={`${booking._id}-photo-${index}`}
+                                                src={primary}
+                                                alt={`${booking.accommodation?.title || 'Accommodation'} gallery ${index + 2}`}
+                                                className="h-16 w-full rounded-md object-cover"
+                                                onError={(event) => {
+                                                    if (event.currentTarget.src !== fallback) {
+                                                        event.currentTarget.src = fallback;
+                                                    } else {
+                                                        event.currentTarget.src = 'https://placehold.co/160x100?text=Photo';
+                                                    }
+                                                }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     ))
                 )}

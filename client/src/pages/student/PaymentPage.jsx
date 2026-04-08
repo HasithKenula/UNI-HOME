@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Building2, CalendarDays, CreditCard, Landmark, ShieldCheck } from 'lucide-react';
@@ -66,10 +66,12 @@ const initialBankForm = {
 
 const PaymentPage = () => {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
     const { selectedBooking, loading } = useSelector((state) => state.bookings);
+    const paymentType = searchParams.get('paymentType') || 'booking_fee';
 
     const [activeMethod, setActiveMethod] = useState('card');
     const [cardForm, setCardForm] = useState(initialCardForm);
@@ -84,18 +86,29 @@ const PaymentPage = () => {
 
     useEffect(() => {
         if (!selectedBooking) return;
-        const defaultAmount = String(selectedBooking.costSummary?.totalInitialPayment || 0);
+        const defaultAmount = String(
+            paymentType === 'monthly_rent'
+                ? selectedBooking.costSummary?.monthlyRent || 0
+                : selectedBooking.costSummary?.totalInitialPayment || 0
+        );
         setCardForm((prev) => ({ ...prev, amount: prev.amount || defaultAmount }));
         setBankForm((prev) => ({ ...prev, amount: prev.amount || defaultAmount }));
-    }, [selectedBooking]);
+    }, [selectedBooking, paymentType]);
 
-    const totalInitial = selectedBooking?.costSummary?.totalInitialPayment || 0;
-    const outstanding = selectedBooking?.paymentStatus?.outstandingAmount ?? totalInitial;
+    const totalInitial = paymentType === 'monthly_rent'
+        ? selectedBooking?.costSummary?.monthlyRent || 0
+        : selectedBooking?.costSummary?.totalInitialPayment || 0;
+    const outstanding = paymentType === 'monthly_rent'
+        ? selectedBooking?.costSummary?.monthlyRent || 0
+        : selectedBooking?.paymentStatus?.outstandingAmount ?? totalInitial;
 
     const title = useMemo(() => {
         if (!selectedBooking?.accommodation?.title) return 'Secure Payment';
+        if (paymentType === 'monthly_rent') {
+            return `Pay Monthly Rent - ${selectedBooking.accommodation.title}`;
+        }
         return `Pay for ${selectedBooking.accommodation.title}`;
-    }, [selectedBooking]);
+    }, [selectedBooking, paymentType]);
 
     const validateCommon = (form) => {
         const nextErrors = {};
@@ -199,7 +212,7 @@ const PaymentPage = () => {
 
             await createBookingPayment(id, {
                 paymentMethod: 'card',
-                paymentType: 'booking_fee',
+                paymentType,
                 amount,
                 cardDetails: {
                     last4: digits.slice(-4),
@@ -232,7 +245,7 @@ const PaymentPage = () => {
          try {
              await createBookingPayment(id, {
                  paymentMethod: 'bank_transfer',
-                 paymentType: 'booking_fee',
+                 paymentType,
                  amount: Number(bankForm.amount),
                  bankTransfer: {
                      bankName: bankForm.bankName.trim(),
@@ -274,7 +287,9 @@ const PaymentPage = () => {
         );
     }
 
-    const paymentBlocked = selectedBooking.status !== 'confirmed';
+    const paymentBlocked = paymentType === 'monthly_rent'
+        ? !['confirmed', 'completed'].includes(selectedBooking.status)
+        : selectedBooking.status !== 'confirmed';
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8">
@@ -294,7 +309,9 @@ const PaymentPage = () => {
 
                     {paymentBlocked && (
                         <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                            Payment is currently available only for confirmed bookings.
+                            {paymentType === 'monthly_rent'
+                                ? 'Monthly rent payment is available only for confirmed or completed bookings.'
+                                : 'Payment is currently available only for confirmed bookings.'}
                         </div>
                     )}
 

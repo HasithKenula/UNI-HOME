@@ -47,13 +47,13 @@ const ProviderDashboard = () => {
         [providerBookings, activeBookingTab]
     );
 
-    const taskStats = useMemo(() => {
-        const assigned = tasks.filter((task) => task.status === 'assigned').length;
-        const inProgress = tasks.filter((task) => task.status === 'in_progress').length;
-        const completed = tasks.filter((task) => task.status === 'completed').length;
+    const bookingStats = useMemo(() => {
+        const assigned = providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === 'pending').length;
+        const inProgress = providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === 'in_progress').length;
+        const completed = providerBookings.filter((booking) => normalizeBookingStatus(booking.status) === 'completed').length;
 
         return { assigned, inProgress, completed };
-    }, [tasks]);
+    }, [providerBookings]);
 
     const handleUpdateBookingStatus = async (bookingId, status) => {
         const result = await dispatch(updateProviderBookingStatusAsync({
@@ -74,15 +74,15 @@ const ProviderDashboard = () => {
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-4">
                     <p className="text-sm text-blue-700">Assigned</p>
-                    <p className="text-3xl font-bold text-blue-700">{taskStats.assigned}</p>
+                    <p className="text-3xl font-bold text-blue-700">{bookingStats.assigned}</p>
                 </div>
                 <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4">
                     <p className="text-sm text-amber-700">In Progress</p>
-                    <p className="text-3xl font-bold text-amber-700">{taskStats.inProgress}</p>
+                    <p className="text-3xl font-bold text-amber-700">{bookingStats.inProgress}</p>
                 </div>
                 <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-4">
                     <p className="text-sm text-green-700">Completed</p>
-                    <p className="text-3xl font-bold text-green-700">{taskStats.completed}</p>
+                    <p className="text-3xl font-bold text-green-700">{bookingStats.completed}</p>
                 </div>
             </div>
 

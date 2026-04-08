@@ -25,6 +25,7 @@ import BookingDetailPage from './pages/student/BookingDetailPage';
 import PaymentPage from './pages/student/PaymentPage';
 import InquiriesPage from './pages/student/InquiriesPage';
 import StudentDashboard from './pages/student/StudentDashboard';
+import StudentProfilePage from './pages/student/StudentProfilePage';
 import MyTicketsPage from './pages/student/MyTicketsPage';
 import TicketDetailPage from './pages/student/TicketDetailPage';
 import OwnerTicketsPage from './pages/owner/OwnerTicketsPage';
@@ -174,6 +175,16 @@ function App() {
               <PrivateRoute>
                 <RoleRoute allowedRoles={['owner', 'admin']}>
                   <MyProviderBookingsPage />
+                </RoleRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/student/profile"
+            element={
+              <PrivateRoute>
+                <RoleRoute allowedRoles={['student']}>
+                  <StudentProfilePage />
                 </RoleRoute>
               </PrivateRoute>
             }

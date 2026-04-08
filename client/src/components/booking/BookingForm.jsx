@@ -5,6 +5,8 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import Select from '../common/Select';
 import { createBookingAsync } from '../../features/bookings/bookingSlice';
+import { getBookings } from '../../features/bookings/bookingAPI';
+import useAuth from '../../hooks/useAuth';
 
 const contractOptions = [
     { value: '1_month', label: '1 Month' },
@@ -21,6 +23,7 @@ const bookingScopeOptions = [
 const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
     const dispatch = useDispatch();
     const { actionLoading } = useSelector((state) => state.bookings);
+    const { isAuthenticated, isStudent } = useAuth();
 
     const availableRooms = useMemo(
         () =>
@@ -58,6 +61,8 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
         emergencyPhone: '',
     });
     const [errors, setErrors] = useState({});
+    const [hasCompletedBooking, setHasCompletedBooking] = useState(false);
+    const [checkingBookingRestriction, setCheckingBookingRestriction] = useState(false);
 
     const selectedRoom = useMemo(
         () => availableRooms.find((room) => room._id === form.roomId) || null,
@@ -77,6 +82,46 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
             roomType: room.roomType || prev.roomType,
         }));
     }, [initialRoomId, availableRooms]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const checkCompletedBookingRestriction = async () => {
+            if (!isAuthenticated || !isStudent) {
+                if (isMounted) {
+                    setHasCompletedBooking(false);
+                }
+                return;
+            }
+
+            if (isMounted) {
+                setCheckingBookingRestriction(true);
+            }
+
+            try {
+                const response = await getBookings({ status: 'completed', page: 1, limit: 1 });
+                if (!isMounted) return;
+
+                const completedCount = Number(response?.pagination?.total || 0);
+                const completedEntries = Array.isArray(response?.data) ? response.data.length : 0;
+                setHasCompletedBooking(completedCount > 0 || completedEntries > 0);
+            } catch (error) {
+                if (isMounted) {
+                    setHasCompletedBooking(false);
+                }
+            } finally {
+                if (isMounted) {
+                    setCheckingBookingRestriction(false);
+                }
+            }
+        };
+
+        checkCompletedBookingRestriction();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [isAuthenticated, isStudent]);
 
     const costs = useMemo(() => {
         const monthlyRent =
@@ -186,6 +231,7 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        if (hasCompletedBooking) return;
         if (!validateForm()) return;
 
         const contactName = form.emergencyName.trim();
@@ -217,12 +263,19 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
 
     return (
         <form className="space-y-3 pb-2 sm:space-y-4" onSubmit={handleSubmit}>
+            {hasCompletedBooking && (
+                <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                    You already have a completed booking and cannot place another booking request.
+                </div>
+            )}
+
             <Select
                 label="Booking Type"
                 value={form.bookingScope}
                 onChange={(e) => handleChange('bookingScope', e.target.value)}
                 error={errors.bookingScope}
                 required
+                disabled={hasCompletedBooking || checkingBookingRestriction}
                 options={bookingScopeOptions.filter((option) => option.value !== 'room' || availableRooms.length > 0)}
             />
 
@@ -233,6 +286,7 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                     onChange={(e) => handleChange('roomId', e.target.value)}
                     error={errors.roomId}
                     required
+                    disabled={hasCompletedBooking || checkingBookingRestriction}
                     options={availableRooms.map((room) => {
                         const maxOccupants = Number(room.maxOccupants || 1);
                         const currentOccupants = Number(room.currentOccupants || 0);
@@ -253,6 +307,7 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                     onChange={(e) => handleChange('roomType', e.target.value)}
                     error={errors.roomType}
                     required
+                    disabled={hasCompletedBooking || checkingBookingRestriction}
                     options={availableRoomTypes.map((type) => ({
                         value: type,
                         label: type.charAt(0).toUpperCase() + type.slice(1),
@@ -267,6 +322,7 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                 onChange={(e) => handleChange('checkInDate', e.target.value)}
                 error={errors.checkInDate}
                 required
+                disabled={hasCompletedBooking || checkingBookingRestriction}
                 min={new Date().toISOString().split('T')[0]}
             />
 
@@ -276,6 +332,7 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                 onChange={(e) => handleChange('contractPeriod', e.target.value)}
                 error={errors.contractPeriod}
                 required
+                disabled={hasCompletedBooking || checkingBookingRestriction}
                 options={contractOptions}
             />
 
@@ -285,6 +342,7 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                 value={form.specialRequests}
                 onChange={(e) => handleChange('specialRequests', e.target.value)}
                 error={errors.specialRequests}
+                disabled={hasCompletedBooking || checkingBookingRestriction}
             />
 
             <div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4">
@@ -294,12 +352,14 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                     value={form.emergencyName}
                     onChange={(e) => handleChange('emergencyName', e.target.value)}
                     error={errors.emergencyName}
+                    disabled={hasCompletedBooking || checkingBookingRestriction}
                 />
                 <Input
                     label="Phone"
                     value={form.emergencyPhone}
                     onChange={(e) => handleEmergencyPhoneChange(e.target.value)}
                     error={errors.emergencyPhone}
+                    disabled={hasCompletedBooking || checkingBookingRestriction}
                     inputMode="numeric"
                     maxLength={10}
                     placeholder="0712345678"
@@ -321,7 +381,12 @@ const BookingForm = ({ listing, onSuccess, initialRoomId = '' }) => {
                 </div>
             </div>
 
-            <Button type="submit" fullWidth loading={actionLoading}>
+            <Button
+                type="submit"
+                fullWidth
+                loading={actionLoading}
+                disabled={hasCompletedBooking || checkingBookingRestriction}
+            >
                 <Calendar className="mr-2 h-5 w-5" /> Submit Booking Request
             </Button>
         </form>

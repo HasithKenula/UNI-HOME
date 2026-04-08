@@ -32,6 +32,7 @@ const BookingRequestsPage = () => {
         const params = {};
         if (statusFilter) params.status = statusFilter;
         if (accommodationFilter !== 'all') params.accommodationId = accommodationFilter;
+        params.includePayments = true;
         dispatch(fetchBookingsAsync(params));
     }, [dispatch, statusFilter, accommodationFilter]);
 
@@ -65,6 +66,7 @@ const BookingRequestsPage = () => {
         const params = {};
         if (statusFilter) params.status = statusFilter;
         if (accommodationFilter !== 'all') params.accommodationId = accommodationFilter;
+        params.includePayments = true;
         dispatch(fetchBookingsAsync(params));
     };
 
@@ -74,6 +76,7 @@ const BookingRequestsPage = () => {
         const params = {};
         if (statusFilter) params.status = statusFilter;
         if (accommodationFilter !== 'all') params.accommodationId = accommodationFilter;
+        params.includePayments = true;
         dispatch(fetchBookingsAsync(params));
     };
 
@@ -133,6 +136,28 @@ const BookingRequestsPage = () => {
                                     <p className="text-sm text-gray-600">
                                         Cost: LKR {(booking.costSummary?.totalInitialPayment || 0).toLocaleString()}
                                     </p>
+                                    {booking.status === 'completed' && (
+                                        <>
+                                            <p className="text-sm font-semibold text-emerald-700 mt-1">
+                                                Total Paid: LKR {(booking.paymentSummary?.totalPaid || 0).toLocaleString()}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                Transactions: {booking.paymentSummary?.totalTransactions || 0}
+                                            </p>
+                                            {Array.isArray(booking.payments) && booking.payments.length > 0 && (
+                                                <div className="mt-2 rounded-lg border border-emerald-100 bg-emerald-50 p-2">
+                                                    <p className="text-xs font-semibold text-emerald-700 mb-1">Payment History</p>
+                                                    <div className="space-y-1">
+                                                        {booking.payments.map((payment) => (
+                                                            <p key={payment._id} className="text-xs text-gray-700">
+                                                                {payment.paymentNumber} • {payment.paymentType?.replace('_', ' ')} • LKR {(payment.amount || 0).toLocaleString()} • {payment.status}
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                     <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 capitalize">
