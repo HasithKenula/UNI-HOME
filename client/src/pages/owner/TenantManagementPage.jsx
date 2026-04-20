@@ -124,7 +124,7 @@ const TenantManagementPage = () => {
                 <p className="text-gray-500">Loading tenants...</p>
             ) : tenants.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
-                    No confirmed tenants for this accommodation.
+                    No active tenants for this accommodation.
                 </div>
             ) : (
                 <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
