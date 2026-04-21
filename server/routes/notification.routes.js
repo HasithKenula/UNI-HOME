@@ -36,6 +36,11 @@ const isExpiredNotification = (item, now = new Date()) => {
 
 const router = express.Router();
 
+const getRequestUserId = (req) => {
+  const userId = req.user?._id || req.user?.id;
+  return userId ? String(userId) : null;
+};
+
 const toActionUrl = (relatedEntity, role) => {
   const entityType = relatedEntity?.entityType;
   const entityId = relatedEntity?.entityId ? String(relatedEntity.entityId) : null;
@@ -75,11 +80,19 @@ const toActionUrl = (relatedEntity, role) => {
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
+    const userId = getRequestUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized. Missing user context.',
+      });
+    }
+
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
     const unreadOnly = String(req.query.unreadOnly || '').toLowerCase() === 'true';
 
-    const filter = { recipient: req.user.id };
+    const filter = { recipient: userId };
     if (unreadOnly) {
       filter.isRead = false;
     }
@@ -132,57 +145,21 @@ router.get('/', protect, async (req, res) => {
 // @desc    Mark notification as read
 // @route   PATCH /api/notifications/:id/read
 // @access  Private
-router.patch('/:id/read', protect, async (req, res) => {
+// Keep this route before '/:id/read' so it does not get captured as an id path.
+router.patch('/read-all', protect, async (req, res) => {
   try {
-    const notification = await Notification.findOne({
-      _id: req.params.id,
-      recipient: req.user.id,
-    });
-
-    if (!notification) {
-      return res.status(404).json({
+    const userId = getRequestUserId(req);
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: 'Notification not found',
+        message: 'Not authorized. Missing user context.',
       });
     }
 
-    if (!notification.isRead) {
-      notification.isRead = true;
-      notification.readAt = new Date();
-      await notification.save();
-    }
-
-    const unreadCount = await Notification.countDocuments({ recipient: req.user.id, isRead: false });
-
-    res.status(200).json({
-      success: true,
-      message: 'Notification marked as read',
-      data: {
-        _id: notification._id,
-        isRead: notification.isRead,
-        readAt: notification.readAt,
-      },
-      unreadCount,
-    });
-  } catch (error) {
-    console.error('Mark notification as read error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark notification as read',
-      error: error.message,
-    });
-  }
-});
-
-// @desc    Mark all notifications as read
-// @route   PATCH /api/notifications/read-all
-// @access  Private
-router.patch('/read-all', protect, async (req, res) => {
-  try {
     const now = new Date();
 
     const result = await Notification.updateMany(
-      { recipient: req.user.id, isRead: false },
+      { recipient: userId, isRead: false },
       { $set: { isRead: true, readAt: now } }
     );
 
@@ -199,6 +176,56 @@ router.patch('/read-all', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to mark all notifications as read',
+      error: error.message,
+    });
+  }
+});
+
+router.patch('/:id/read', protect, async (req, res) => {
+  try {
+    const userId = getRequestUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized. Missing user context.',
+      });
+    }
+
+    const notification = await Notification.findOne({
+      _id: req.params.id,
+      recipient: userId,
+    });
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found',
+      });
+    }
+
+    if (!notification.isRead) {
+      notification.isRead = true;
+      notification.readAt = new Date();
+      await notification.save();
+    }
+
+    const unreadCount = await Notification.countDocuments({ recipient: userId, isRead: false });
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification marked as read',
+      data: {
+        _id: notification._id,
+        isRead: notification.isRead,
+        readAt: notification.readAt,
+      },
+      unreadCount,
+    });
+  } catch (error) {
+    console.error('Mark notification as read error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark notification as read',
       error: error.message,
     });
   }

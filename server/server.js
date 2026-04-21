@@ -91,14 +91,23 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Rate limiting
+const isDevelopment = (process.env.NODE_ENV || 'development') === 'development';
+
 const apiLimiter = rateLimit({
   windowMs: 50 * 60 * 1000, // 50 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   skip: (req) => (
-    req.originalUrl.startsWith('/api/auth/logout')
+    req.originalUrl.startsWith('/api/auth')
     || req.originalUrl.startsWith('/api/notifications')
+    || req.originalUrl.startsWith('/api/accommodations/owner/my-listings')
   ),
+});
+
+const authLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 300 : 80,
+  message: 'Too many authentication attempts. Please try again shortly.',
 });
 
 const notificationsLimiter = rateLimit({
@@ -107,8 +116,16 @@ const notificationsLimiter = rateLimit({
   message: 'Too many notification requests. Please try again shortly.',
 });
 
+const ownerListingsLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: isDevelopment ? 300 : 90,
+  message: 'Too many listing refresh requests. Please try again shortly.',
+});
+
 app.use('/api/', apiLimiter);
+app.use('/api/auth', authLimiter);
 app.use('/api/notifications', notificationsLimiter);
+app.use('/api/accommodations/owner/my-listings', ownerListingsLimiter);
 
 // Static files (for uploaded files)
 app.use('/uploads', express.static(uploadsDirectory));

@@ -60,6 +60,7 @@ const notificationSchema = new Schema(
         "ticket_re_opened",
         "ticket_closed",
         "ticket_escalated",
+        "ticket_update",
         // System
         "system_announcement",
         "general",

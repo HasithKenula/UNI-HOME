@@ -41,14 +41,45 @@ const generateInvoiceNumber = async () => {
 
 const generatePaymentNumber = async () => {
     const year = new Date().getFullYear();
-    const count = await Payment.countDocuments({
-        createdAt: {
-            $gte: new Date(`${year}-01-01T00:00:00.000Z`),
-            $lte: new Date(`${year}-12-31T23:59:59.999Z`),
-        },
-    });
+    const prefix = `PAY-${year}-`;
 
-    return `PAY-${year}-${String(count + 1).padStart(5, '0')}`;
+    const latestPayment = await Payment.findOne({
+        paymentNumber: { $regex: `^${prefix}` },
+    })
+        .sort({ paymentNumber: -1 })
+        .select('paymentNumber')
+        .lean();
+
+    const latestSequence = Number(latestPayment?.paymentNumber?.split('-')?.[2] || 0);
+    const nextSequence = Number.isFinite(latestSequence) ? latestSequence + 1 : 1;
+
+    return `${prefix}${String(nextSequence).padStart(5, '0')}`;
+};
+
+const createPaymentWithUniqueNumber = async (payload) => {
+    const maxRetries = 3;
+
+    for (let attempt = 0; attempt < maxRetries; attempt += 1) {
+        try {
+            const paymentNumber = await generatePaymentNumber();
+            return await Payment.create({
+                ...payload,
+                paymentNumber,
+            });
+        } catch (error) {
+            const isPaymentNumberCollision =
+                error?.code === 11000 &&
+                (error?.keyPattern?.paymentNumber || String(error?.message || '').includes('paymentNumber'));
+
+            if (isPaymentNumberCollision && attempt < maxRetries - 1) {
+                continue;
+            }
+
+            throw error;
+        }
+    }
+
+    throw new Error('Failed to generate unique payment number');
 };
 
 const addMonths = (dateValue, months) => {
@@ -567,8 +598,7 @@ const createBookingPayment = async (req, res) => {
             ? currentOutstanding
             : Math.max(0, currentOutstanding - amountToPay);
 
-        const payment = await Payment.create({
-            paymentNumber: await generatePaymentNumber(),
+        const payment = await createPaymentWithUniqueNumber({
             booking: booking._id,
             paidBy: booking.student,
             paidTo: booking.owner,
@@ -649,6 +679,7 @@ const createBookingPayment = async (req, res) => {
             },
         });
     } catch (error) {
+        console.error('Create booking payment error:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to process payment',

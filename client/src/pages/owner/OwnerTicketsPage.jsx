@@ -95,9 +95,14 @@ const OwnerTicketsPage = () => {
         const result = await dispatch(approveTicketAsync(selectedTicket._id));
         if (result.type === 'tickets/approve/fulfilled') {
             if (result.payload?.data) {
-                setSelectedTicket(result.payload.data);
+                setSelectedTicket((prev) => {
+                    if (!prev || prev._id !== result.payload.data._id) {
+                        return result.payload.data;
+                    }
+                    return { ...prev, ...result.payload.data };
+                });
             }
-            fetchTickets();
+            await fetchTickets();
         }
     };
 
@@ -107,10 +112,15 @@ const OwnerTicketsPage = () => {
         const result = await dispatch(rejectTicketAsync({ id: rejectModal.ticketId, reason: rejectModal.reason }));
         if (result.type === 'tickets/reject/fulfilled') {
             if (result.payload?.data) {
-                setSelectedTicket(result.payload.data);
+                setSelectedTicket((prev) => {
+                    if (!prev || prev._id !== result.payload.data._id) {
+                        return result.payload.data;
+                    }
+                    return { ...prev, ...result.payload.data };
+                });
             }
             setRejectModal({ open: false, ticketId: null, reason: '' });
-            fetchTickets();
+            await fetchTickets();
         }
     };
 

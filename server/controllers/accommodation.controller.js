@@ -13,6 +13,7 @@ import ListingReport from '../models/ListingReport.js';
 import Payment from '../models/Payment.js';
 import Invoice from '../models/Invoice.js';
 import Student from '../models/Student.js';
+import { autoCompleteExpiredContracts, getRoomContractLockMap } from '../utils/contractLifecycle.util.js';
 
 // Map to track IP and last view time to debounce view counts
 const viewCache = new Map();
@@ -341,6 +342,31 @@ const syncAccommodationRoomSnapshot = async (accommodationId) => {
     await Accommodation.findByIdAndUpdate(accommodationId, update);
 };
 
+const attachRoomContractLockMetadata = async (rooms = []) => {
+    if (!Array.isArray(rooms) || rooms.length === 0) return [];
+
+    const roomIds = rooms.map((room) => room?._id).filter(Boolean);
+    const lockMap = await getRoomContractLockMap(roomIds);
+
+    return rooms.map((room) => {
+        const roomObject = typeof room.toObject === 'function' ? room.toObject() : room;
+        const lock = lockMap.get(String(roomObject._id));
+
+        if (!lock) {
+            return {
+                ...roomObject,
+                roomLock: { isLocked: false },
+            };
+        }
+
+        return {
+            ...roomObject,
+            status: roomObject.status === 'maintenance' ? roomObject.status : 'occupied',
+            roomLock: lock,
+        };
+    });
+};
+
 const ensureOwnerListing = async (accommodationId, reqUser) => {
     const accommodation = await Accommodation.findOne({
         _id: accommodationId,
@@ -536,6 +562,8 @@ const getAccommodationById = async (req, res) => {
             });
         }
 
+        await autoCompleteExpiredContracts({ accommodationId: req.params.id });
+
         const accommodation = await Accommodation.findOne({
             _id: req.params.id,
             isDeleted: false,
@@ -562,7 +590,24 @@ const getAccommodationById = async (req, res) => {
                   {
                       $match: {
                           room: { $in: roomIds },
-                          status: { $in: ['pending', 'confirmed'] },
+                          $and: [
+                              {
+                                  $or: [
+                                      { status: 'completed' },
+                                      {
+                                          status: 'confirmed',
+                                          'paymentStatus.outstandingAmount': { $lte: 0 },
+                                      },
+                                  ],
+                              },
+                              {
+                                  $or: [
+                                      { checkOutDate: { $exists: false } },
+                                      { checkOutDate: null },
+                                      { checkOutDate: { $gte: new Date() } },
+                                  ],
+                              },
+                          ],
                       },
                   },
                   {
@@ -577,6 +622,7 @@ const getAccommodationById = async (req, res) => {
         const bookingCountMap = new Map(
             activeBookingsByRoom.map((entry) => [String(entry._id), Number(entry.count || 0)])
         );
+        const roomLockMap = await getRoomContractLockMap(roomIds);
 
         const roomsWithLiveAvailability = rooms.map((room) => {
             const roomObj = room.toObject();
@@ -585,14 +631,23 @@ const getAccommodationById = async (req, res) => {
             const fallbackOccupants = Number(roomObj.currentOccupants || 0);
             const occupiedCount = Math.max(activeBookingCount, fallbackOccupants);
             const availableSlots = Math.max(0, maxOccupants - occupiedCount);
-            const isBookable = roomObj.status === 'available' && availableSlots > 0;
+            const lock = roomLockMap.get(String(roomObj._id));
+            const hasContractLock = Boolean(lock?.isLocked);
+            const computedStatus =
+                roomObj.status === 'available' && availableSlots <= 0
+                    ? 'occupied'
+                    : hasContractLock && roomObj.status !== 'maintenance'
+                      ? 'occupied'
+                      : roomObj.status;
+            const isBookable = computedStatus === 'available' && availableSlots > 0 && !hasContractLock;
 
             return {
                 ...roomObj,
-                status: roomObj.status === 'available' && availableSlots <= 0 ? 'occupied' : roomObj.status,
+                status: computedStatus,
                 activeBookingCount,
                 availableSlots,
                 isBookable,
+                roomLock: lock || { isLocked: false },
             };
         });
 
@@ -880,7 +935,96 @@ const getOwnerListings = async (req, res) => {
 
         if (status) query.status = status;
 
+        await autoCompleteExpiredContracts();
+
         const listings = await Accommodation.find(query).sort({ createdAt: -1 });
+
+        const accommodationIds = listings.map((listing) => listing._id);
+        const rooms = accommodationIds.length
+            ? await Room.find({ accommodation: { $in: accommodationIds } })
+                  .select('_id accommodation status maxOccupants')
+                  .lean()
+            : [];
+
+        const roomIds = rooms.map((room) => room._id);
+        const now = new Date();
+        const activeBookingsByRoom = roomIds.length
+            ? await Booking.aggregate([
+                  {
+                      $match: {
+                          room: { $in: roomIds },
+                          $and: [
+                              {
+                                  $or: [
+                                      { status: 'completed' },
+                                      {
+                                          status: 'confirmed',
+                                          'paymentStatus.outstandingAmount': { $lte: 0 },
+                                      },
+                                  ],
+                              },
+                              {
+                                  $or: [
+                                      { checkOutDate: { $exists: false } },
+                                      { checkOutDate: null },
+                                      { checkOutDate: { $gte: now } },
+                                  ],
+                              },
+                          ],
+                      },
+                  },
+                  {
+                      $group: {
+                          _id: '$room',
+                          count: { $sum: 1 },
+                      },
+                  },
+              ])
+            : [];
+
+        const bookingCountMap = new Map(
+            activeBookingsByRoom.map((entry) => [String(entry._id), Number(entry.count || 0)])
+        );
+
+        const listingRoomMap = new Map();
+        rooms.forEach((room) => {
+            const accommodationKey = String(room.accommodation);
+            if (!listingRoomMap.has(accommodationKey)) {
+                listingRoomMap.set(accommodationKey, []);
+            }
+            listingRoomMap.get(accommodationKey).push(room);
+        });
+
+        const listingsWithLiveRoomStats = listings.map((listingDoc) => {
+            const listing = listingDoc.toObject();
+            const listingRooms = listingRoomMap.get(String(listing._id)) || [];
+
+            const totalRooms = listingRooms.length || Number(listing.totalRooms || 0);
+            const liveAvailableRooms = listingRooms.reduce((count, room) => {
+                const bookingCount = bookingCountMap.get(String(room._id)) || 0;
+
+                const isMaintenance = room.status === 'maintenance';
+                const isOccupiedByBooking = bookingCount > 0;
+                const effectiveStatus = isMaintenance ? 'maintenance' : isOccupiedByBooking ? 'occupied' : room.status;
+
+                return count + (effectiveStatus === 'available' ? 1 : 0);
+            }, 0);
+
+            const boundedAvailable = Math.max(0, Math.min(totalRooms, liveAvailableRooms));
+            const availabilityStatus =
+                boundedAvailable <= 0
+                    ? 'not_available'
+                    : boundedAvailable < totalRooms
+                      ? 'limited_slots'
+                      : 'available';
+
+            return {
+                ...listing,
+                totalRooms,
+                availableRooms: boundedAvailable,
+                availabilityStatus,
+            };
+        });
 
         const stats = {
             total: await Accommodation.countDocuments({ owner: req.user._id, isDeleted: false }),
@@ -895,7 +1039,7 @@ const getOwnerListings = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            data: listings,
+            data: listingsWithLiveRoomStats,
             stats,
         });
     } catch (error) {
@@ -953,14 +1097,78 @@ const getRoomsByAccommodation = async (req, res) => {
             return res.status(ownedResult.status).json({ success: false, message: ownedResult.error });
         }
 
+        await autoCompleteExpiredContracts({ accommodationId: req.params.accommodationId });
+
         const rooms = await Room.find({ accommodation: req.params.accommodationId })
             .populate('currentTenants.student', 'firstName lastName email')
             .populate('currentTenants.booking', 'bookingNumber status')
             .sort({ createdAt: -1 });
 
+        const roomIds = rooms.map((room) => room._id);
+        const now = new Date();
+        const liveBookingsByRoom = roomIds.length
+            ? await Booking.aggregate([
+                  {
+                      $match: {
+                          room: { $in: roomIds },
+                          $and: [
+                              {
+                                  $or: [
+                                      { status: 'completed' },
+                                      {
+                                          status: 'confirmed',
+                                          'paymentStatus.outstandingAmount': { $lte: 0 },
+                                      },
+                                  ],
+                              },
+                              {
+                                  $or: [
+                                      { checkOutDate: { $exists: false } },
+                                      { checkOutDate: null },
+                                      { checkOutDate: { $gte: now } },
+                                  ],
+                              },
+                          ],
+                      },
+                  },
+                  {
+                      $group: {
+                          _id: '$room',
+                          count: { $sum: 1 },
+                      },
+                  },
+              ])
+            : [];
+
+        const bookingCountMap = new Map(
+            liveBookingsByRoom.map((entry) => [String(entry._id), Number(entry.count || 0)])
+        );
+
+        const roomsWithLiveStatus = rooms.map((roomDoc) => {
+            const room = roomDoc.toObject();
+            const activeBookingCount = bookingCountMap.get(String(room._id)) || 0;
+            const maxOccupants = Math.max(1, Number(room.maxOccupants || 1));
+
+            // If a room has at least one active confirmed booking, treat it as unavailable.
+            const isBooked = activeBookingCount > 0;
+            const effectiveStatus =
+                room.status === 'maintenance' ? 'maintenance' : isBooked ? 'occupied' : room.status;
+            const availableSlots = effectiveStatus === 'available' ? maxOccupants : 0;
+
+            return {
+                ...room,
+                status: effectiveStatus,
+                activeBookingCount,
+                availableSlots,
+                isBookable: effectiveStatus === 'available' && availableSlots > 0,
+            };
+        });
+
+        const enrichedRooms = await attachRoomContractLockMetadata(roomsWithLiveStatus);
+
         res.status(200).json({
             success: true,
-            data: rooms,
+            data: enrichedRooms,
         });
     } catch (error) {
         res.status(500).json({
@@ -976,6 +1184,8 @@ const getRoomsByAccommodation = async (req, res) => {
 // @access  Private (owner/admin)
 const updateRoom = async (req, res) => {
     try {
+        await autoCompleteExpiredContracts();
+
         const room = await Room.findById(req.params.roomId).populate('accommodation');
 
         if (!room) {
@@ -994,6 +1204,17 @@ const updateRoom = async (req, res) => {
                 success: false,
                 message: 'Not authorized to update this room',
             });
+        }
+
+        if (req.user.role === 'owner') {
+            const lockMap = await getRoomContractLockMap([room._id]);
+            if (lockMap.get(String(room._id))?.isLocked) {
+                return res.status(409).json({
+                    success: false,
+                    message:
+                        'This room is locked for an active student contract and cannot be modified until the contract ends',
+                });
+            }
         }
 
         const roomMedia = buildRoomMediaPayload(req);
@@ -1058,6 +1279,8 @@ const updateRoom = async (req, res) => {
 // @access  Private (owner/admin)
 const deleteRoom = async (req, res) => {
     try {
+        await autoCompleteExpiredContracts();
+
         const room = await Room.findById(req.params.roomId).populate('accommodation');
 
         if (!room) {
@@ -1076,6 +1299,17 @@ const deleteRoom = async (req, res) => {
                 success: false,
                 message: 'Not authorized to delete this room',
             });
+        }
+
+        if (req.user.role === 'owner') {
+            const lockMap = await getRoomContractLockMap([room._id]);
+            if (lockMap.get(String(room._id))?.isLocked) {
+                return res.status(409).json({
+                    success: false,
+                    message:
+                        'This room is locked for an active student contract and cannot be deleted until the contract ends',
+                });
+            }
         }
 
         if (room.currentOccupants > 0 || room.status === 'occupied') {
@@ -1111,9 +1345,27 @@ const getAccommodationTenants = async (req, res) => {
             return res.status(ownedResult.status).json({ success: false, message: ownedResult.error });
         }
 
+        await autoCompleteExpiredContracts({ accommodationId: req.params.id });
+
+        const now = new Date();
+
         const tenants = await Booking.find({
             accommodation: req.params.id,
-            status: 'confirmed',
+            $and: [
+                {
+                    $or: [
+                        { status: 'confirmed' },
+                        { status: 'completed' },
+                    ],
+                },
+                {
+                    $or: [
+                        { checkOutDate: { $exists: false } },
+                        { checkOutDate: null },
+                        { checkOutDate: { $gte: now } },
+                    ],
+                },
+            ],
         })
             .populate('student', 'firstName lastName email phone')
             .populate('room', 'roomNumber roomType status')
@@ -1138,6 +1390,8 @@ const getAccommodationTenants = async (req, res) => {
 const assignRoomToBooking = async (req, res) => {
     try {
         const { roomId } = req.body;
+
+        await autoCompleteExpiredContracts();
 
         const booking = await Booking.findById(req.params.bookingId);
         if (!booking) {
@@ -1226,6 +1480,8 @@ const sendTenantNotice = async (req, res) => {
             return res.status(ownedResult.status).json({ success: false, message: ownedResult.error });
         }
 
+        await autoCompleteExpiredContracts({ accommodationId: req.params.id });
+
         const title = String(req.body?.title || '').trim();
         const message = String(req.body?.message || '').trim();
 
@@ -1236,9 +1492,25 @@ const sendTenantNotice = async (req, res) => {
             });
         }
 
+        const now = new Date();
+
         const activeBookings = await Booking.find({
             accommodation: req.params.id,
-            status: 'confirmed',
+            $and: [
+                {
+                    $or: [
+                        { status: 'confirmed' },
+                        { status: 'completed' },
+                    ],
+                },
+                {
+                    $or: [
+                        { checkOutDate: { $exists: false } },
+                        { checkOutDate: null },
+                        { checkOutDate: { $gte: now } },
+                    ],
+                },
+            ],
         }).select('student');
 
         if (activeBookings.length === 0) {
