@@ -10,7 +10,9 @@ import { createBookingPayment } from '../../features/payments/paymentAPI';
 
 const onlyDigits = (value = '') => value.replace(/\D/g, '');
 
-const formatCardNumber = (value = '') => onlyDigits(value).slice(0, 19).replace(/(.{4})/g, '$1 ').trim();
+const formatCardNumber = (value = '') => onlyDigits(value).slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+
+const sanitizeCardholderName = (value = '') => value.replace(/[^A-Za-z\s]/g, '').replace(/\s{2,}/g, ' ');
 
 const formatExpiry = (value = '') => {
     const raw = onlyDigits(value).slice(0, 4);
@@ -144,15 +146,18 @@ const PaymentPage = () => {
     const validateCardForm = () => {
         const nextErrors = validateCommon(cardForm);
 
-        if (!cardForm.cardholderName.trim()) {
+        const cardholderName = cardForm.cardholderName.trim();
+        if (!cardholderName) {
             nextErrors.cardholderName = 'Cardholder name is required';
-        } else if (cardForm.cardholderName.trim().length < 3) {
+        } else if (cardholderName.length < 3) {
             nextErrors.cardholderName = 'Cardholder name should be at least 3 characters';
+        } else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(cardholderName)) {
+            nextErrors.cardholderName = 'Cardholder name can only include letters and spaces';
         }
 
         const cardDigits = onlyDigits(cardForm.cardNumber);
-        if (!/^\d{13,19}$/.test(cardDigits)) {
-            nextErrors.cardNumber = 'Card number is invalid';
+        if (!/^\d{16}$/.test(cardDigits)) {
+            nextErrors.cardNumber = 'Card number must be exactly 16 digits';
         }
 
         const expiryResult = parseExpiry(cardForm.expiry);
@@ -160,8 +165,8 @@ const PaymentPage = () => {
             nextErrors.expiry = 'Expiry must be in MM/YY format and must be a future date';
         }
 
-        if (!/^\d{3,4}$/.test(cardForm.cvv)) {
-            nextErrors.cvv = 'CVV must be 3 or 4 digits';
+        if (!/^\d{3}$/.test(cardForm.cvv)) {
+            nextErrors.cvv = 'CVV must be exactly 3 digits';
         }
 
         return nextErrors;
@@ -359,7 +364,12 @@ const PaymentPage = () => {
                                 name="cardholderName"
                                 placeholder="Mandini Perera"
                                 value={cardForm.cardholderName}
-                                onChange={(e) => setCardForm((prev) => ({ ...prev, cardholderName: e.target.value }))}
+                                onChange={(e) =>
+                                    setCardForm((prev) => ({
+                                        ...prev,
+                                        cardholderName: sanitizeCardholderName(e.target.value),
+                                    }))
+                                }
                                 error={errors.cardholderName}
                                 required
                                 disabled={paymentBlocked || submitting}
@@ -397,7 +407,7 @@ const PaymentPage = () => {
                                     placeholder="123"
                                     value={cardForm.cvv}
                                     onChange={(e) =>
-                                        setCardForm((prev) => ({ ...prev, cvv: onlyDigits(e.target.value).slice(0, 4) }))
+                                        setCardForm((prev) => ({ ...prev, cvv: onlyDigits(e.target.value).slice(0, 3) }))
                                     }
                                     error={errors.cvv}
                                     required
