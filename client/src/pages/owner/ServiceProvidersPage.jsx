@@ -668,8 +668,8 @@ const ServiceProvidersPage = () => {
             />
           </div>
 
-          <div className="overflow-hidden rounded border border-gray-300 bg-white shadow-sm">
-            <div className="bg-gray-800 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white">
+          <div className="overflow-hidden rounded border border-emerald-200 bg-white shadow-sm">
+            <div className="bg-emerald-600 px-4 py-3 text-sm font-bold uppercase tracking-wide text-white">
               All Categories
             </div>
             <div className="divide-y divide-gray-200">
@@ -683,12 +683,12 @@ const ServiceProvidersPage = () => {
                   }}
                   className={`flex w-full items-center justify-between px-4 py-3 text-left font-medium transition-colors ${
                     filters.category === category.value
-                      ? 'bg-amber-100 text-amber-900'
-                      : 'bg-white text-gray-800 hover:bg-gray-50'
+                      ? 'bg-emerald-100 text-emerald-900'
+                      : 'bg-white text-gray-800 hover:bg-emerald-50 hover:text-emerald-800'
                   }`}
                 >
                   <span className="flex items-center gap-2"><span>{CATEGORY_ICONS[category.value] || '🛠️'}</span>{category.label}</span>
-                  {filters.category === category.value && <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />}
+                  {filters.category === category.value && <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />}
                 </button>
               ))}
             </div>
@@ -696,7 +696,7 @@ const ServiceProvidersPage = () => {
         </aside>
 
         <section>
-          <div className="mb-3 flex items-center justify-between rounded bg-gray-800 px-4 py-3 text-white">
+          <div className="mb-3 flex items-center justify-between rounded bg-emerald-600 px-4 py-3 text-white">
             <span className="text-sm">All Ads</span>
             <span className="text-sm">Showing 1-{Math.min(providers.length, 30)} of {providers.length} ads</span>
           </div>
